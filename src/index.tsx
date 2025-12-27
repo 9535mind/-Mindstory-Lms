@@ -14,6 +14,8 @@ import auth from './routes/auth'
 import courses from './routes/courses'
 import enrollments from './routes/enrollments'
 import payments from './routes/payments'
+import paymentsV2 from './routes/payments-v2'
+import pagesPayment from './routes/pages-payment'
 import certificates from './routes/certificates'
 import admin from './routes/admin'
 import pages from './routes/pages'
@@ -35,6 +37,7 @@ app.route('/api/auth', auth)
 app.route('/api/courses', courses)
 app.route('/api/enrollments', enrollments)
 app.route('/api/payments', payments)
+app.route('/api/payments-v2', paymentsV2)  // 토스페이먼츠 연동
 app.route('/api/certificates', certificates)
 app.route('/api/admin', admin)
 app.route('/api/popups', popups)
@@ -43,6 +46,7 @@ app.route('/api/popups', popups)
 app.route('/', pages)
 app.route('/', pagesMy)
 app.route('/', pagesAbout)
+app.route('/', pagesPayment)  // 결제 페이지
 
 // 홈페이지
 app.get('/', (c) => {
