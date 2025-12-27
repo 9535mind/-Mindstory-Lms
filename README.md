@@ -1,332 +1,275 @@
 # 마인드스토리 원격평생교육원 LMS 플랫폼
 
+**Ver.1.3.2 - MVP (2025.12.27)**
+
 ## 📋 프로젝트 개요
 
-마인드스토리 원격평생교육원의 온라인 학습 관리 시스템(LMS) Ver.1.3 MVP입니다.
+마인드스토리 원격평생교육원을 위한 온라인 학습 관리 시스템(LMS)입니다.  
+심리학, 상담학, 코칭 분야의 전문 교육을 온라인으로 제공하며,  
+수강 신청부터 학습, 수료, 수료증 발급까지 전 과정을 지원합니다.
 
-- **목적**: 온라인 수강 신청 → 학습 → 수료 → 수료증 발급까지 완결되는 경량형 LMS
-- **개발 단계**: Ver.1.3 (1단계 MVP - 필수 기능만 구현)
-- **기술 스택**: Hono + Cloudflare Pages + D1 Database + TypeScript
+## 🎯 주요 목표
 
-## 🌐 URL 정보
+- **운영 안정성 우선**: 초기 법적 리스크 제거, 검증된 기술만 사용
+- **대표 1인 운영 가능**: 관리자 대시보드로 모든 기능 제어
+- **확장 가능한 구조**: 향후 심리검사/상담/자격 과정 확장 대비
 
-### 개발 환경
-- **Local Development**: http://localhost:3000
-- **Sandbox URL**: https://3000-ieu1ambselnpjf2cme9se-c81df28e.sandbox.novita.ai
+## ✨ 신규 추가 기능 (Ver.1.3.2)
 
-### 페이지 경로
-- **홈**: `/`
-- **로그인**: `/login`
-- **회원가입**: `/register`
-- **내 강의실**: `/my-courses`
+### 🎉 팝업 공지사항 시스템
+- **동시 최대 5개 팝업 표시** 지원
+- 신규 강좌, 이벤트, 중요 공지 등 다양한 용도로 활용
+- 우선순위 설정으로 표시 순서 제어
+- '오늘 하루 보지 않기' 기능 (쿠키 기반)
+- 이미지, HTML 콘텐츠, 링크 버튼 지원
+- 관리자 페이지에서 생성/수정/삭제 가능
 
-### API 엔드포인트
-- **헬스체크**: `/api/health`
-- **인증**: `/api/auth/*`
-- **과정**: `/api/courses/*`
-- **수강신청**: `/api/enrollments/*`
-- **결제**: `/api/payments/*`
-- **수료증**: `/api/certificates/*`
-- **관리자**: `/api/admin/*`
+### 🎨 홈페이지 디자인 개선
+- **mindstorys.com의 실제 사진** 활용으로 생동감 있는 디자인
+- 심리/상담/평생교육원에서 자주 사용하는 패턴 적용
+- 히어로 섹션: 교육 현장 사진 배경
+- 특징 섹션: 강의실, 책, 학습 현장 사진
+- 소개 섹션: 실제 교육 사진으로 신뢰도 향상
+- 반응형 디자인으로 모든 기기에서 최적화
 
-## ✅ 현재 완료된 기능
+## 🚀 핵심 기능 (Ver.1.3 Baseline + Ver.1.3.2 추가)
 
-### 1. 회원 시스템
-- [x] 회원가입 / 로그인 / 로그아웃
-- [x] 프로필 수정
-- [x] 회원 탈퇴
-- [x] 휴대폰 본인인증 (구조만 - API 연동 대기)
-- [x] 세션 관리 (동시 접속 차단)
+### 1️⃣ 회원 시스템
+- 회원가입/로그인/로그아웃
+- 프로필 관리 및 회원 탈퇴
+- 세션 관리 (동일 ID 동시 접속 차단 구조)
+- 휴대폰 본인인증 구조 (API 연동 대기)
 
-### 2. 과정 관리 시스템
-- [x] 과정 CRUD (관리자)
-- [x] 차시 CRUD (관리자)
-- [x] 과정 목록 조회 (공개/비공개)
-- [x] 추천 과정 조회
-- [x] 과정 상세 정보
-- [x] 전문 호스팅 연동 구조 (Kollus/VideoCloud)
+### 2️⃣ 과정 관리
+- 과정/차시 CRUD (관리자)
+- 공개/비공개 설정
+- 무료/유료 구분
+- 전문 호스팅 연동 구조 (Kollus/VideoCloud)
+- 추천 과정 표시
 
-### 3. 수강 신청 및 학습
-- [x] 수강 신청
-- [x] 내 강의실 (수강 목록)
-- [x] 진도율 관리 (실시간 업데이트)
-- [x] 차시별 학습 진도 추적
-- [x] 수강 기간 관리
+### 3️⃣ 수강 신청 및 학습
+- 수강 신청/기간 관리
+- 실시간 진도율 추적 (80% 기준)
+- 차시별 학습 진도 저장
+- 내 강의실 (수강 중인 과정 목록)
 
-### 4. 결제 시스템
-- [x] 결제 생성 (모의 구현)
-- [x] 결제 내역 조회
-- [x] 환불 처리 (관리자)
-- [x] PG 연동 구조 (실제 연동 대기)
+### 4️⃣ 결제 시스템
+- 결제 생성 (모의)
+- 결제 내역 조회
+- 환불 처리 (관리자)
+- PG 연동 구조 (실제 연동 대기)
 
-### 5. 수료 및 수료증
-- [x] 수료 조건 체크 (진도율 80% 이상)
-- [x] 수료 처리
-- [x] 수료증 발급 (번호 자동 생성: MS-YYYY-XXXX)
-- [x] 수료증 조회
-- [x] PDF 생성 구조 (실제 PDF 생성 대기)
+### 5️⃣ 수료 및 수료증
+- 수료 조건 체크 (진도율 80% 이상)
+- 수료 처리 및 날짜 기록
+- 수료증 번호 자동 생성 (MS-2025-XXXX)
+- 수료증 발급/조회/재발급
+- PDF 생성 구조 (실제 생성 대기)
 
-### 6. 관리자 대시보드
-- [x] 통계 대시보드 (회원/과정/수강/매출)
-- [x] 회원 관리
-- [x] 수강 신청 관리
-- [x] 결제 내역 관리
-- [x] 수료증 관리
+### 6️⃣ 팝업 공지사항 (NEW)
+- 최대 5개 동시 표시
+- 우선순위 기반 정렬
+- 표시 기간 설정
+- '오늘 하루 보지 않기' 쿠키
+- 이미지/HTML/링크 지원
+- 관리자 CRUD
 
-### 7. 프론트엔드 페이지 (신규 추가!)
-- [x] **홈페이지** - 과정 목록, 추천 과정
-- [x] **로그인 페이지** - 세션 기반 인증
-- [x] **회원가입 페이지** - 약관 동의, 이메일 인증
-- [x] **내 강의실 페이지** - 수강 과정 목록, 진도율 표시
-- [x] Toast 알림 시스템
-- [x] 로딩 스피너 및 에러 메시지
-- [x] 반응형 디자인 (모바일/태블릿/PC)
+### 7️⃣ 관리자 대시보드
+- 통계 대시보드 (회원/과정/수강/매출)
+- 회원 관리
+- 수강 신청 관리
+- 결제 내역 관리
+- 수료증 관리
+- 팝업 관리
 
-### 8. JavaScript 유틸리티
-- [x] 인증 관리 (AuthManager) - 세션 토큰, 로그인 체크
-- [x] 공통 유틸리티 - 날짜/금액/진도율 포맷팅
-- [x] API 인터셉터 - 자동 토큰 추가, 401 처리
+### 8️⃣ UI/UX
+- **반응형 홈페이지** (Tailwind CSS)
+- 모바일 최적화
+- 과정 카드 뷰
+- 토스트 알림
+- 로딩 인디케이터
+- **실제 교육 현장 사진** 활용
 
-## 📊 데이터베이스 구조
+## 🗄️ 데이터베이스 구조
 
 ### 주요 테이블
-- `users` - 회원 정보
-- `courses` - 과정 정보
-- `lessons` - 차시 정보
-- `enrollments` - 수강 신청
-- `lesson_progress` - 학습 진도
-- `payments` - 결제 정보
-- `certificates` - 수료증
-- `user_sessions` - 세션 관리
-- `admin_logs` - 관리자 활동 로그
+1. **users**: 회원 정보
+2. **courses**: 과정 정보
+3. **lessons**: 차시 정보
+4. **enrollments**: 수강 신청 정보
+5. **lesson_progress**: 차시별 학습 진도
+6. **payments**: 결제 정보
+7. **certificates**: 수료증 정보
+8. **user_sessions**: 세션 관리
+9. **admin_logs**: 관리자 로그
+10. **popups**: 팝업 공지사항 (NEW)
 
-## 🚧 다음 단계 구현 필요
+## 🌐 접속 정보
 
-### 페이지 구현 (UI)
-- [ ] 과정 상세 페이지 - 차시 목록, 수강 신청 버튼
-- [ ] 학습 페이지 - 영상 플레이어, 진도 저장
-- [ ] 관리자 대시보드 UI - 통계 차트, 관리 테이블
-- [ ] 약관 페이지 - 이용약관, 개인정보처리방침, 환불규정
+### 개발 환경
+- **Sandbox URL**: https://3000-ieu1ambselnpjf2cme9se-c81df28e.sandbox.novita.ai
+- **로컬**: http://localhost:3000
 
-### API 연동
-- [ ] 휴대폰 본인인증 API 연동
-- [ ] PG 결제 API 연동 (토스페이먼츠 등)
-- [ ] PDF 수료증 생성 및 다운로드
-- [ ] 전문 호스팅 영상 재생 연동
+### 테스트 계정
+- **관리자**: admin@mindstory.co.kr / admin123
+- **학생1**: student1@example.com / test123
+- **학생2**: student2@example.com / test123
 
-### Ver.1.5 확장 (구조만 선반영됨)
-- [ ] 시험 및 평가 시스템
-- [ ] 복합 수료 조건
-- [ ] 과정 유형별 분류 (일반/자격/검사)
+## 💾 백업
 
-## 🔧 로컬 개발 환경 설정
+- **다운로드**: https://www.genspark.ai/api/files/s/MJ7TN5nn
+- **파일명**: mindstory-lms-v1.3.2-with-popup.tar.gz
+- **크기**: 174KB
+- **포함 내용**: 
+  - 전체 소스 코드
+  - 데이터베이스 마이그레이션
+  - 팝업 기능
+  - 개선된 홈페이지 디자인
 
-### 1. 의존성 설치
+## 🔌 API 엔드포인트
+
+### 인증 (Auth)
+- `POST /api/auth/register` - 회원가입
+- `POST /api/auth/login` - 로그인
+- `POST /api/auth/logout` - 로그아웃
+- `GET /api/auth/me` - 내 정보 조회
+
+### 과정 (Courses)
+- `GET /api/courses` - 과정 목록
+- `GET /api/courses/featured` - 추천 과정
+- `GET /api/courses/:id` - 과정 상세
+- `POST /api/courses` - 과정 생성 (관리자)
+
+### 수강 (Enrollments)
+- `GET /api/enrollments/my` - 내 수강 목록
+- `POST /api/enrollments` - 수강 신청
+- `POST /api/enrollments/:id/progress` - 진도 저장
+- `POST /api/enrollments/:id/complete` - 수강 완료
+
+### 결제 (Payments)
+- `GET /api/payments/my` - 내 결제 내역
+- `POST /api/payments` - 결제 생성
+- `POST /api/payments/:id/refund` - 환불 (관리자)
+
+### 수료증 (Certificates)
+- `GET /api/certificates/my` - 내 수료증 목록
+- `POST /api/certificates` - 수료증 발급
+- `GET /api/certificates/:id` - 수료증 조회
+
+### 팝업 (Popups) - NEW
+- `GET /api/popups/active` - 활성 팝업 목록 (최대 5개)
+- `POST /api/popups/:id/close` - 팝업 닫기
+- `GET /api/popups` - 팝업 관리 목록 (관리자)
+- `POST /api/popups` - 팝업 생성 (관리자)
+- `PUT /api/popups/:id` - 팝업 수정 (관리자)
+- `DELETE /api/popups/:id` - 팝업 삭제 (관리자)
+
+### 관리자 (Admin)
+- `GET /api/admin/dashboard` - 대시보드 통계
+- `GET /api/admin/users` - 회원 관리
+- `GET /api/admin/enrollments` - 수강 관리
+- `GET /api/admin/payments` - 결제 관리
+
+## 🛠️ 기술 스택
+
+- **프레임워크**: Hono (Cloudflare Workers)
+- **배포**: Cloudflare Pages
+- **데이터베이스**: Cloudflare D1 (SQLite)
+- **언어**: TypeScript
+- **스타일**: Tailwind CSS
+- **아이콘**: Font Awesome
+- **HTTP 클라이언트**: Axios
+
+## 🔧 로컬 개발 가이드
+
+### 서버 시작
 ```bash
-cd /home/user/webapp
-npm install
+npm run build
+pm2 start ecosystem.config.cjs
 ```
 
-### 2. 데이터베이스 마이그레이션
+### 데이터베이스 초기화
 ```bash
-# 로컬 D1 데이터베이스 마이그레이션
-npm run db:migrate:local
+# 로컬 DB 리셋
+rm -rf .wrangler/state/v3/d1
+
+# 마이그레이션 적용
+npx wrangler d1 migrations apply mindstory-production --local
 
 # 테스트 데이터 삽입
-npm run db:seed
-
-# 데이터베이스 초기화 (재설정)
-npm run db:reset
+npx wrangler d1 execute mindstory-production --local --file=./seed.sql
 ```
 
-### 3. 개발 서버 실행
+### 테스트
 ```bash
-# 프로젝트 빌드
-npm run build
-
-# PM2로 개발 서버 시작
-pm2 start ecosystem.config.cjs
-
 # 서버 상태 확인
-pm2 list
-
-# 로그 확인
-pm2 logs mindstory-lms --nostream
-
-# 서버 재시작
-npm run clean-port
-pm2 restart mindstory-lms
-
-# 서버 중지
-pm2 stop mindstory-lms
-```
-
-### 4. 테스트
-```bash
-# API 헬스체크
 curl http://localhost:3000/api/health
 
 # 추천 과정 조회
 curl http://localhost:3000/api/courses/featured
 
-# 회원가입 테스트
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "test123",
-    "name": "테스트",
-    "terms_agreed": true,
-    "privacy_agreed": true
-  }'
+# 활성 팝업 조회
+curl http://localhost:3000/api/popups/active
 ```
 
-## 🧪 테스트 계정 및 사용 방법
-
-### 1. 홈페이지 접속
-```
-https://3000-ieu1ambselnpjf2cme9se-c81df28e.sandbox.novita.ai
-```
-
-### 2. 테스트 계정으로 로그인
-
-#### 관리자 계정
-- **이메일**: admin@mindstory.co.kr
-- **비밀번호**: admin123
-- **권한**: 과정/회원/결제 관리, 환불 처리
-
-#### 학생 계정
-1. **이메일**: student1@example.com / **비밀번호**: test123 (수강 중)
-2. **이메일**: student2@example.com / **비밀번호**: test123 (수료 완료)
-3. **이메일**: student3@example.com / **비밀번호**: test123 (무료 과정)
-
-### 3. 주요 기능 테스트
-
-#### 회원가입
-1. 우측 상단 "회원가입" 클릭
-2. 정보 입력 및 약관 동의
-3. 가입 후 로그인
-
-#### 로그인
-1. 우측 상단 "로그인" 클릭
-2. 테스트 계정으로 로그인
-3. "내 강의실"로 자동 이동
-
-#### 내 강의실
-1. 수강 중인 과정 확인
-2. 진도율 및 남은 기간 확인
-3. "학습하기" 버튼 클릭 (추후 구현)
-
-#### 과정 둘러보기
-1. 홈페이지에서 "추천 과정" 섹션 확인
-2. "자세히 보기" 버튼 클릭 (추후 구현)
-
-## 📦 배포
-
-### Cloudflare Pages 배포 준비
+### 로그 확인
 ```bash
-# 프로덕션 빌드
-npm run build
-
-# Cloudflare 프로젝트 생성 (최초 1회)
-npx wrangler pages project create mindstory-lms \
-  --production-branch main \
-  --compatibility-date 2025-12-27
-
-# 프로덕션 D1 데이터베이스 생성
-npx wrangler d1 create mindstory-production
-
-# wrangler.jsonc에 database_id 업데이트 필요
-
-# 프로덕션 데이터베이스 마이그레이션
-npm run db:migrate:prod
-
-# 배포
-npm run deploy:prod
+pm2 logs mindstory-lms --nostream
 ```
 
-## 📂 프로젝트 구조
+## 📦 NPM 스크립트
 
-```
-webapp/
-├── src/
-│   ├── index.tsx              # 메인 애플리케이션
-│   ├── types/
-│   │   └── database.ts        # 타입 정의
-│   ├── middleware/
-│   │   └── auth.ts            # 인증 미들웨어
-│   ├── routes/
-│   │   ├── auth.ts            # 인증 API
-│   │   ├── courses.ts         # 과정 API
-│   │   ├── enrollments.ts     # 수강신청 API
-│   │   ├── payments.ts        # 결제 API
-│   │   ├── certificates.ts    # 수료증 API
-│   │   └── admin.ts           # 관리자 API
-│   └── utils/
-│       └── helpers.ts         # 헬퍼 함수
-├── migrations/
-│   └── 0001_initial_schema.sql  # DB 스키마
-├── public/
-│   └── static/                # 정적 파일
-├── dist/                      # 빌드 결과물
-├── seed.sql                   # 테스트 데이터
-├── ecosystem.config.cjs       # PM2 설정
-├── wrangler.jsonc            # Cloudflare 설정
-├── package.json
-└── README.md
+```json
+{
+  "dev": "vite",
+  "build": "vite build",
+  "preview": "wrangler pages dev dist",
+  "deploy": "npm run build && wrangler pages deploy dist",
+  "db:migrate:local": "wrangler d1 migrations apply mindstory-production --local",
+  "db:migrate:prod": "wrangler d1 migrations apply mindstory-production",
+  "db:seed": "wrangler d1 execute mindstory-production --local --file=./seed.sql",
+  "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate:local && npm run db:seed"
+}
 ```
 
-## 🎯 다음 단계 (추천 개발 순서)
+## 🔜 다음 단계 (API 연동)
 
-1. **외부 서비스 API 연동**
-   - 휴대폰 본인인증 (Pass, NICE)
-   - PG 결제 (토스페이먼츠, 이니시스)
-   - 전문 영상 호스팅 (Kollus, VideoCloud)
+### 필수 API 서비스
+1. **휴대폰 본인인증**: Pass, NICE 등
+2. **PG 결제**: 토스페이먼츠, 이니시스 등
+3. **영상 호스팅**: Kollus, VideoCloud 등
+4. **SMS 발송**: 선택 사항
 
-2. **수료증 PDF 생성**
-   - 브라우저 기반 PDF 생성 또는
-   - PDF 생성 API 연동
+### 구조 선반영 (Ver.1.5 대비)
+- 시험/평가 시스템 필드
+- 복합 수료 조건 (진도 + 시험 점수)
+- 과정 유형별 분류 (일반/자격/검사)
+- 지도사 트랙 ID
+- 상담·검사 데이터 확장
 
-3. **관리자 웹 UI 구현**
-   - 과정 관리 페이지
-   - 수강생 관리 페이지
-   - 통계 대시보드 UI
+### 2단계 확장 계획
+- 심리검사 기능
+- 온라인 상담 예약
+- 자격증 과정
+- 지도사 양성 트랙
+- 커뮤니티 게시판
 
-4. **학생 학습 UI 구현**
-   - 내 강의실 페이지
-   - 영상 플레이어 페이지
-   - 진도 추적 UI
+## 📄 라이선스
 
-5. **GitHub Pages / Cloudflare Pages 배포**
-   - 프로덕션 환경 구축
-   - 도메인 연결
-   - SSL 인증서 설정
-
-## ⚠️ 주의사항
-
-### API 연동 전 준비물
-1. **본인인증 서비스** - Pass, NICE 등의 API 키
-2. **PG 결제** - 토스페이먼츠, 이니시스 등의 가맹점 정보
-3. **영상 호스팅** - Kollus, VideoCloud 등의 API 키
-4. **SMS 발송** (선택) - 알리고, 문자 API 등
-
-### 보안 설정
-- `.env` 파일에 API 키 저장 (Git에 포함하지 말 것)
-- 프로덕션 배포 시 `wrangler secret put` 사용
-- CORS 설정 확인
-- 세션 만료 시간 설정
+© 2025 마인드스토리 원격평생교육원. All rights reserved.
 
 ## 📞 문의
 
-- **개발자**: Claude (AI Assistant)
-- **프로젝트**: 마인드스토리 원격평생교육원 LMS
-- **버전**: Ver.1.3 MVP
-- **최종 업데이트**: 2025-12-27
-
-## 📝 라이선스
-
-Copyright © 2025 마인드스토리 원격평생교육원. All rights reserved.
+- **이메일**: sanj2100@naver.com
+- **전화**: 062-959-9535
+- **웹사이트**: https://www.mindstorys.com
 
 ---
 
-**개발 완료 상태**: ✅ 1단계 MVP 구현 완료 (API 연동 대기 중)
+**Ver.1.3.2 업데이트 내역 (2025.12.27)**
+- ✅ 팝업 공지사항 시스템 추가 (동시 최대 5개)
+- ✅ 홈페이지 디자인 개선 (mindstorys.com 사진 활용)
+- ✅ 히어로 섹션 배경 이미지 교체
+- ✅ 특징 섹션 카드 디자인 개선
+- ✅ 소개 섹션 이미지 교체
+- ✅ 반응형 레이아웃 최적화
