@@ -18,6 +18,7 @@ import certificates from './routes/certificates'
 import admin from './routes/admin'
 import pages from './routes/pages'
 import pagesMy from './routes/pages-my'
+import pagesAbout from './routes/pages-about'
 import popups from './routes/popups'
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -41,6 +42,7 @@ app.route('/api/popups', popups)
 // 페이지 라우트
 app.route('/', pages)
 app.route('/', pagesMy)
+app.route('/', pagesAbout)
 
 // 홈페이지
 app.get('/', (c) => {
