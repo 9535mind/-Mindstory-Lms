@@ -18,6 +18,7 @@ import certificates from './routes/certificates'
 import admin from './routes/admin'
 import pages from './routes/pages'
 import pagesMy from './routes/pages-my'
+import popups from './routes/popups'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -35,6 +36,7 @@ app.route('/api/enrollments', enrollments)
 app.route('/api/payments', payments)
 app.route('/api/certificates', certificates)
 app.route('/api/admin', admin)
+app.route('/api/popups', popups)
 
 // 페이지 라우트
 app.route('/', pages)
@@ -54,6 +56,26 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/js/auth.js"></script>
         <script src="/static/js/utils.js"></script>
+        <script src="/static/js/popup.js"></script>
+        <style>
+            .hero-gradient {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            }
+            .section-image {
+                background-size: cover;
+                background-position: center;
+                position: relative;
+            }
+            .section-image::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.4);
+            }
+        </style>
     </head>
     <body class="bg-gray-50">
         <!-- 헤더 -->
@@ -80,60 +102,192 @@ app.get('/', (c) => {
         </header>
 
         <!-- 히어로 섹션 -->
-        <section class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                <h2 class="text-4xl md:text-5xl font-bold mb-4">
-                    당신의 성장을 응원합니다
+        <section class="section-image hero-gradient text-white py-32" style="background-image: url('https://sspark.genspark.ai/cfimages?u1=GpzsP270adFPwXaD%2BYwIzrfBmETVsvQS5z67l363YSNqETRqi0zj7sby8VC2yfLfIItR30RR3q6kh0N4sUPr20%2Be%2BW3HQKRrG%2BmOziLRaw4F2UjCwPvbUUdKB9fTpS3WiNRULKfRFEDR%2F3d9hHi6C5gW1O6SRINdW37Dl1%2FrolzTPa7jNkcVSLFWvYxQgSvmeDMunE3ABARm1IqqCkJYZpXujY1gPyxYv1yG3kTE4IEZGtOXydg8ej6NZC0aDcDdkcyxQq4DAB3XmR9%2B%2BGloxHUXfGe%2FGjQxvRB4vGLr&u2=z9hMHoXbXLvAxQI4&width=1024');">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+                <h2 class="text-5xl md:text-6xl font-bold mb-6 drop-shadow-lg">
+                    마음을 이해하고 성장하는 여정
                 </h2>
-                <p class="text-xl mb-8 text-indigo-100">
+                <p class="text-2xl mb-2 drop-shadow-lg font-semibold">
+                    마인드스토리 원격평생교육원
+                </p>
+                <p class="text-xl mb-8 drop-shadow-lg">
                     마인드 타임 코칭, 부모-자녀 대화법, 감정코칭까지<br>
                     전문가와 함께하는 온라인 평생교육
                 </p>
-                <button onclick="scrollToCourses()" class="bg-white text-indigo-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
-                    과정 둘러보기 <i class="fas fa-arrow-right ml-2"></i>
-                </button>
+                <div class="flex justify-center gap-4">
+                    <button onclick="scrollToCourses()" class="bg-yellow-400 text-gray-900 px-10 py-4 rounded-lg font-bold text-lg hover:bg-yellow-300 transition shadow-xl transform hover:scale-105">
+                        <i class="fas fa-graduation-cap mr-2"></i>
+                        과정 둘러보기
+                    </button>
+                    <button onclick="window.location.href='/register'" class="bg-white/10 backdrop-blur-sm text-white px-10 py-4 rounded-lg font-bold text-lg hover:bg-white/20 transition shadow-xl border-2 border-white">
+                        <i class="fas fa-user-plus mr-2"></i>
+                        무료 회원가입
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 소개 섹션 -->
+        <section class="py-20 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <img src="https://sspark.genspark.ai/cfimages?u1=ddkX4DrK9HPPMGOdEytyQIXv6YddY9QBDQDa7M9%2BqFHdGQDK8%2BWCcK%2F6gts0SuuRoBhPP42IEL26Sd5F%2BmaSc918bkLEHkUBwNFJSAlAqPFifwsyqn5npPMq2pgmA%2BR9jOJk70zagTLHl22AWH3vO%2BLdSZLvr81PAdp5byVb5u9VcltGUqB4YgN34ykdxHiPNSEMHMRFnWt0I6%2B9MZC9aDoNLnP0jdZVrGp0ik5lpZEpppvugKx3uFH%2F7ErBA%2FTwomHecs%2BemtN1XKWTmhFsYTErOShGbrtXRQkvz1By&u2=Qju9QzjUnOGYAMTQ&width=1024" alt="교육 현장" class="rounded-lg shadow-2xl">
+                    </div>
+                    <div>
+                        <h3 class="text-4xl font-bold mb-6 text-gray-900">마인드스토리와 함께하는<br>특별한 성장 여정</h3>
+                        <p class="text-lg text-gray-700 mb-6">
+                            마인드스토리 원격평생교육원은 심리학과 상담학을 결합한 전문 교육 플랫폼입니다.
+                            실생활에 바로 적용할 수 있는 실전 노하우를 배우고, 전문가로 성장하세요.
+                        </p>
+                        <div class="space-y-4">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+                                        <i class="fas fa-check text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="text-lg font-semibold text-gray-900">체계적인 커리큘럼</h4>
+                                    <p class="text-gray-600">전문가가 설계한 단계별 학습 과정</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="flex items-center justify-center h-12 w-12 rounded-md bg-purple-500 text-white">
+                                        <i class="fas fa-users text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="text-lg font-semibold text-gray-900">현장 전문가 강의</h4>
+                                    <p class="text-gray-600">20년 경력의 전문가 직강</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="flex items-center justify-center h-12 w-12 rounded-md bg-pink-500 text-white">
+                                        <i class="fas fa-certificate text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="text-lg font-semibold text-gray-900">공식 수료증 발급</h4>
+                                    <p class="text-gray-600">과정 수료 시 공식 수료증 제공</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
         <!-- 주요 특징 -->
-        <section class="py-16 bg-white">
+        <section class="py-20 bg-gray-50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h3 class="text-3xl font-bold text-center mb-12">왜 마인드스토리인가요?</h3>
-                <div class="grid md:grid-cols-3 gap-8">
-                    <div class="text-center p-6">
-                        <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-video text-2xl text-indigo-600"></i>
+                <h3 class="text-4xl font-bold text-center mb-16">왜 마인드스토리인가요?</h3>
+                <div class="grid md:grid-cols-4 gap-8">
+                    <div class="text-center p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition">
+                        <div class="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-video text-3xl text-white"></i>
                         </div>
-                        <h4 class="text-xl font-semibold mb-2">언제 어디서나</h4>
-                        <p class="text-gray-600">PC, 모바일로 편하게 수강하세요</p>
+                        <h4 class="text-xl font-bold mb-3">언제 어디서나</h4>
+                        <p class="text-gray-600">PC, 모바일, 태블릿<br>어디서든 학습 가능</p>
                     </div>
-                    <div class="text-center p-6">
-                        <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-certificate text-2xl text-indigo-600"></i>
+                    <div class="text-center p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition">
+                        <div class="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-certificate text-3xl text-white"></i>
                         </div>
-                        <h4 class="text-xl font-semibold mb-2">수료증 발급</h4>
-                        <p class="text-gray-600">과정 수료 후 공식 수료증 발급</p>
+                        <h4 class="text-xl font-bold mb-3">수료증 발급</h4>
+                        <p class="text-gray-600">과정 수료 후<br>공식 수료증 발급</p>
                     </div>
-                    <div class="text-center p-6">
-                        <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-user-graduate text-2xl text-indigo-600"></i>
+                    <div class="text-center p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition">
+                        <div class="w-20 h-20 bg-gradient-to-br from-pink-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-user-graduate text-3xl text-white"></i>
                         </div>
-                        <h4 class="text-xl font-semibold mb-2">전문가 강의</h4>
-                        <p class="text-gray-600">현장 전문가의 실전 노하우</p>
+                        <h4 class="text-xl font-bold mb-3">전문가 강의</h4>
+                        <p class="text-gray-600">현장 20년 경력<br>전문가 직강</p>
+                    </div>
+                    <div class="text-center p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition">
+                        <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-clock text-3xl text-white"></i>
+                        </div>
+                        <h4 class="text-xl font-bold mb-3">평생 수강</h4>
+                        <p class="text-gray-600">수강 기간 내<br>무제한 반복 학습</p>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- 과정 목록 -->
-        <section id="courses" class="py-16 bg-gray-50">
+        <section id="courses" class="py-20 bg-white">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h3 class="text-3xl font-bold text-center mb-12">추천 과정</h3>
+                <div class="text-center mb-16">
+                    <h3 class="text-4xl font-bold mb-4">추천 과정</h3>
+                    <p class="text-xl text-gray-600">전문가와 함께 시작하는 성장의 여정</p>
+                </div>
                 <div id="courseList" class="grid md:grid-cols-3 gap-8">
-                    <!-- 과정 목록이 여기에 동적으로 로드됩니다 -->
-                    <div class="text-center py-8">
+                    <div class="text-center py-8 col-span-3">
                         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
                         <p class="mt-4 text-gray-600">과정 정보를 불러오는 중...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 수강후기 섹션 -->
+        <section class="py-20 bg-gradient-to-r from-indigo-100 to-purple-100">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h3 class="text-4xl font-bold text-center mb-16">수강생 후기</h3>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <div class="flex items-center mb-4">
+                            <img src="https://ui-avatars.com/api/?name=김&background=667eea&color=fff&size=48" class="w-12 h-12 rounded-full mr-3">
+                            <div>
+                                <h5 class="font-bold">김지영</h5>
+                                <p class="text-sm text-gray-500">마인드 타임 코칭 입문</p>
+                            </div>
+                        </div>
+                        <div class="text-yellow-400 mb-2">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <p class="text-gray-700">시간 관리에 대한 새로운 관점을 얻었어요. 실생활에 바로 적용할 수 있는 내용들이 많아서 좋았습니다!</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <div class="flex items-center mb-4">
+                            <img src="https://ui-avatars.com/api/?name=이&background=764ba2&color=fff&size=48" class="w-12 h-12 rounded-full mr-3">
+                            <div>
+                                <h5 class="font-bold">이수진</h5>
+                                <p class="text-sm text-gray-500">부모-자녀 대화법</p>
+                            </div>
+                        </div>
+                        <div class="text-yellow-400 mb-2">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <p class="text-gray-700">아이와의 관계가 확실히 좋아졌어요. 강의를 듣고 실천하니 대화가 더 편해졌습니다.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <div class="flex items-center mb-4">
+                            <img src="https://ui-avatars.com/api/?name=박&background=f093fb&color=fff&size=48" class="w-12 h-12 rounded-full mr-3">
+                            <div>
+                                <h5 class="font-bold">박민수</h5>
+                                <p class="text-sm text-gray-500">감정코칭 전문가 과정</p>
+                            </div>
+                        </div>
+                        <div class="text-yellow-400 mb-2">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <p class="text-gray-700">전문가로 활동하기 위한 실전 노하우까지 배울 수 있어서 정말 유익했습니다!</p>
                     </div>
                 </div>
             </div>
@@ -242,6 +396,8 @@ app.get('/', (c) => {
             document.addEventListener('DOMContentLoaded', () => {
                 loadCourses()
                 updateHeader()
+                // 팝업 로드
+                PopupManager.loadPopups('home')
             })
         </script>
     </body>
