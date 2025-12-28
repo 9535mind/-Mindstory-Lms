@@ -98,7 +98,7 @@ courses.get('/:id', optionalAuth, async (c) => {
     }
 
     return c.json(successResponse({
-      ...course,
+      course,
       lessons: lessons.results,
       enrollment
     }))
