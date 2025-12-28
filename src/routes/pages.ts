@@ -143,9 +143,38 @@ pages.get('/login', (c) => {
                     </button>
                 </div>
             </form>
+            
+            <!-- 소셜 로그인 구분선 -->
+            <div class="mt-6">
+                <div class="relative">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-gray-50 text-gray-500">또는 간편 로그인</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 카카오 로그인 버튼 -->
+            <div class="mt-6">
+                <button onclick="loginWithKakao()" type="button"
+                    class="w-full flex items-center justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-900 hover:opacity-90 transition-opacity"
+                    style="background-color: #FEE500;">
+                    <img src="https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_small.png" 
+                         alt="Kakao" class="w-5 h-5 mr-2">
+                    카카오로 시작하기
+                </button>
+            </div>
         </div>
     </div>
 
+    <script>
+        // 카카오 로그인 함수
+        function loginWithKakao() {
+            window.location.href = '/api/auth/kakao/login';
+        }
+    </script>
     <script>
         // 이미 로그인된 경우 리다이렉트
         if (AuthManager.isLoggedIn()) {
