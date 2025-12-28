@@ -1,0 +1,10 @@
+# 카카오 로그인 설정
+# https://developers.kakao.com 에서 발급받은 REST API 키를 입력하세요
+KAKAO_CLIENT_ID=your_kakao_rest_api_key_here
+KAKAO_REDIRECT_URI=http://localhost:3000/api/auth/kakao/callback
+
+# R2 Storage 설정 (영상 저장소)
+# Cloudflare Dashboard에서 R2 API 토큰을 생성하여 입력하세요
+R2_ACCOUNT_ID=your_cloudflare_account_id
+R2_ACCESS_KEY_ID=your_r2_access_key_id
+R2_SECRET_ACCESS_KEY=your_r2_secret_access_key
