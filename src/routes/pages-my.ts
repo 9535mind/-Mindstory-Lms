@@ -7,14 +7,15 @@ import { Bindings } from '../types/database'
 
 const pagesMy = new Hono<{ Bindings: Bindings }>()
 
-const getHeader = () => `
+const getHeader = (currentPage = '') => `
 <header class="bg-white shadow-sm sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center py-4">
             <a href="/" class="text-2xl font-bold text-indigo-600">마인드스토리 원격평생교육원</a>
             <nav class="hidden md:flex space-x-8">
                 <a href="/#courses" class="text-gray-700 hover:text-indigo-600">과정 안내</a>
-                <a href="/my-courses" class="text-indigo-600 font-semibold">내 강의실</a>
+                <a href="/my-courses" class="${currentPage === 'courses' ? 'text-indigo-600 font-semibold' : 'text-gray-700 hover:text-indigo-600'}">내 강의실</a>
+                <a href="/my-profile" class="${currentPage === 'profile' ? 'text-indigo-600 font-semibold' : 'text-gray-700 hover:text-indigo-600'}">내 정보</a>
             </nav>
             <div class="flex items-center space-x-4">
                 <span class="text-gray-700" id="userName"></span>
@@ -43,7 +44,7 @@ pagesMy.get('/my-courses', (c) => {
         <script src="/static/js/utils.js"></script>
     </head>
     <body class="bg-gray-50">
-        ${getHeader()}
+        ${getHeader('courses')}
         
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <h1 class="text-3xl font-bold text-gray-900 mb-8">내 강의실</h1>
@@ -177,6 +178,344 @@ pagesMy.get('/my-courses', (c) => {
             
             // 페이지 로드 시 수강 중 과정 로드
             loadCourses('active')
+        </script>
+    </body>
+    </html>
+  `)
+})
+
+/**
+ * 내 정보 (프로필) 페이지
+ */
+pagesMy.get('/my-profile', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>내 정보 - 마인드스토리</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script src="/static/js/auth.js"></script>
+        <script src="/static/js/utils.js"></script>
+    </head>
+    <body class="bg-gray-50">
+        ${getHeader('profile')}
+        
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-8">내 정보</h1>
+            
+            <!-- 프로필 정보 -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">기본 정보</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+                        <input type="text" id="email" readonly class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">이름</label>
+                        <input type="text" id="name" class="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
+                        <input type="tel" id="phone" placeholder="010-1234-5678" class="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">생년월일</label>
+                        <input type="date" id="birth_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                    </div>
+                    <button onclick="updateProfile()" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700">
+                        정보 수정
+                    </button>
+                </div>
+            </div>
+
+            <!-- 비밀번호 변경 (이메일 가입자만) -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6" id="passwordSection">
+                <h2 class="text-xl font-semibold mb-4">비밀번호 변경</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">현재 비밀번호</label>
+                        <input type="password" id="currentPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호</label>
+                        <input type="password" id="newPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호 확인</label>
+                        <input type="password" id="confirmPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                    </div>
+                    <button onclick="changePassword()" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700">
+                        비밀번호 변경
+                    </button>
+                </div>
+            </div>
+
+            <!-- 회원 탈퇴 -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-red-600">회원 탈퇴</h2>
+                <p class="text-gray-600 mb-4">
+                    회원 탈퇴 시 모든 수강 기록과 결제 내역이 삭제되며 복구할 수 없습니다.<br>
+                    탈퇴 후 30일간 데이터가 보관되며, 이 기간 동안 고객센터에 문의하시면 복구 가능합니다.
+                </p>
+                <button onclick="openWithdrawalModal()" class="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700">
+                    회원 탈퇴하기
+                </button>
+            </div>
+        </div>
+
+        <!-- 탈퇴 사유 선택 모달 -->
+        <div id="withdrawalModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-md w-full p-6">
+                <h3 class="text-xl font-bold mb-4">회원 탈퇴</h3>
+                
+                <!-- 탈퇴 조건 확인 메시지 -->
+                <div id="withdrawalCheckMessage" class="mb-4"></div>
+                
+                <div id="withdrawalForm" class="hidden">
+                    <p class="text-gray-600 mb-4">탈퇴 사유를 선택해주세요</p>
+                    
+                    <div class="space-y-2 mb-4">
+                        <label class="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="radio" name="reason" value="사용하지 않는 서비스입니다" class="mr-3" />
+                            <span>사용하지 않는 서비스입니다</span>
+                        </label>
+                        <label class="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="radio" name="reason" value="원하는 강의가 없습니다" class="mr-3" />
+                            <span>원하는 강의가 없습니다</span>
+                        </label>
+                        <label class="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="radio" name="reason" value="다른 학습 플랫폼을 사용합니다" class="mr-3" />
+                            <span>다른 학습 플랫폼을 사용합니다</span>
+                        </label>
+                        <label class="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="radio" name="reason" value="개인정보 보호를 위해" class="mr-3" />
+                            <span>개인정보 보호를 위해</span>
+                        </label>
+                        <label class="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="radio" name="reason" value="기타" class="mr-3" />
+                            <span>기타</span>
+                        </label>
+                    </div>
+                    
+                    <div id="reasonDetailBox" class="hidden mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">상세 사유</label>
+                        <textarea id="reasonDetail" rows="3" placeholder="탈퇴 사유를 입력해주세요" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></textarea>
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <button onclick="closeWithdrawalModal()" class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400">
+                            취소
+                        </button>
+                        <button onclick="confirmWithdrawal()" class="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700">
+                            탈퇴하기
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="withdrawalCloseButton" class="hidden">
+                    <button onclick="closeWithdrawalModal()" class="w-full bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400">
+                        닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let currentUser = null;
+
+            // 페이지 로드 시 사용자 정보 로드
+            async function loadUserProfile() {
+                try {
+                    const response = await axios.get('/api/auth/me', {
+                        headers: {
+                            'Authorization': \`Bearer \${getSessionToken()}\`
+                        }
+                    });
+
+                    if (response.data.success) {
+                        currentUser = response.data.data;
+                        document.getElementById('email').value = currentUser.email || '';
+                        document.getElementById('name').value = currentUser.name || '';
+                        document.getElementById('phone').value = currentUser.phone || '';
+                        document.getElementById('birth_date').value = currentUser.birth_date || '';
+
+                        // 소셜 로그인 사용자는 비밀번호 변경 섹션 숨김
+                        if (currentUser.social_provider) {
+                            document.getElementById('passwordSection').style.display = 'none';
+                        }
+                    }
+                } catch (error) {
+                    console.error('프로필 로드 실패:', error);
+                    alert('로그인이 필요합니다.');
+                    window.location.href = '/login';
+                }
+            }
+
+            // 프로필 수정
+            async function updateProfile() {
+                try {
+                    const response = await axios.put('/api/auth/profile', {
+                        name: document.getElementById('name').value,
+                        phone: document.getElementById('phone').value,
+                        birth_date: document.getElementById('birth_date').value
+                    }, {
+                        headers: {
+                            'Authorization': \`Bearer \${getSessionToken()}\`
+                        }
+                    });
+
+                    if (response.data.success) {
+                        alert('정보가 수정되었습니다.');
+                        loadUserProfile();
+                    }
+                } catch (error) {
+                    alert(error.response?.data?.message || '정보 수정에 실패했습니다.');
+                }
+            }
+
+            // 비밀번호 변경
+            async function changePassword() {
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+
+                if (!currentPassword || !newPassword || !confirmPassword) {
+                    alert('모든 필드를 입력해주세요.');
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    alert('새 비밀번호가 일치하지 않습니다.');
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    alert('비밀번호는 6자 이상이어야 합니다.');
+                    return;
+                }
+
+                try {
+                    const response = await axios.post('/api/auth/change-password', {
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    }, {
+                        headers: {
+                            'Authorization': \`Bearer \${getSessionToken()}\`
+                        }
+                    });
+
+                    if (response.data.success) {
+                        alert('비밀번호가 변경되었습니다.');
+                        document.getElementById('currentPassword').value = '';
+                        document.getElementById('newPassword').value = '';
+                        document.getElementById('confirmPassword').value = '';
+                    }
+                } catch (error) {
+                    alert(error.response?.data?.message || '비밀번호 변경에 실패했습니다.');
+                }
+            }
+
+            // 탈퇴 모달 열기
+            async function openWithdrawalModal() {
+                // 수강/결제 내역 확인
+                try {
+                    const response = await axios.get('/api/auth/check-withdrawal', {
+                        headers: {
+                            'Authorization': \`Bearer \${getSessionToken()}\`
+                        }
+                    });
+
+                    document.getElementById('withdrawalModal').classList.remove('hidden');
+                    
+                    if (response.data.success && response.data.data.can_withdraw) {
+                        // 탈퇴 가능
+                        document.getElementById('withdrawalCheckMessage').innerHTML = '';
+                        document.getElementById('withdrawalForm').classList.remove('hidden');
+                        document.getElementById('withdrawalCloseButton').classList.add('hidden');
+                    } else {
+                        // 탈퇴 불가
+                        document.getElementById('withdrawalCheckMessage').innerHTML = \`
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                <p class="text-red-800 font-semibold mb-2">탈퇴할 수 없습니다</p>
+                                <p class="text-red-700 text-sm">\${response.data.data.reason}</p>
+                            </div>
+                        \`;
+                        document.getElementById('withdrawalForm').classList.add('hidden');
+                        document.getElementById('withdrawalCloseButton').classList.remove('hidden');
+                    }
+                } catch (error) {
+                    alert('탈퇴 가능 여부 확인에 실패했습니다.');
+                    closeWithdrawalModal();
+                }
+            }
+
+            // 탈퇴 모달 닫기
+            function closeWithdrawalModal() {
+                document.getElementById('withdrawalModal').classList.add('hidden');
+                document.querySelectorAll('input[name="reason"]').forEach(input => input.checked = false);
+                document.getElementById('reasonDetail').value = '';
+                document.getElementById('reasonDetailBox').classList.add('hidden');
+            }
+
+            // 기타 선택 시 상세 사유 입력란 표시
+            document.querySelectorAll('input[name="reason"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    if (e.target.value === '기타') {
+                        document.getElementById('reasonDetailBox').classList.remove('hidden');
+                    } else {
+                        document.getElementById('reasonDetailBox').classList.add('hidden');
+                    }
+                });
+            });
+
+            // 탈퇴 확인
+            async function confirmWithdrawal() {
+                const selectedReason = document.querySelector('input[name="reason"]:checked');
+                
+                if (!selectedReason) {
+                    alert('탈퇴 사유를 선택해주세요.');
+                    return;
+                }
+
+                const reason = selectedReason.value;
+                const reasonDetail = document.getElementById('reasonDetail').value;
+
+                if (reason === '기타' && !reasonDetail.trim()) {
+                    alert('기타 사유를 입력해주세요.');
+                    return;
+                }
+
+                if (!confirm('정말 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                    return;
+                }
+
+                try {
+                    const response = await axios.post('/api/auth/withdrawal', {
+                        reason: reason,
+                        reason_detail: reasonDetail
+                    }, {
+                        headers: {
+                            'Authorization': \`Bearer \${getSessionToken()}\`
+                        }
+                    });
+
+                    if (response.data.success) {
+                        alert(response.data.message);
+                        clearSession();
+                        window.location.href = '/';
+                    }
+                } catch (error) {
+                    alert(error.response?.data?.message || '탈퇴 처리에 실패했습니다.');
+                }
+            }
+
+            // 페이지 로드
+            loadUserProfile();
         </script>
     </body>
     </html>

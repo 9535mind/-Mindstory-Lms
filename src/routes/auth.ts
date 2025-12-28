@@ -47,13 +47,21 @@ auth.post('/register', async (c) => {
 
     const { DB } = c.env
 
-    // 이메일 중복 체크
+    // 이메일 중복 체크 (탈퇴한 사용자는 재가입 가능)
     const existingUser = await DB.prepare(`
-      SELECT id FROM users WHERE email = ?
-    `).bind(email).first()
+      SELECT id, deleted_at FROM users WHERE email = ?
+    `).bind(email).first<{ id: number; deleted_at: string | null }>()
 
-    if (existingUser) {
+    if (existingUser && !existingUser.deleted_at) {
       return c.json(errorResponse('이미 사용 중인 이메일입니다.'), 409)
+    }
+
+    // 탈퇴한 사용자가 재가입하는 경우
+    if (existingUser && existingUser.deleted_at) {
+      // 기존 데이터 완전 삭제 후 신규 가입 처리
+      await DB.prepare(`
+        DELETE FROM users WHERE id = ?
+      `).bind(existingUser.id).run()
     }
 
     // 비밀번호 해시
@@ -107,9 +115,12 @@ auth.post('/login', async (c) => {
 
     const { DB } = c.env
 
-    // 사용자 조회
+    // 사용자 조회 (탈퇴한 사용자는 로그인 불가)
     const user = await DB.prepare(`
-      SELECT * FROM users WHERE email = ? AND status = 'active'
+      SELECT * FROM users 
+      WHERE email = ? 
+      AND status = 'active'
+      AND deleted_at IS NULL
     `).bind(email).first<User>()
 
     if (!user) {
@@ -269,27 +280,15 @@ auth.put('/profile', requireAuth, async (c) => {
 })
 
 /**
- * POST /api/auth/withdrawal
- * 회원 탈퇴
+ * GET /api/auth/check-withdrawal
+ * 회원 탈퇴 가능 여부 확인
  */
-auth.post('/withdrawal', requireAuth, async (c) => {
+auth.get('/check-withdrawal', requireAuth, async (c) => {
   try {
     const user = c.get('user')
-    const { password } = await c.req.json<{ password: string }>()
-
-    if (!password) {
-      return c.json(errorResponse('비밀번호를 입력해주세요.'), 400)
-    }
-
     const { DB } = c.env
 
-    // 비밀번호 검증
-    const isValidPassword = await verifyPassword(password, user.password)
-    if (!isValidPassword) {
-      return c.json(errorResponse('비밀번호가 일치하지 않습니다.'), 401)
-    }
-
-    // 진행 중인 수강이 있는지 확인
+    // 1. 진행 중인 수강 확인
     const activeEnrollment = await DB.prepare(`
       SELECT COUNT(*) as count 
       FROM enrollments 
@@ -297,26 +296,167 @@ auth.post('/withdrawal', requireAuth, async (c) => {
     `).bind(user.id).first<{ count: number }>()
 
     if (activeEnrollment && activeEnrollment.count > 0) {
-      return c.json(errorResponse('진행 중인 수강이 있어 탈퇴할 수 없습니다. 환불 후 탈퇴해주세요.'), 400)
+      return c.json(successResponse({
+        can_withdraw: false,
+        reason: '진행 중인 수강이 있어 탈퇴할 수 없습니다. 수강을 완료하거나 환불 후 탈퇴해주세요.'
+      }))
     }
 
-    // 회원 상태를 탈퇴로 변경
+    // 2. 결제 내역 확인
+    const pendingPayment = await DB.prepare(`
+      SELECT COUNT(*) as count 
+      FROM payments 
+      WHERE user_id = ? AND status IN ('pending', 'completed')
+    `).bind(user.id).first<{ count: number }>()
+
+    if (pendingPayment && pendingPayment.count > 0) {
+      return c.json(successResponse({
+        can_withdraw: false,
+        reason: '처리 중이거나 완료된 결제 내역이 있어 탈퇴할 수 없습니다. 고객센터로 문의해주세요.'
+      }))
+    }
+
+    return c.json(successResponse({
+      can_withdraw: true,
+      reason: null
+    }))
+
+  } catch (error) {
+    console.error('Check withdrawal error:', error)
+    return c.json(errorResponse('서버 오류가 발생했습니다.'), 500)
+  }
+})
+
+/**
+ * POST /api/auth/change-password
+ * 비밀번호 변경
+ */
+auth.post('/change-password', requireAuth, async (c) => {
+  try {
+    const user = c.get('user')
+    const { current_password, new_password } = await c.req.json<{
+      current_password: string
+      new_password: string
+    }>()
+
+    if (!current_password || !new_password) {
+      return c.json(errorResponse('현재 비밀번호와 새 비밀번호를 입력해주세요.'), 400)
+    }
+
+    if (new_password.length < 6) {
+      return c.json(errorResponse('새 비밀번호는 6자 이상이어야 합니다.'), 400)
+    }
+
+    // 소셜 로그인 사용자는 비밀번호 변경 불가
+    if (user.social_provider) {
+      return c.json(errorResponse('소셜 로그인 사용자는 비밀번호를 변경할 수 없습니다.'), 400)
+    }
+
+    // 현재 비밀번호 검증
+    const isValidPassword = await verifyPassword(current_password, user.password)
+    if (!isValidPassword) {
+      return c.json(errorResponse('현재 비밀번호가 일치하지 않습니다.'), 401)
+    }
+
+    const { DB } = c.env
+
+    // 새 비밀번호 해시
+    const hashedPassword = await hashPassword(new_password)
+
+    // 비밀번호 업데이트
     await DB.prepare(`
       UPDATE users 
-      SET status = 'withdrawn', 
-          withdrawn_at = datetime('now'),
+      SET password = ?,
           updated_at = datetime('now')
       WHERE id = ?
-    `).bind(user.id).run()
+    `).bind(hashedPassword, user.id).run()
 
-    // 모든 세션 비활성화
+    return c.json(successResponse(null, '비밀번호가 변경되었습니다.'))
+
+  } catch (error) {
+    console.error('Change password error:', error)
+    return c.json(errorResponse('서버 오류가 발생했습니다.'), 500)
+  }
+})
+
+/**
+ * POST /api/auth/withdrawal
+ * 회원 탈퇴 (C안: 사유 선택 방식)
+ * - 수강 중인 강의 있으면 차단
+ * - 결제 내역 남아있으면 차단
+ * - 탈퇴 사유 필수 입력
+ * - 소프트 삭제 (30일 보관)
+ */
+auth.post('/withdrawal', requireAuth, async (c) => {
+  try {
+    const user = c.get('user')
+    const { reason, reason_detail } = await c.req.json<{ 
+      reason: string
+      reason_detail?: string 
+    }>()
+
+    // 탈퇴 사유 검증
+    const validReasons = [
+      '사용하지 않는 서비스입니다',
+      '원하는 강의가 없습니다',
+      '다른 학습 플랫폼을 사용합니다',
+      '개인정보 보호를 위해',
+      '기타'
+    ]
+    
+    if (!reason || !validReasons.includes(reason)) {
+      return c.json(errorResponse('탈퇴 사유를 선택해주세요.'), 400)
+    }
+
+    // 기타 선택 시 상세 사유 필수
+    if (reason === '기타' && !reason_detail) {
+      return c.json(errorResponse('기타 사유를 입력해주세요.'), 400)
+    }
+
+    const { DB } = c.env
+
+    // 1. 진행 중인 수강이 있는지 확인
+    const activeEnrollment = await DB.prepare(`
+      SELECT COUNT(*) as count 
+      FROM enrollments 
+      WHERE user_id = ? AND status = 'active'
+    `).bind(user.id).first<{ count: number }>()
+
+    if (activeEnrollment && activeEnrollment.count > 0) {
+      return c.json(errorResponse('진행 중인 수강이 있어 탈퇴할 수 없습니다. 수강을 완료하거나 환불 후 탈퇴해주세요.'), 400)
+    }
+
+    // 2. 결제 내역이 남아있는지 확인 (환불되지 않은 결제)
+    const pendingPayment = await DB.prepare(`
+      SELECT COUNT(*) as count 
+      FROM payments 
+      WHERE user_id = ? AND status IN ('pending', 'completed')
+    `).bind(user.id).first<{ count: number }>()
+
+    if (pendingPayment && pendingPayment.count > 0) {
+      return c.json(errorResponse('처리 중이거나 완료된 결제 내역이 있어 탈퇴할 수 없습니다. 고객센터로 문의해주세요.'), 400)
+    }
+
+    // 3. 소프트 삭제 (deleted_at 기록)
+    const deletionReason = reason === '기타' ? `${reason}: ${reason_detail}` : reason
+    
+    await DB.prepare(`
+      UPDATE users 
+      SET deleted_at = datetime('now'),
+          deletion_reason = ?,
+          status = 'withdrawn',
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(deletionReason, user.id).run()
+
+    // 4. 모든 세션 비활성화 (즉시 로그아웃)
     await DB.prepare(`
       UPDATE user_sessions 
       SET is_active = 0 
       WHERE user_id = ?
     `).bind(user.id).run()
 
-    return c.json(successResponse(null, '회원 탈퇴가 완료되었습니다.'))
+    return c.json(successResponse(null, '회원 탈퇴가 완료되었습니다. 30일 후 모든 데이터가 완전히 삭제됩니다. 그동안 고객센터에 문의하시면 복구 가능합니다.'))
 
   } catch (error) {
     console.error('Withdrawal error:', error)
