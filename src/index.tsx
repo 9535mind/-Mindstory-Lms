@@ -148,7 +148,7 @@ app.get('/', (c) => {
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="grid md:grid-cols-2 gap-12 items-center">
                     <div>
-                        <img src="https://sspark.genspark.ai/cfimages?u1=ddkX4DrK9HPPMGOdEytyQIXv6YddY9QBDQDa7M9%2BqFHdGQDK8%2BWCcK%2F6gts0SuuRoBhPP42IEL26Sd5F%2BmaSc918bkLEHkUBwNFJSAlAqPFifwsyqn5npPMq2pgmA%2BR9jOJk70zagTLHl22AWH3vO%2BLdSZLvr81PAdp5byVb5u9VcltGUqB4YgN34ykdxHiPNSEMHMRFnWt0I6%2B9MZC9aDoNLnP0jdZVrGp0ik5lpZEpppvugKx3uFH%2F7ErBA%2FTwomHecs%2BemtN1XKWTmhFsYTErOShGbrtXRQkvz1By&u2=Qju9QzjUnOGYAMTQ&width=1024" alt="교육 현장" class="rounded-lg shadow-2xl">
+                        <img src="https://sspark.genspark.ai/cfimages?u1=pJKVys7yKdnM7hp9Wm3raUxJVc6L6GNtJjJWWMEZQAc7K75FcNOfMTelNoPz85QDddQimZvu3lvWUr%2BFfjQismPV0bi58B5jh1gDTZIsYCl8fz9D684GuYJ1pStO18ebcpnygXn7JLJcMrXx52X9xsTmkP1ApZp%2BnJQbUClahmdRchjiKIzbmw%3D%3D&u2=ol5ROhpVIu0sDFZT&width=1024" alt="교육 현장 - 전문 코칭 멘토링" class="rounded-lg shadow-2xl hover:shadow-3xl transition-shadow duration-300">
                     </div>
                     <div>
                         <h3 class="text-4xl font-bold mb-6 text-gray-900">마인드스토리와 함께하는<br>특별한 성장 여정</h3>

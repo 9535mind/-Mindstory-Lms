@@ -20,6 +20,247 @@ adminCertifications.use('*', requireAuth, async (c, next) => {
 })
 
 /**
+ * GET /api/admin/certifications/types
+ * 민간자격 종류 목록
+ */
+adminCertifications.get('/types', async (c) => {
+  try {
+    const { DB } = c.env
+    
+    const types = await DB.prepare(`
+      SELECT * FROM certification_types
+      ORDER BY display_order ASC, created_at DESC
+    `).all()
+
+    return c.json(successResponse(types.results || []))
+
+  } catch (error) {
+    console.error('Get certification types error:', error)
+    return c.json(errorResponse('자격 종류 조회에 실패했습니다.'), 500)
+  }
+})
+
+/**
+ * POST /api/admin/certifications/types
+ * 민간자격 종류 생성
+ */
+adminCertifications.post('/types', async (c) => {
+  try {
+    const body = await c.req.json<{
+      name: string
+      code: string
+      category: string
+      description?: string
+      issuer_type: 'direct' | 'partner'
+      issuer_name?: string
+      issuer_registration_number?: string
+      price?: number
+      validity_period_months?: number
+      is_active?: boolean
+      display_order?: number
+      requirements?: any
+    }>()
+
+    if (!body.name || !body.code || !body.category) {
+      return c.json(errorResponse('필수 항목을 입력해주세요.'), 400)
+    }
+
+    const { DB } = c.env
+
+    // 자격명/코드 중복 확인
+    const existing = await DB.prepare(`
+      SELECT id FROM certification_types WHERE name = ? OR code = ?
+    `).bind(body.name, body.code).first()
+
+    if (existing) {
+      return c.json(errorResponse('이미 존재하는 자격명 또는 코드입니다.'), 409)
+    }
+
+    // 발급 기관 기본값 설정
+    let issuerName = body.issuer_name || '(주)마인드스토리'
+    if (body.issuer_type === 'direct') {
+      issuerName = '(주)마인드스토리'
+    }
+
+    // 자격 생성
+    const result = await DB.prepare(`
+      INSERT INTO certification_types (
+        name, code, category, description, issuer_type, issuer_name, issuer_registration_number,
+        price, validity_period_months, is_active, display_order, requirements
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      body.name,
+      body.code,
+      body.category,
+      body.description || null,
+      body.issuer_type || 'direct',
+      issuerName,
+      body.issuer_registration_number || null,
+      body.price || 0,
+      body.validity_period_months || 0,
+      body.is_active !== false ? 1 : 0,
+      body.display_order || 0,
+      body.requirements ? JSON.stringify(body.requirements) : null
+    ).run()
+
+    return c.json(successResponse({
+      id: result.meta.last_row_id,
+      name: body.name,
+      code: body.code
+    }, '자격이 생성되었습니다.'), 201)
+
+  } catch (error) {
+    console.error('Create certification type error:', error)
+    return c.json(errorResponse('자격 생성에 실패했습니다.'), 500)
+  }
+})
+
+/**
+ * PUT /api/admin/certifications/types/:id
+ * 민간자격 종류 수정
+ */
+adminCertifications.put('/types/:id', async (c) => {
+  try {
+    const typeId = parseInt(c.req.param('id'))
+    const body = await c.req.json<{
+      name?: string
+      code?: string
+      category?: string
+      description?: string
+      issuer_type?: 'direct' | 'partner'
+      issuer_name?: string
+      issuer_registration_number?: string
+      price?: number
+      validity_period_months?: number
+      is_active?: boolean
+      display_order?: number
+      requirements?: any
+    }>()
+
+    const { DB } = c.env
+
+    // 존재 확인
+    const existing = await DB.prepare(`
+      SELECT id FROM certification_types WHERE id = ?
+    `).bind(typeId).first()
+
+    if (!existing) {
+      return c.json(errorResponse('존재하지 않는 자격입니다.'), 404)
+    }
+
+    // 업데이트 필드 구성
+    const updates: string[] = []
+    const bindings: any[] = []
+
+    if (body.name !== undefined) {
+      updates.push('name = ?')
+      bindings.push(body.name)
+    }
+    if (body.code !== undefined) {
+      updates.push('code = ?')
+      bindings.push(body.code)
+    }
+    if (body.category !== undefined) {
+      updates.push('category = ?')
+      bindings.push(body.category)
+    }
+    if (body.description !== undefined) {
+      updates.push('description = ?')
+      bindings.push(body.description)
+    }
+    if (body.issuer_type !== undefined) {
+      updates.push('issuer_type = ?')
+      bindings.push(body.issuer_type)
+      // 직접 발급이면 자동으로 발급 기관 설정
+      if (body.issuer_type === 'direct') {
+        updates.push('issuer_name = ?')
+        bindings.push('(주)마인드스토리')
+      }
+    }
+    if (body.issuer_name !== undefined && body.issuer_type === 'partner') {
+      updates.push('issuer_name = ?')
+      bindings.push(body.issuer_name)
+    }
+    if (body.issuer_registration_number !== undefined) {
+      updates.push('issuer_registration_number = ?')
+      bindings.push(body.issuer_registration_number)
+    }
+    if (body.price !== undefined) {
+      updates.push('price = ?')
+      bindings.push(body.price)
+    }
+    if (body.validity_period_months !== undefined) {
+      updates.push('validity_period_months = ?')
+      bindings.push(body.validity_period_months)
+    }
+    if (body.is_active !== undefined) {
+      updates.push('is_active = ?')
+      bindings.push(body.is_active ? 1 : 0)
+    }
+    if (body.display_order !== undefined) {
+      updates.push('display_order = ?')
+      bindings.push(body.display_order)
+    }
+    if (body.requirements !== undefined) {
+      updates.push('requirements = ?')
+      bindings.push(JSON.stringify(body.requirements))
+    }
+
+    if (updates.length === 0) {
+      return c.json(errorResponse('업데이트할 항목이 없습니다.'), 400)
+    }
+
+    updates.push('updated_at = datetime(\'now\')')
+    bindings.push(typeId)
+
+    await DB.prepare(`
+      UPDATE certification_types
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `).bind(...bindings).run()
+
+    return c.json(successResponse(null, '자격이 수정되었습니다.'))
+
+  } catch (error) {
+    console.error('Update certification type error:', error)
+    return c.json(errorResponse('자격 수정에 실패했습니다.'), 500)
+  }
+})
+
+/**
+ * DELETE /api/admin/certifications/types/:id
+ * 민간자격 종류 삭제 (비활성화)
+ */
+adminCertifications.delete('/types/:id', async (c) => {
+  try {
+    const typeId = parseInt(c.req.param('id'))
+    const { DB } = c.env
+
+    // 존재 확인
+    const existing = await DB.prepare(`
+      SELECT id FROM certification_types WHERE id = ?
+    `).bind(typeId).first()
+
+    if (!existing) {
+      return c.json(errorResponse('존재하지 않는 자격입니다.'), 404)
+    }
+
+    // 비활성화 (실제 삭제하지 않음)
+    await DB.prepare(`
+      UPDATE certification_types
+      SET is_active = 0, updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(typeId).run()
+
+    return c.json(successResponse(null, '자격이 비활성화되었습니다.'))
+
+  } catch (error) {
+    console.error('Delete certification type error:', error)
+    return c.json(errorResponse('자격 삭제에 실패했습니다.'), 500)
+  }
+})
+
+/**
  * GET /api/admin/certifications/applications
  * 자격 신청 목록 (관리자)
  */
