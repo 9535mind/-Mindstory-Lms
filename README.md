@@ -214,7 +214,9 @@
 ## 💾 백업
 
 ### 최신 버전 (v2.2 - With Withdrawal System)
-- **백업 예정**: 곧 생성
+- **다운로드**: https://www.genspark.ai/api/files/s/LTrFpOHN
+- **파일명**: mindstory-lms-v2.2-withdrawal-system.tar.gz
+- **크기**: 506KB
 - **포함 내용**: 
   - 회원 탈퇴 기능 (C안)
   - 내 정보 페이지
@@ -224,6 +226,7 @@
   - 전체 소스 코드
   - 데이터베이스 마이그레이션
   - **운영 문서 (docs/)** ✨
+  - **변경 이력 (CHANGELOG.md)** ✨
 
 ### 이전 버전 (v1.4.0 - With Toss Payments)
 - **다운로드**: https://www.genspark.ai/api/files/s/djuYjQvn
