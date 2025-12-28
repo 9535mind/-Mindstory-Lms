@@ -155,7 +155,7 @@ app.get('/', (c) => {
         </header>
 
         <!-- 히어로 섹션 -->
-        <section class="section-image hero-gradient text-white py-32" style="background-image: url('https://www.genspark.ai/api/files/s/zktGaoUn?cache_control=3600');">
+        <section class="section-image hero-gradient text-white py-32" style="background-image: url('https://www.genspark.ai/api/files/s/Nx5k1tgA');">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
                 <h2 class="text-5xl md:text-6xl font-bold mb-6 drop-shadow-lg">
                     마음을 이해하고 성장하는 여정
@@ -172,66 +172,11 @@ app.get('/', (c) => {
                         <i class="fas fa-graduation-cap mr-2"></i>
                         과정 둘러보기
                     </button>
-                    <button onclick="window.location.href='/register'" class="bg-white/10 backdrop-blur-sm text-white px-10 py-4 rounded-lg font-bold text-lg hover:bg-white/20 transition shadow-xl border-2 border-white">
-                        <i class="fas fa-user-plus mr-2"></i>
-                        무료 회원가입
-                    </button>
                 </div>
             </div>
         </section>
 
-        <!-- 소개 섹션 -->
-        <section class="py-20 bg-white">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="grid md:grid-cols-2 gap-12 items-center">
-                    <div>
-                        <img src="https://www.genspark.ai/api/files/s/Y73JXeVz?cache_control=3600" alt="교육 현장 - 전문 코칭 멘토링" class="rounded-lg shadow-2xl hover:shadow-3xl transition-shadow duration-300">
-                    </div>
-                    <div>
-                        <h3 class="text-4xl font-bold mb-6 text-gray-900">마인드스토리와 함께하는<br>특별한 성장 여정</h3>
-                        <p class="text-lg text-gray-700 mb-6">
-                            마인드스토리 원격평생교육원은 심리학과 상담학을 결합한 전문 교육 플랫폼입니다.
-                            실생활에 바로 적용할 수 있는 실전 노하우를 배우고, 전문가로 성장하세요.
-                        </p>
-                        <div class="space-y-4">
-                            <div class="flex items-start">
-                                <div class="flex-shrink-0">
-                                    <div class="flex items-center justify-center h-12 w-12 rounded-md btn-primary">
-                                        <i class="fas fa-check text-xl"></i>
-                                    </div>
-                                </div>
-                                <div class="ml-4">
-                                    <h4 class="text-lg font-semibold text-gray-900">체계적인 커리큘럼</h4>
-                                    <p class="text-gray-600">전문가가 설계한 단계별 학습 과정</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start">
-                                <div class="flex-shrink-0">
-                                    <div class="flex items-center justify-center h-12 w-12 rounded-md btn-success">
-                                        <i class="fas fa-users text-xl"></i>
-                                    </div>
-                                </div>
-                                <div class="ml-4">
-                                    <h4 class="text-lg font-semibold text-gray-900">현장 전문가 강의</h4>
-                                    <p class="text-gray-600">20년 경력의 전문가 직강</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start">
-                                <div class="flex-shrink-0">
-                                    <div class="flex items-center justify-center h-12 w-12 rounded-md btn-warning">
-                                        <i class="fas fa-certificate text-xl"></i>
-                                    </div>
-                                </div>
-                                <div class="ml-4">
-                                    <h4 class="text-lg font-semibold text-gray-900">공식 수료증 발급</h4>
-                                    <p class="text-gray-600">과정 수료 시 공식 수료증 제공</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+
 
         <!-- 주요 특징 -->
         <section class="py-20 bg-gray-50">
