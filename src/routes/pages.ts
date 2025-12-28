@@ -226,12 +226,12 @@ pages.get('/register', (c) => {
     <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-2xl w-full space-y-8">
             <div>
-                <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                    회원가입
+                <h2 class="mt-6 text-center text-4xl font-extrabold text-gray-900">
+                    회원가입 방법을 선택해주세요
                 </h2>
-                <p class="mt-2 text-center text-sm text-gray-600">
+                <p class="mt-4 text-center text-base text-gray-600">
                     이미 계정이 있으신가요?
-                    <a href="/login" class="font-medium text-indigo-600 hover:text-indigo-500">
+                    <a href="/login" class="font-medium text-indigo-600 hover:text-indigo-500 text-lg">
                         로그인하기
                     </a>
                 </p>
@@ -239,7 +239,6 @@ pages.get('/register', (c) => {
             
             <!-- 회원가입 방법 선택 -->
             <div id="registerMethodSelection" class="mt-8">
-                <h3 class="text-center text-lg font-semibold text-gray-900 mb-6">회원가입 방법을 선택해주세요</h3>
                 <div class="grid md:grid-cols-3 gap-4">
                     <!-- 이메일 회원가입 -->
                     <button onclick="selectRegisterMethod('email')" 
