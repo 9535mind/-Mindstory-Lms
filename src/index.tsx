@@ -25,6 +25,8 @@ import pagesAdmin from './routes/pages-admin'
 import popups from './routes/popups'
 import videos from './routes/videos'
 import progress from './routes/progress'
+import certifications from './routes/certifications'
+import adminCertifications from './routes/admin-certifications'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -46,6 +48,8 @@ app.route('/api/admin', admin)
 app.route('/api/popups', popups)
 app.route('/api/videos', videos)  // 영상 관리
 app.route('/api/progress', progress)  // 진도율 추적
+app.route('/api/certifications', certifications)  // 민간자격
+app.route('/api/admin/certifications', adminCertifications)  // 관리자 민간자격
 
 // 페이지 라우트
 app.route('/', pages)
