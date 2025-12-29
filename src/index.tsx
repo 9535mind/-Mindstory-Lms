@@ -74,9 +74,9 @@ app.get('/', (c) => {
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-        <script src="/static/js/auth.js?v=20251229122947"></script>
-        <script src="/static/js/utils.js?v=20251229122947"></script>
-        <script src="/static/js/popup.js?v=20251229122947"></script>
+        <script src="/static/js/auth.js?v=2025122913"></script>
+        <script src="/static/js/utils.js?v=2025122913"></script>
+        <script src="/static/js/popup.js?v=2025122913"></script>
         <style>
             /* 새로운 색상 팔레트 */
             :root {
@@ -395,12 +395,6 @@ app.get('/', (c) => {
             
             // 페이지 로드 시 실행
             document.addEventListener('DOMContentLoaded', () => {
-                console.log('[메인 페이지] DOMContentLoaded 이벤트 발생')
-                console.log('[메인 페이지] localStorage 확인:', {
-                    session_token: localStorage.getItem('session_token') ? '존재' : '없음',
-                    user: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null
-                })
-                
                 loadCourses()
                 updateHeader()
                 
