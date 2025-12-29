@@ -251,13 +251,13 @@ pages.get('/register', (c) => {
                     </button>
                 </div>
                 
-                <!-- 소셜 로그인 (설정 필요) -->
+                <!-- 소셜 로그인 (Google만) -->
                 <div class="space-y-3">
                     <div class="text-center text-sm text-gray-500 mb-2">또는 소셜 계정으로</div>
                     
-                    <!-- 구글로 계속하기 ✅ 활성화! -->
+                    <!-- 구글로 계속하기 ✅ -->
                     <button onclick="registerWithGoogle()" 
-                        class="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all shadow-sm">
+                        class="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all shadow-md">
                         <svg class="w-6 h-6" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -266,29 +266,6 @@ pages.get('/register', (c) => {
                         </svg>
                         <span class="text-lg font-semibold text-gray-700">Google로 계속하기</span>
                     </button>
-                    
-                    <!-- 카카오로 계속하기 (비활성화) -->
-                    <div class="relative">
-                        <button disabled 
-                            class="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gray-100 border-2 border-gray-300 rounded-lg cursor-not-allowed opacity-50">
-                            <img src="https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_small.png" 
-                                 alt="Kakao" class="w-6 h-6 opacity-50">
-                            <span class="text-lg font-semibold text-gray-500">카카오 (설정 중)</span>
-                        </button>
-                        <div class="absolute top-1/2 right-4 transform -translate-y-1/2">
-                            <i class="fas fa-lock text-gray-400"></i>
-                        </div>
-                    </div>
-                    
-                    <!-- 전화번호로 시작하기 (테스트 모드) -->
-                    <button onclick="selectRegisterMethod('phone')" 
-                        class="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-green-500 rounded-lg hover:bg-green-50 transition-all">
-                        <i class="fas fa-mobile-alt text-2xl text-green-600"></i>
-                        <div class="text-left">
-                            <div class="text-lg font-semibold text-gray-900">전화번호로 가입하기</div>
-                            <div class="text-xs text-gray-500">테스트 모드 (인증번호: 123456)</div>
-                        </div>
-                    </button>
                 </div>
                 
                 <!-- 안내 메시지 -->
@@ -296,12 +273,10 @@ pages.get('/register', (c) => {
                     <div class="flex items-start gap-2">
                         <i class="fas fa-info-circle text-blue-600 mt-0.5"></i>
                         <div class="text-sm text-gray-700">
-                            <p class="font-semibold mb-2">💡 빠른 가입 안내</p>
+                            <p class="font-semibold mb-2">💡 가입 방법</p>
                             <ul class="space-y-1 ml-4 list-disc">
-                                <li><strong>Google 계정</strong>: 1초 만에 시작하기! ✅</li>
-                                <li><strong>이메일 회원가입</strong>: 안전하고 빠른 가입 ✅</li>
-                                <li><strong>전화번호 가입</strong>: 테스트 모드 (인증번호: 123456)</li>
-                                <li><strong>카카오 로그인</strong>: 설정 진행 중 (곧 오픈!)</li>
+                                <li><strong>이메일 회원가입</strong>: 가장 안전하고 확실한 방법 ✅</li>
+                                <li><strong>Google 로그인</strong>: 1초 만에 간편 가입 ✅</li>
                             </ul>
                         </div>
                     </div>
