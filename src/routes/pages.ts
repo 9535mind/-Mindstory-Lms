@@ -210,11 +210,23 @@ pages.get('/login', (c) => {
                     AuthManager.saveSession(response.data.data.session_token, response.data.data.user)
                     showToast('로그인되었습니다.', 'success')
                     
-                    // 리다이렉트
+                    // 역할에 따른 리다이렉트
                     setTimeout(() => {
                         const urlParams = new URLSearchParams(window.location.search)
-                        const redirect = urlParams.get('redirect') || '/my-courses'
-                        window.location.href = redirect
+                        const redirect = urlParams.get('redirect')
+                        
+                        if (redirect) {
+                            // 리다이렉트 파라미터가 있으면 해당 페이지로
+                            window.location.href = redirect
+                        } else {
+                            // 관리자는 관리자 대시보드, 일반 사용자는 내 강의실
+                            const user = response.data.data.user
+                            if (user.role === 'admin') {
+                                window.location.href = '/admin/dashboard'
+                            } else {
+                                window.location.href = '/my-courses'
+                            }
+                        }
                     }, 500)
                 }
             } catch (error) {
