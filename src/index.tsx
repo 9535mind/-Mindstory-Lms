@@ -143,6 +143,7 @@ app.get('/', (c) => {
                     <nav class="hidden md:flex space-x-8">
                         <a href="#courses" class="text-gray-700 transition-colors duration-200" style="hover:color: var(--color-primary);" onmouseover="this.style.color='var(--color-primary)'" onmouseout="this.style.color=''">과정 안내</a>
                         <a href="/my-courses" class="text-gray-700 transition-colors duration-200" onmouseover="this.style.color='var(--color-primary)'" onmouseout="this.style.color=''">내 강의실</a>
+                        <a href="/admin" id="adminLink" class="text-gray-700 transition-colors duration-200" style="display:none" onmouseover="this.style.color='var(--color-primary)'" onmouseout="this.style.color=''">관리자</a>
                     </nav>
                     <div id="headerAuthButtons" class="flex items-center space-x-4">
                         <a href="/login" class="text-gray-700 transition-colors duration-200" onmouseover="this.style.color='var(--color-primary)'" onmouseout="this.style.color=''">로그인</a>
