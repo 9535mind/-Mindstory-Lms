@@ -140,15 +140,22 @@ function updateHeader() {
   const authButtons = document.getElementById('headerAuthButtons')
   const userMenu = document.getElementById('headerUserMenu')
   const userName = document.getElementById('headerUserName')
+  const adminLink = document.getElementById('adminLink')
 
   if (AuthManager.isLoggedIn()) {
     const user = AuthManager.getUser()
     if (authButtons) authButtons.style.display = 'none'
     if (userMenu) userMenu.style.display = 'flex'
     if (userName && user) userName.textContent = user.name + ' 님'
+    
+    // 관리자 링크 표시
+    if (adminLink && user && user.role === 'admin') {
+      adminLink.style.display = 'inline-block'
+    }
   } else {
     if (authButtons) authButtons.style.display = 'flex'
     if (userMenu) userMenu.style.display = 'none'
+    if (adminLink) adminLink.style.display = 'none'
   }
 }
 

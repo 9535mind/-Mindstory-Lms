@@ -85,14 +85,9 @@ const getCommonHead = (title: string) => `
 
 const getCommonFoot = () => `
 <script>
-  // 헤더 업데이트
+  // 헤더 업데이트 (로그인 상태 및 관리자 링크 자동 처리)
   document.addEventListener('DOMContentLoaded', () => {
     updateHeader()
-    
-    // 관리자 링크 표시
-    if (AuthManager.isAdmin()) {
-      document.getElementById('adminLink').style.display = 'block'
-    }
   })
 </script>
 </body>
