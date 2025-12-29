@@ -29,6 +29,8 @@ import videos from './routes/videos'
 import progress from './routes/progress'
 import certifications from './routes/certifications'
 import adminCertifications from './routes/admin-certifications'
+import upload from './routes/upload'
+import ai from './routes/ai'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -54,6 +56,9 @@ app.route('/api/videos', videos)  // 영상 관리
 app.route('/api/progress', progress)  // 진도율 추적
 app.route('/api/certifications', certifications)  // 민간자격
 app.route('/api/admin/certifications', adminCertifications)  // 관리자 민간자격
+app.route('/api/upload', upload)  // 파일 업로드
+app.route('/api', upload)  // 스토리지 파일 서빙
+app.route('/api/ai', ai)  // AI 도우미
 
 // 페이지 라우트
 app.route('/', pages)

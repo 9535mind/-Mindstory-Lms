@@ -383,6 +383,32 @@ courses.post('/:id/lessons', requireAdmin, async (c) => {
 })
 
 /**
+ * GET /api/courses/:courseId/lessons/:lessonId
+ * 차시 상세 조회
+ */
+courses.get('/:courseId/lessons/:lessonId', optionalAuth, async (c) => {
+  try {
+    const courseId = c.req.param('courseId')
+    const lessonId = c.req.param('lessonId')
+    const { DB } = c.env
+
+    const lesson = await DB.prepare(`
+      SELECT * FROM lessons WHERE id = ? AND course_id = ?
+    `).bind(lessonId, courseId).first<Lesson>()
+
+    if (!lesson) {
+      return c.json(errorResponse('차시를 찾을 수 없습니다.'), 404)
+    }
+
+    return c.json(successResponse(lesson))
+
+  } catch (error) {
+    console.error('Get lesson error:', error)
+    return c.json(errorResponse('서버 오류가 발생했습니다.'), 500)
+  }
+})
+
+/**
  * PUT /api/courses/:courseId/lessons/:lessonId
  * 차시 수정 (관리자 전용)
  */

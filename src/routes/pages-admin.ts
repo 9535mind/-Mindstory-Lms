@@ -255,6 +255,9 @@ pagesAdmin.get('/courses', async (c) => {
                     <button onclick="openNewCourseModal()" class="bg-purple-700 text-white px-6 py-2 rounded-lg hover:bg-purple-800">
                         <i class="fas fa-plus mr-2"></i>새 강좌 등록
                     </button>
+                    <button onclick="openAIAssistantModal()" class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-lg hover:from-purple-700 hover:to-pink-700">
+                        <i class="fas fa-robot mr-2"></i>AI 도우미
+                    </button>
                 </div>
             </div>
 
@@ -318,14 +321,54 @@ pagesAdmin.get('/courses', async (c) => {
                                 class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
                         </div>
 
-                        <!-- 썸네일 URL -->
+                        <!-- 썸네일 URL 또는 파일 업로드 -->
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                썸네일 이미지 URL
+                                썸네일 이미지
                             </label>
-                            <input type="url" id="courseThumbnail" placeholder="https://..."
-                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                            <p class="text-sm text-gray-500 mt-1">* Unsplash 등 무료 이미지 사이트의 URL을 입력하세요</p>
+                            
+                            <!-- 탭 선택 -->
+                            <div class="flex border-b mb-4">
+                                <button type="button" id="urlTab" onclick="switchImageTab('url')" 
+                                    class="px-4 py-2 border-b-2 border-purple-700 text-purple-700 font-semibold">
+                                    URL 입력
+                                </button>
+                                <button type="button" id="uploadTab" onclick="switchImageTab('upload')" 
+                                    class="px-4 py-2 text-gray-600">
+                                    파일 업로드
+                                </button>
+                            </div>
+
+                            <!-- URL 입력 -->
+                            <div id="urlSection">
+                                <input type="url" id="courseThumbnail" placeholder="https://..."
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <p class="text-sm text-gray-500 mt-1">* Unsplash 등 무료 이미지 사이트의 URL을 입력하세요</p>
+                            </div>
+
+                            <!-- 파일 업로드 -->
+                            <div id="uploadSection" class="hidden">
+                                <div class="flex items-center space-x-4">
+                                    <input type="file" id="courseThumbnailFile" accept="image/*"
+                                        class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <button type="button" onclick="uploadImage()" 
+                                        class="bg-purple-700 text-white px-4 py-2 rounded-lg hover:bg-purple-800">
+                                        <i class="fas fa-upload mr-2"></i>업로드
+                                    </button>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-1">* JPG, PNG, GIF, WebP (최대 5MB)</p>
+                                <div id="uploadProgress" class="hidden mt-2">
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div id="uploadProgressBar" class="bg-purple-700 h-2 rounded-full" style="width: 0%"></div>
+                                    </div>
+                                    <p class="text-sm text-gray-500 mt-1">업로드 중...</p>
+                                </div>
+                            </div>
+
+                            <!-- 미리보기 -->
+                            <div id="thumbnailPreview" class="mt-4 hidden">
+                                <img id="previewImage" src="" alt="미리보기" class="w-full h-48 object-cover rounded-lg">
+                            </div>
                         </div>
 
                         <!-- 강좌 유형 -->
@@ -408,6 +451,79 @@ pagesAdmin.get('/courses', async (c) => {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- AI 도우미 모달 -->
+        <div id="aiAssistantModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+                <div class="p-6 border-b flex justify-between items-center bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-t-lg">
+                    <h2 class="text-2xl font-bold">
+                        <i class="fas fa-robot mr-2"></i>AI 강좌 생성 도우미
+                    </h2>
+                    <button onclick="closeAIAssistantModal()" class="text-white hover:text-gray-200">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+                        <div class="flex items-start">
+                            <i class="fas fa-info-circle text-purple-600 mt-1 mr-3"></i>
+                            <div class="text-sm text-gray-700">
+                                <p class="font-semibold mb-1">AI가 강좌를 자동으로 기획해드립니다!</p>
+                                <ul class="list-disc list-inside space-y-1 text-gray-600">
+                                    <li>주제만 입력하면 강좌 제목, 설명, 차시 구성을 자동 생성</li>
+                                    <li>생성된 내용은 수정 가능합니다</li>
+                                    <li>OpenAI API 키가 필요합니다 (GenSpark API Keys 탭에서 설정)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <form id="aiAssistantForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                강좌 주제 <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" id="aiTopic" required placeholder="예: 파이썬 기초, 디지털 마케팅, 리더십 코칭"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                대상 (선택)
+                            </label>
+                            <input type="text" id="aiTargetAudience" placeholder="예: 직장인, 대학생, 초보자"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">난이도</label>
+                            <select id="aiDifficulty"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <option value="beginner">초급</option>
+                                <option value="intermediate">중급</option>
+                                <option value="advanced">고급</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">수강 기간 (일)</label>
+                            <input type="number" id="aiDuration" min="1" value="30"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div class="flex justify-end space-x-4 pt-6 border-t">
+                            <button type="button" onclick="closeAIAssistantModal()"
+                                class="px-6 py-2 border rounded-lg hover:bg-gray-100">취소</button>
+                            <button type="submit" id="aiGenerateBtn"
+                                class="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700">
+                                <i class="fas fa-magic mr-2"></i>AI로 생성하기
+                            </button>
+                        </div>
+                    </form>
+                    <div id="aiGenerating" class="hidden text-center py-8">
+                        <i class="fas fa-robot fa-3x text-purple-600 mb-4 animate-pulse"></i>
+                        <p class="text-lg font-semibold text-gray-800 mb-2">AI가 강좌를 생성하고 있습니다...</p>
+                        <p class="text-sm text-gray-600">잠시만 기다려주세요 (약 10~20초 소요)</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -955,6 +1071,439 @@ pagesAdmin.get('/payments', async (c) => {
 
             function viewPayment(id) {
                 alert('결제 상세 페이지는 준비 중입니다.');
+            }
+        </script>
+    </body>
+    </html>
+  `)
+})
+
+/**
+ * GET /admin/courses/:courseId/lessons
+ * 강좌 차시 관리 페이지
+ */
+pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
+  const courseId = c.req.param('courseId')
+  
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>차시 관리 - 마인드스토리 LMS</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <link href="/static/styles.css" rel="stylesheet">
+    </head>
+    <body class="bg-gray-100">
+        <!-- 관리자 헤더 -->
+        <nav class="bg-purple-700 text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold">
+                        <i class="fas fa-list mr-2"></i>
+                        차시 관리
+                    </h1>
+                    <div class="flex items-center space-x-4">
+                        <a href="/" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors">
+                            <i class="fas fa-users mr-1"></i>수강생 모드
+                        </a>
+                        <span id="adminName">로딩중...</span>
+                        <button onclick="logout()" class="bg-white text-purple-700 px-4 py-2 rounded hover:bg-gray-100">
+                            <i class="fas fa-sign-out-alt mr-1"></i>로그아웃
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 관리자 메뉴 -->
+        <div class="bg-white shadow-md">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex space-x-1">
+                    <a href="/admin/dashboard" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-home mr-1"></i>대시보드
+                    </a>
+                    <a href="/admin/courses" class="px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
+                        <i class="fas fa-book mr-1"></i>강좌 관리
+                    </a>
+                    <a href="/admin/users" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-users mr-1"></i>회원 관리
+                    </a>
+                    <a href="/admin/payments" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-credit-card mr-1"></i>결제 관리
+                    </a>
+                    <a href="/admin/popups" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-bell mr-1"></i>팝업 관리
+                    </a>
+                    <a href="/admin/settings" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-cog mr-1"></i>설정
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 메인 콘텐츠 -->
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <!-- 강좌 정보 카드 -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <div class="flex justify-between items-start">
+                    <div class="flex items-start">
+                        <img id="courseThumbnail" src="" alt="강좌 썸네일" class="w-32 h-32 object-cover rounded-lg mr-6" onerror="this.src='https://via.placeholder.com/128'">
+                        <div>
+                            <h2 id="courseTitle" class="text-2xl font-bold text-gray-800 mb-2">로딩중...</h2>
+                            <p id="courseDescription" class="text-gray-600 mb-4">로딩중...</p>
+                            <div class="flex items-center space-x-4 text-sm text-gray-500">
+                                <span><i class="fas fa-users mr-1"></i><span id="enrolledCount">0</span>명 수강중</span>
+                                <span><i class="fas fa-list mr-1"></i><span id="lessonCount">0</span>개 차시</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <a href="/admin/courses" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                            <i class="fas fa-arrow-left mr-2"></i>강좌 목록
+                        </a>
+                        <button onclick="openNewLessonModal()" class="bg-purple-700 text-white px-4 py-2 rounded-lg hover:bg-purple-800">
+                            <i class="fas fa-plus mr-2"></i>새 차시 추가
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 차시 목록 -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-list-ol mr-2"></i>차시 목록
+                    </h2>
+                    <div class="space-y-4" id="lessonList">
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>로딩중...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 차시 등록/수정 모달 -->
+        <div id="lessonModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-edit mr-2"></i><span id="modalTitle">새 차시 추가</span>
+                    </h2>
+                    <button onclick="closeLessonModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                <form id="lessonForm" class="p-6 space-y-6">
+                    <input type="hidden" id="lessonId">
+                    <input type="hidden" id="courseIdInput" value="${courseId}">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- 차시 제목 -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                차시 제목 <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" id="lessonTitle" required
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+
+                        <!-- 차시 순서 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                차시 순서 <span class="text-red-500">*</span>
+                            </label>
+                            <input type="number" id="lessonOrder" min="1" required
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <p class="text-sm text-gray-500 mt-1">* 차시 순서를 입력하세요 (예: 1, 2, 3...)</p>
+                        </div>
+
+                        <!-- 재생 시간 (분) -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                재생 시간 (분)
+                            </label>
+                            <input type="number" id="lessonDuration" min="0" value="0"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+
+                        <!-- 영상 URL -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                영상 URL (YouTube Private 링크)
+                            </label>
+                            <input type="url" id="lessonVideoUrl" placeholder="https://youtube.com/watch?v=..."
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <p class="text-sm text-gray-500 mt-1">* YouTube Private 영상 링크를 입력하세요</p>
+                        </div>
+
+                        <!-- 차시 설명 -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                차시 설명
+                            </label>
+                            <textarea id="lessonDescription" rows="4"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                        </div>
+
+                        <!-- 무료 미리보기 -->
+                        <div class="md:col-span-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="lessonIsFree" class="mr-2">
+                                <span class="text-sm font-medium text-gray-700">무료 미리보기 (비로그인 사용자도 시청 가능)</span>
+                            </label>
+                        </div>
+
+                        <!-- 공개 여부 -->
+                        <div class="md:col-span-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="lessonIsActive" checked class="mr-2">
+                                <span class="text-sm font-medium text-gray-700">공개 (수강생에게 공개)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-4 pt-6 border-t">
+                        <button type="button" onclick="closeLessonModal()"
+                            class="px-6 py-2 border rounded-lg hover:bg-gray-100">
+                            취소
+                        </button>
+                        <button type="submit"
+                            class="px-6 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800">
+                            <i class="fas fa-save mr-2"></i>저장
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script src="/static/js/auth.js"></script>
+        <script>
+            const courseId = ${courseId};
+            let allLessons = [];
+
+            // 페이지 로드 시 초기화
+            document.addEventListener('DOMContentLoaded', async () => {
+              // 관리자 권한 확인
+              const user = await requireAdmin();
+              if (!user) return;
+
+              // 관리자 이름 표시
+              document.getElementById('adminName').textContent = user.name;
+
+              // 강좌 정보 로드
+              await loadCourseInfo();
+
+              // 차시 목록 로드
+              await loadLessons();
+
+              // 폼 제출 이벤트
+              document.getElementById('lessonForm').addEventListener('submit', handleSubmit);
+            });
+
+            // 강좌 정보 로드
+            async function loadCourseInfo() {
+              try {
+                const response = await apiRequest('GET', \`/api/courses/\${courseId}\`);
+                
+                if (response.success) {
+                  const course = response.data;
+                  document.getElementById('courseTitle').textContent = course.title;
+                  document.getElementById('courseDescription').textContent = course.description || '';
+                  document.getElementById('courseThumbnail').src = course.thumbnail_url || 'https://via.placeholder.com/128';
+                  document.getElementById('enrolledCount').textContent = course.enrolled_count || 0;
+                } else {
+                  showError('강좌 정보를 불러오는데 실패했습니다.');
+                }
+              } catch (error) {
+                console.error('Load course info error:', error);
+                showError('강좌 정보를 불러오는데 실패했습니다.');
+              }
+            }
+
+            // 차시 목록 로드
+            async function loadLessons() {
+              try {
+                const response = await apiRequest('GET', \`/api/courses/\${courseId}/lessons\`);
+                
+                if (response.success) {
+                  allLessons = response.data;
+                  document.getElementById('lessonCount').textContent = allLessons.length;
+                  renderLessons(allLessons);
+                } else {
+                  showError('차시 목록을 불러오는데 실패했습니다.');
+                }
+              } catch (error) {
+                console.error('Load lessons error:', error);
+                showError('차시 목록을 불러오는데 실패했습니다.');
+              }
+            }
+
+            // 차시 목록 렌더링
+            function renderLessons(lessons) {
+              const container = document.getElementById('lessonList');
+              
+              if (!lessons || lessons.length === 0) {
+                container.innerHTML = \`
+                  <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                    <p>등록된 차시가 없습니다.</p>
+                    <button onclick="openNewLessonModal()" class="mt-4 bg-purple-700 text-white px-6 py-2 rounded-lg hover:bg-purple-800">
+                      <i class="fas fa-plus mr-2"></i>첫 차시 추가하기
+                    </button>
+                  </div>
+                \`;
+                return;
+              }
+
+              container.innerHTML = lessons.map(lesson => \`
+                <div class="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div class="flex justify-between items-start">
+                    <div class="flex items-start flex-1">
+                      <div class="bg-purple-100 text-purple-700 rounded-full w-10 h-10 flex items-center justify-center font-bold mr-4">
+                        \${lesson.lesson_number}
+                      </div>
+                      <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-1">\${lesson.title}</h3>
+                        <p class="text-sm text-gray-600 mb-2">\${lesson.description || '설명 없음'}</p>
+                        <div class="flex items-center space-x-4 text-sm text-gray-500">
+                          \${lesson.video_duration_minutes ? \`<span><i class="fas fa-clock mr-1"></i>\${lesson.video_duration_minutes}분</span>\` : ''}
+                          \${lesson.video_url ? \`<span><i class="fas fa-video mr-1"></i>영상 있음</span>\` : '<span><i class="fas fa-video-slash mr-1 text-gray-400"></i>영상 없음</span>'}
+                          \${lesson.is_free_preview === 1 ? '<span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold"><i class="fas fa-unlock mr-1"></i>무료 미리보기</span>' : ''}
+                          \${lesson.status !== 'active' ? '<span class="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold"><i class="fas fa-eye-slash mr-1"></i>비공개</span>' : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex space-x-2">
+                      <button onclick="editLesson(\${lesson.id})" class="text-blue-600 hover:text-blue-800" title="수정">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button onclick="deleteLesson(\${lesson.id})" class="text-red-600 hover:text-red-800" title="삭제">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              \`).join('');
+            }
+
+            // 새 차시 모달 열기
+            function openNewLessonModal() {
+              document.getElementById('modalTitle').textContent = '새 차시 추가';
+              document.getElementById('lessonForm').reset();
+              document.getElementById('lessonId').value = '';
+              document.getElementById('courseIdInput').value = courseId;
+              
+              // 다음 순서 번호 자동 설정
+              const nextOrder = allLessons.length > 0 ? Math.max(...allLessons.map(l => l.lesson_number)) + 1 : 1;
+              document.getElementById('lessonOrder').value = nextOrder;
+              
+              document.getElementById('lessonIsActive').checked = true;
+              document.getElementById('lessonModal').classList.remove('hidden');
+              document.getElementById('lessonModal').classList.add('flex');
+            }
+
+            // 차시 수정 모달
+            async function editLesson(lessonId) {
+              try {
+                const response = await apiRequest('GET', \`/api/courses/\${courseId}/lessons/\${lessonId}\`);
+                
+                if (response.success) {
+                  const lesson = response.data;
+                  
+                  document.getElementById('modalTitle').textContent = '차시 수정';
+                  document.getElementById('lessonId').value = lesson.id;
+                  document.getElementById('lessonTitle').value = lesson.title;
+                  document.getElementById('lessonOrder').value = lesson.lesson_number;
+                  document.getElementById('lessonDuration').value = lesson.video_duration_minutes || 0;
+                  document.getElementById('lessonVideoUrl').value = lesson.video_url || '';
+                  document.getElementById('lessonDescription').value = lesson.description || '';
+                  document.getElementById('lessonIsFree').checked = lesson.is_free_preview === 1;
+                  document.getElementById('lessonIsActive').checked = lesson.status === 'active';
+                  
+                  document.getElementById('lessonModal').classList.remove('hidden');
+                  document.getElementById('lessonModal').classList.add('flex');
+                }
+              } catch (error) {
+                console.error('Edit lesson error:', error);
+                showError('차시 정보를 불러오는데 실패했습니다.');
+              }
+            }
+
+            // 모달 닫기
+            function closeLessonModal() {
+              document.getElementById('lessonModal').classList.add('hidden');
+              document.getElementById('lessonModal').classList.remove('flex');
+            }
+
+            // 폼 제출 처리
+            async function handleSubmit(e) {
+              e.preventDefault();
+              
+              const lessonId = document.getElementById('lessonId').value;
+              const formData = {
+                course_id: parseInt(courseId),
+                title: document.getElementById('lessonTitle').value,
+                lesson_number: parseInt(document.getElementById('lessonOrder').value),
+                video_duration_minutes: parseInt(document.getElementById('lessonDuration').value) || 0,
+                video_url: document.getElementById('lessonVideoUrl').value || null,
+                description: document.getElementById('lessonDescription').value || null,
+                is_free_preview: document.getElementById('lessonIsFree').checked ? 1 : 0,
+                status: document.getElementById('lessonIsActive').checked ? 'active' : 'inactive'
+              };
+
+              try {
+                let response;
+                if (lessonId) {
+                  // 수정
+                  response = await apiRequest('PUT', \`/api/courses/\${courseId}/lessons/\${lessonId}\`, formData);
+                } else {
+                  // 등록
+                  response = await apiRequest('POST', \`/api/courses/\${courseId}/lessons\`, formData);
+                }
+
+                if (response.success) {
+                  alert(lessonId ? '차시가 수정되었습니다.' : '차시가 추가되었습니다.');
+                  closeLessonModal();
+                  await loadLessons();
+                } else {
+                  showError(response.error || '저장에 실패했습니다.');
+                }
+              } catch (error) {
+                console.error('Save lesson error:', error);
+                showError('저장에 실패했습니다.');
+              }
+            }
+
+            // 차시 삭제
+            async function deleteLesson(lessonId) {
+              if (!confirm('정말 이 차시를 삭제하시겠습니까?')) {
+                return;
+              }
+
+              try {
+                const response = await apiRequest('DELETE', \`/api/courses/\${courseId}/lessons/\${lessonId}\`);
+                
+                if (response.success) {
+                  alert('차시가 삭제되었습니다.');
+                  await loadLessons();
+                } else {
+                  showError(response.error || '삭제에 실패했습니다.');
+                }
+              } catch (error) {
+                console.error('Delete lesson error:', error);
+                showError('삭제에 실패했습니다.');
+              }
+            }
+
+            // 에러 메시지 표시
+            function showError(message) {
+              alert(message);
             }
         </script>
     </body>

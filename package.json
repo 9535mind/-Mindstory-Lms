@@ -24,7 +24,9 @@
     "git:log": "git log --oneline"
   },
   "dependencies": {
-    "hono": "^4.11.3"
+    "hono": "^4.11.3",
+    "js-yaml": "^4.1.1",
+    "openai": "^6.15.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251210.0",

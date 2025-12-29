@@ -3,6 +3,91 @@
  */
 
 let allCourses = [];
+let currentImageTab = 'url';  // 현재 선택된 탭 ('url' 또는 'upload')
+
+// 탭 전환
+function switchImageTab(tab) {
+  currentImageTab = tab;
+  
+  // 탭 버튼 스타일 변경
+  const urlTab = document.getElementById('urlTab');
+  const uploadTab = document.getElementById('uploadTab');
+  
+  if (tab === 'url') {
+    urlTab.classList.add('border-b-2', 'border-purple-700', 'text-purple-700', 'font-semibold');
+    urlTab.classList.remove('text-gray-600');
+    uploadTab.classList.remove('border-b-2', 'border-purple-700', 'text-purple-700', 'font-semibold');
+    uploadTab.classList.add('text-gray-600');
+    
+    document.getElementById('urlSection').classList.remove('hidden');
+    document.getElementById('uploadSection').classList.add('hidden');
+  } else {
+    uploadTab.classList.add('border-b-2', 'border-purple-700', 'text-purple-700', 'font-semibold');
+    uploadTab.classList.remove('text-gray-600');
+    urlTab.classList.remove('border-b-2', 'border-purple-700', 'text-purple-700', 'font-semibold');
+    urlTab.classList.add('text-gray-600');
+    
+    document.getElementById('uploadSection').classList.remove('hidden');
+    document.getElementById('urlSection').classList.add('hidden');
+  }
+}
+
+// 이미지 업로드
+async function uploadImage() {
+  const fileInput = document.getElementById('courseThumbnailFile');
+  const file = fileInput.files[0];
+  
+  if (!file) {
+    alert('파일을 선택해주세요.');
+    return;
+  }
+  
+  // 진행 바 표시
+  document.getElementById('uploadProgress').classList.remove('hidden');
+  
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const token = AuthManager.getSessionToken();
+    const response = await fetch('/api/upload/image', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      // 업로드 성공 - URL을 courseThumbnail 필드에 설정
+      document.getElementById('courseThumbnail').value = result.data.url;
+      
+      // 미리보기 표시
+      showThumbnailPreview(result.data.url);
+      
+      alert('이미지가 업로드되었습니다.');
+    } else {
+      alert(result.error || '이미지 업로드에 실패했습니다.');
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    alert('이미지 업로드에 실패했습니다.');
+  } finally {
+    // 진행 바 숨기기
+    document.getElementById('uploadProgress').classList.add('hidden');
+  }
+}
+
+// 썸네일 미리보기 표시
+function showThumbnailPreview(url) {
+  const preview = document.getElementById('thumbnailPreview');
+  const previewImage = document.getElementById('previewImage');
+  
+  previewImage.src = url;
+  preview.classList.remove('hidden');
+}
 
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', async () => {
@@ -35,6 +120,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       priceInput.disabled = false;
       discountInput.disabled = false;
+    }
+  });
+
+  // 썸네일 URL 입력 시 미리보기
+  document.getElementById('courseThumbnail').addEventListener('input', (e) => {
+    const url = e.target.value;
+    if (url) {
+      showThumbnailPreview(url);
+    } else {
+      document.getElementById('thumbnailPreview').classList.add('hidden');
     }
   });
 });
@@ -263,3 +358,74 @@ function formatDate(dateString) {
 function showError(message) {
   alert(message);
 }
+
+// AI 도우미 모달 열기
+function openAIAssistantModal() {
+  document.getElementById('aiAssistantModal').classList.remove('hidden');
+  document.getElementById('aiAssistantModal').classList.add('flex');
+  document.getElementById('aiAssistantForm').classList.remove('hidden');
+  document.getElementById('aiGenerating').classList.add('hidden');
+}
+
+// AI 도우미 모달 닫기
+function closeAIAssistantModal() {
+  document.getElementById('aiAssistantModal').classList.add('hidden');
+  document.getElementById('aiAssistantModal').classList.remove('flex');
+  document.getElementById('aiAssistantForm').reset();
+}
+
+// AI 폼 제출
+document.addEventListener('DOMContentLoaded', () => {
+  const aiForm = document.getElementById('aiAssistantForm');
+  if (aiForm) {
+    aiForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const topic = document.getElementById('aiTopic').value;
+      const targetAudience = document.getElementById('aiTargetAudience').value;
+      const difficulty = document.getElementById('aiDifficulty').value;
+      const duration = parseInt(document.getElementById('aiDuration').value);
+      
+      // 생성 중 표시
+      document.getElementById('aiAssistantForm').classList.add('hidden');
+      document.getElementById('aiGenerating').classList.remove('hidden');
+      
+      try {
+        const response = await apiRequest('POST', '/api/ai/generate-course', {
+          topic,
+          target_audience: targetAudience,
+          difficulty,
+          duration
+        });
+        
+        if (response.success) {
+          const courseData = response.data;
+          
+          // AI 모달 닫기
+          closeAIAssistantModal();
+          
+          // 강좌 등록 모달 열기 및 데이터 채우기
+          openNewCourseModal();
+          document.getElementById('courseTitle').value = courseData.title;
+          document.getElementById('courseDescription').value = courseData.description;
+          document.getElementById('courseType').value = courseData.course_type;
+          document.getElementById('courseDuration').value = duration;
+          
+          // 차시 정보를 저장 (나중에 차시 추가 시 사용)
+          sessionStorage.setItem('aiGeneratedLessons', JSON.stringify(courseData.lessons));
+          
+          alert('AI가 강좌를 생성했습니다! 내용을 확인하고 수정 후 저장해주세요.\n\n💡 강좌 저장 후 차시 관리에서 AI가 생성한 차시를 추가할 수 있습니다.');
+        } else {
+          showError(response.error || 'AI 생성에 실패했습니다.');
+          document.getElementById('aiAssistantForm').classList.remove('hidden');
+          document.getElementById('aiGenerating').classList.add('hidden');
+        }
+      } catch (error) {
+        console.error('AI generation error:', error);
+        showError('AI 생성에 실패했습니다. OpenAI API 키가 설정되어 있는지 확인해주세요.');
+        document.getElementById('aiAssistantForm').classList.remove('hidden');
+        document.getElementById('aiGenerating').classList.add('hidden');
+      }
+    });
+  }
+});
