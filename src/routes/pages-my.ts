@@ -74,8 +74,9 @@ pagesMy.get('/my-courses', (c) => {
         </div>
         
         <script>
-            if (!requireAuth()) {
-                // requireAuth가 false를 반환하면 이미 로그인 페이지로 리다이렉트됨
+            // 로그인 확인
+            if (!AuthManager.isLoggedIn()) {
+                window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname)
             }
             
             // 사용자 이름 표시
