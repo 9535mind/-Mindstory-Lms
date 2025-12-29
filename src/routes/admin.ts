@@ -9,6 +9,39 @@ import { requireAdmin } from '../middleware/auth'
 
 const admin = new Hono<{ Bindings: Bindings }>()
 
+// 대시보드 통계 (상세)
+admin.get('/dashboard/stats', requireAdmin, async (c) => {
+  const { DB } = c.env
+
+  try {
+    // 기본 통계
+    const [users, courses, activeEnroll] = await Promise.all([
+      DB.prepare(`SELECT COUNT(*) as count FROM users WHERE status = 'active'`).first(),
+      DB.prepare(`SELECT COUNT(*) as count FROM courses WHERE status = 'active'`).first(),
+      DB.prepare(`SELECT COUNT(*) as count FROM enrollments WHERE status = 'active'`).first(),
+    ])
+
+    // 이번 달 매출 (월별)
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+    const monthlyRevenue = await DB.prepare(`
+      SELECT SUM(final_amount) as total 
+      FROM payments 
+      WHERE status = 'completed' AND created_at >= ?
+    `).bind(startOfMonth).first()
+
+    return c.json(successResponse({
+      total_users: users?.count || 0,
+      total_courses: courses?.count || 0,
+      active_enrollments: activeEnroll?.count || 0,
+      monthly_revenue: monthlyRevenue?.total || 0
+    }))
+  } catch (error) {
+    console.error('Dashboard stats error:', error)
+    return c.json(errorResponse('통계 조회 실패'), 500)
+  }
+})
+
 // 대시보드 통계
 admin.get('/dashboard', requireAdmin, async (c) => {
   const { DB } = c.env

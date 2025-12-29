@@ -952,7 +952,7 @@ pages.get('/courses/:id', async (c) => {
             }
         }
         
-        function enrollCourse(courseId) {
+        async function enrollCourse(courseId) {
             if (!AuthManager.isLoggedIn()) {
                 showToast('로그인이 필요합니다.', 'error')
                 setTimeout(() => {
@@ -961,7 +961,33 @@ pages.get('/courses/:id', async (c) => {
                 return
             }
             
-            window.location.href = '/payment/checkout/' + courseId
+            try {
+                // 과정 정보 다시 조회 (무료/유료 확인)
+                const courseResponse = await axios.get(\`/api/courses/\${courseId}\`)
+                const course = courseResponse.data.data
+                
+                if (course.is_free) {
+                    // 무료 과정: 바로 수강신청
+                    const token = AuthManager.getSessionToken()
+                    const response = await axios.post('/api/enrollments', 
+                        { course_id: courseId },
+                        { headers: { 'Authorization': \`Bearer \${token}\` } }
+                    )
+                    
+                    if (response.data.success) {
+                        showToast('수강 신청이 완료되었습니다!', 'success')
+                        setTimeout(() => {
+                            window.location.href = '/my-courses'
+                        }, 1000)
+                    }
+                } else {
+                    // 유료 과정: 결제 페이지로 이동
+                    window.location.href = '/payment/checkout/' + courseId
+                }
+            } catch (error) {
+                const message = error.response?.data?.error || '수강 신청에 실패했습니다.'
+                showToast(message, 'error')
+            }
         }
         
         document.addEventListener('DOMContentLoaded', () => {
