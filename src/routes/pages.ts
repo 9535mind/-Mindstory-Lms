@@ -974,23 +974,29 @@ pages.get('/courses/:id', async (c) => {
                                     <h2 class="text-2xl font-bold text-gray-900 mb-4">
                                         <i class="fas fa-list mr-2"></i>커리큘럼
                                     </h2>
-                                    <div class="space-y-2">
+                                    <div class="space-y-3">
                                         \${lessons.map((lesson, index) => \`
                                             <div onclick="goToLesson(\${course.id}, \${lesson.id}, \${lesson.is_free_preview}, \${enrollment ? true : false})" 
-                                                 class="bg-white border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition cursor-pointer">
+                                                 class="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-indigo-500 hover:shadow-lg transition-all cursor-pointer group">
                                                 <div class="flex justify-between items-center">
                                                     <div class="flex items-center flex-1">
-                                                        <span class="bg-indigo-100 text-indigo-600 font-bold w-8 h-8 rounded-full flex items-center justify-center mr-3">
+                                                        <span class="bg-indigo-100 text-indigo-600 font-bold w-12 h-12 rounded-full flex items-center justify-center mr-4 text-lg group-hover:bg-indigo-600 group-hover:text-white transition">
                                                             \${index + 1}
                                                         </span>
-                                                        <span class="font-semibold text-gray-900 flex-1">\${lesson.title}</span>
-                                                        \${lesson.is_free_preview ? '<span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold ml-2">무료</span>' : ''}
+                                                        <div class="flex-1">
+                                                            <div class="flex items-center">
+                                                                <span class="font-bold text-gray-900 text-lg">\${lesson.title}</span>
+                                                                \${lesson.is_free_preview ? '<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold ml-3">무료 미리보기</span>' : ''}
+                                                            </div>
+                                                            <span class="text-gray-500 text-sm mt-1 inline-block">
+                                                                <i class="fas fa-clock mr-1"></i>\${lesson.video_duration_minutes || 0}분
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div class="flex items-center">
-                                                        <span class="text-gray-500 text-sm mr-3">
-                                                            <i class="fas fa-clock mr-1"></i>\${lesson.video_duration_minutes || 0}분
-                                                        </span>
-                                                        <i class="fas fa-play-circle text-indigo-600 text-2xl"></i>
+                                                    <div class="flex items-center ml-4">
+                                                        <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-bold transition group-hover:scale-110">
+                                                            <i class="fas fa-play mr-2"></i>재생
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
