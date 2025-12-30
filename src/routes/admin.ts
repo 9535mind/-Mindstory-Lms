@@ -366,13 +366,11 @@ admin.delete('/courses/:id', requireAdmin, async (c) => {
   }
 })
 
-export default admin
-
 /**
  * GET /api/admin/videos
  * 모든 영상 목록 조회 (관리자 전용)
  */
-adminRoutes.get('/videos', async (c) => {
+admin.get('/videos', async (c) => {
   try {
     const { DB } = c.env
 
@@ -403,3 +401,5 @@ adminRoutes.get('/videos', async (c) => {
     return c.json(errorResponse('서버 오류가 발생했습니다.'), 500)
   }
 })
+
+export default admin
