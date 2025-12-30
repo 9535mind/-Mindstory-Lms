@@ -1233,6 +1233,9 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                         <a href="/admin/courses" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
                             <i class="fas fa-arrow-left mr-2"></i>강좌 목록
                         </a>
+                        <button onclick="openBulkLessonModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+                            <i class="fas fa-layer-group mr-2"></i>차시 일괄 입력
+                        </button>
                         <button onclick="openNewLessonModal()" class="bg-purple-700 text-white px-4 py-2 rounded-lg hover:bg-purple-800">
                             <i class="fas fa-plus mr-2"></i>새 차시 추가
                         </button>
@@ -1257,6 +1260,119 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
         </div>
 
         <!-- 차시 등록/수정 모달 -->
+        <!-- 차시 일괄 입력 모달 -->
+        <div id="bulkLessonModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-layer-group mr-2"></i>차시 일괄 입력
+                    </h2>
+                    <button onclick="closeBulkLessonModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                
+                <div class="p-6">
+                    <!-- 입력 방법 선택 탭 -->
+                    <div class="flex border-b mb-6">
+                        <button id="manualTab" onclick="switchBulkInputMode('manual')" 
+                                class="px-6 py-3 font-semibold border-b-2 border-purple-600 text-purple-600">
+                            <i class="fas fa-keyboard mr-2"></i>수동 입력
+                        </button>
+                        <button id="aiTab" onclick="switchBulkInputMode('ai')" 
+                                class="px-6 py-3 font-semibold text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-robot mr-2"></i>AI 자동 생성
+                        </button>
+                    </div>
+                    
+                    <!-- 수동 입력 섹션 -->
+                    <div id="manualSection">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                            <h3 class="font-semibold text-blue-900 mb-2">
+                                <i class="fas fa-info-circle mr-2"></i>입력 형식
+                            </h3>
+                            <p class="text-sm text-blue-800 mb-2">각 줄에 하나의 차시를 입력하세요. 형식: <code class="bg-blue-100 px-2 py-1 rounded">차시번호|제목|설명|재생시간(분)</code></p>
+                            <p class="text-sm text-blue-800 font-mono">예: 1|메타인지란 무엇인가?|메타인지의 기본 개념을 배웁니다|30</p>
+                            <p class="text-sm text-blue-600 mt-2">* 설명과 재생시간은 선택사항입니다.</p>
+                        </div>
+                        
+                        <textarea id="bulkLessonInput" rows="12" 
+                                  placeholder="1|메타인지란 무엇인가?|메타인지의 기본 개념을 배웁니다|30&#10;2|메타인지 향상 전략|효과적인 메타인지 향상 방법을 학습합니다|45&#10;3|실전 적용 사례|실제 학습 상황에서의 메타인지 활용법|40"
+                                  class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"></textarea>
+                        
+                        <div class="flex justify-between items-center mt-4">
+                            <p class="text-sm text-gray-600">
+                                <i class="fas fa-lightbulb text-yellow-500 mr-1"></i>
+                                Tip: 엑셀에서 복사-붙여넣기도 가능합니다
+                            </p>
+                            <button onclick="processBulkLessons('manual')" 
+                                    class="bg-purple-700 text-white px-6 py-3 rounded-lg hover:bg-purple-800 font-semibold">
+                                <i class="fas fa-check mr-2"></i>일괄 등록
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- AI 자동 생성 섹션 -->
+                    <div id="aiSection" class="hidden">
+                        <div class="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-6 mb-6">
+                            <h3 class="font-semibold text-purple-900 mb-3 flex items-center">
+                                <i class="fas fa-magic mr-2 text-purple-600"></i>AI가 강좌 커리큘럼을 자동으로 생성합니다
+                            </h3>
+                            <p class="text-sm text-purple-800">강좌 제목과 목표를 기반으로 최적의 차시 구성을 제안합니다.</p>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    생성할 차시 수 <span class="text-red-500">*</span>
+                                </label>
+                                <input type="number" id="aiLessonCount" min="3" max="20" value="5"
+                                       class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <p class="text-sm text-gray-500 mt-1">* 3~20개 사이로 입력하세요</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    추가 요구사항 (선택사항)
+                                </label>
+                                <textarea id="aiRequirements" rows="3" 
+                                          placeholder="예: 초보자를 위한 기초 중심 구성, 실습 위주의 내용 포함 등"
+                                          class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                            </div>
+                            
+                            <div class="flex justify-end">
+                                <button onclick="processBulkLessons('ai')" 
+                                        class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 font-semibold shadow-lg">
+                                    <i class="fas fa-wand-magic-sparkles mr-2"></i>AI로 생성하기
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- AI 생성 결과 미리보기 -->
+                        <div id="aiPreviewSection" class="hidden mt-6">
+                            <div class="border-t pt-6">
+                                <h3 class="font-semibold text-gray-900 mb-4">
+                                    <i class="fas fa-eye mr-2"></i>생성된 차시 미리보기
+                                </h3>
+                                <div id="aiPreviewList" class="space-y-2 max-h-80 overflow-y-auto bg-gray-50 rounded-lg p-4 mb-4">
+                                    <!-- AI 생성 결과가 여기에 표시됩니다 -->
+                                </div>
+                                <div class="flex justify-end space-x-3">
+                                    <button onclick="regenerateAILessons()" 
+                                            class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600">
+                                        <i class="fas fa-redo mr-2"></i>다시 생성
+                                    </button>
+                                    <button onclick="confirmAILessons()" 
+                                            class="bg-purple-700 text-white px-6 py-2 rounded-lg hover:bg-purple-800">
+                                        <i class="fas fa-check mr-2"></i>확인 및 등록
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div id="lessonModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
             <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
                 <div class="p-6 border-b flex justify-between items-center">

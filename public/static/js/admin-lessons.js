@@ -650,3 +650,236 @@ async function generateLessonDescription() {
     descriptionTextarea.focus();
   }
 }
+
+// ========== 차시 일괄 입력 기능 ==========
+
+let generatedLessons = [];
+
+function openBulkLessonModal() {
+    document.getElementById('bulkLessonModal').classList.remove('hidden');
+    document.getElementById('bulkLessonModal').classList.add('flex');
+    
+    // 초기화
+    document.getElementById('bulkLessonInput').value = '';
+    document.getElementById('aiLessonCount').value = 5;
+    document.getElementById('aiRequirements').value = '';
+    document.getElementById('aiPreviewSection').classList.add('hidden');
+    generatedLessons = [];
+}
+
+function closeBulkLessonModal() {
+    document.getElementById('bulkLessonModal').classList.remove('flex');
+    document.getElementById('bulkLessonModal').classList.add('hidden');
+}
+
+function switchBulkInputMode(mode) {
+    const manualTab = document.getElementById('manualTab');
+    const aiTab = document.getElementById('aiTab');
+    const manualSection = document.getElementById('manualSection');
+    const aiSection = document.getElementById('aiSection');
+    
+    if (mode === 'manual') {
+        manualTab.classList.add('border-b-2', 'border-purple-600', 'text-purple-600');
+        manualTab.classList.remove('text-gray-500');
+        aiTab.classList.remove('border-b-2', 'border-purple-600', 'text-purple-600');
+        aiTab.classList.add('text-gray-500');
+        manualSection.classList.remove('hidden');
+        aiSection.classList.add('hidden');
+    } else {
+        aiTab.classList.add('border-b-2', 'border-purple-600', 'text-purple-600');
+        aiTab.classList.remove('text-gray-500');
+        manualTab.classList.remove('border-b-2', 'border-purple-600', 'text-purple-600');
+        manualTab.classList.add('text-gray-500');
+        aiSection.classList.remove('hidden');
+        manualSection.classList.add('hidden');
+    }
+}
+
+async function processBulkLessons(mode) {
+    if (mode === 'manual') {
+        await processManualBulkLessons();
+    } else {
+        await processAIBulkLessons();
+    }
+}
+
+async function processManualBulkLessons() {
+    const input = document.getElementById('bulkLessonInput').value.trim();
+    
+    if (!input) {
+        alert('차시 정보를 입력해주세요.');
+        return;
+    }
+    
+    // 파싱
+    const lines = input.split('\n').filter(line => line.trim());
+    const lessons = [];
+    
+    for (const line of lines) {
+        const parts = line.split('|').map(p => p.trim());
+        if (parts.length < 2) {
+            alert(`잘못된 형식입니다: ${line}\n\n형식: 차시번호|제목|설명|재생시간(분)`);
+            return;
+        }
+        
+        lessons.push({
+            lesson_number: parseInt(parts[0]) || 0,
+            title: parts[1] || '',
+            description: parts[2] || '',
+            video_duration_minutes: parseInt(parts[3]) || 0
+        });
+    }
+    
+    if (lessons.length === 0) {
+        alert('등록할 차시가 없습니다.');
+        return;
+    }
+    
+    // 확인
+    if (!confirm(`${lessons.length}개의 차시를 일괄 등록하시겠습니까?`)) {
+        return;
+    }
+    
+    // 등록
+    await bulkCreateLessons(lessons);
+}
+
+async function processAIBulkLessons() {
+    const count = parseInt(document.getElementById('aiLessonCount').value);
+    const requirements = document.getElementById('aiRequirements').value.trim();
+    
+    if (count < 3 || count > 20) {
+        alert('차시 수는 3~20개 사이로 입력해주세요.');
+        return;
+    }
+    
+    try {
+        // 강좌 정보 가져오기
+        const courseTitle = document.getElementById('courseTitle').textContent;
+        const courseDescription = document.getElementById('courseDescription').textContent;
+        
+        // AI 생성 요청
+        showToast('AI가 차시를 생성하고 있습니다... ⏳', 'info');
+        
+        const response = await apiRequest('/api/ai/generate-course', {
+            method: 'POST',
+            body: JSON.stringify({
+                topic: courseTitle,
+                target_audience: requirements || '일반 학습자',
+                difficulty: 'beginner',
+                duration: 30
+            })
+        });
+        
+        if (response.success && response.data.lessons) {
+            generatedLessons = response.data.lessons.slice(0, count);
+            displayAIPreview(generatedLessons);
+            showToast('AI 생성이 완료되었습니다! ✅', 'success');
+        } else {
+            throw new Error('AI 생성에 실패했습니다.');
+        }
+        
+    } catch (error) {
+        console.error('AI generation error:', error);
+        alert('AI 생성에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
+    }
+}
+
+function displayAIPreview(lessons) {
+    const previewList = document.getElementById('aiPreviewList');
+    const html = lessons.map((lesson, index) => `
+        <div class="border border-gray-300 rounded-lg p-4">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="font-semibold text-gray-900 mb-1">
+                        ${lesson.lesson_number}강. ${lesson.title}
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">${lesson.description || ''}</p>
+                    <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                        <i class="fas fa-clock mr-1"></i>${lesson.video_duration_minutes || 0}분
+                    </span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    previewList.innerHTML = html;
+    document.getElementById('aiPreviewSection').classList.remove('hidden');
+}
+
+async function regenerateAILessons() {
+    document.getElementById('aiPreviewSection').classList.add('hidden');
+    await processAIBulkLessons();
+}
+
+async function confirmAILessons() {
+    if (generatedLessons.length === 0) {
+        alert('생성된 차시가 없습니다.');
+        return;
+    }
+    
+    if (!confirm(`${generatedLessons.length}개의 차시를 등록하시겠습니까?`)) {
+        return;
+    }
+    
+    await bulkCreateLessons(generatedLessons);
+}
+
+async function bulkCreateLessons(lessons) {
+    try {
+        showToast('차시를 등록하고 있습니다... ⏳', 'info');
+        
+        const token = localStorage.getItem('session_token');
+        const courseId = document.getElementById('courseIdInput').value;
+        
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const lesson of lessons) {
+            try {
+                const response = await fetch(`/api/courses/${courseId}/lessons`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        title: lesson.title,
+                        lesson_number: lesson.lesson_number,
+                        description: lesson.description || '',
+                        video_duration_minutes: lesson.video_duration_minutes || 0,
+                        content_type: 'video',
+                        is_free_preview: 0,
+                        status: 'active'
+                    })
+                });
+                
+                if (response.ok) {
+                    successCount++;
+                } else {
+                    failCount++;
+                    console.error(`Failed to create lesson ${lesson.lesson_number}:`, await response.text());
+                }
+                
+            } catch (error) {
+                failCount++;
+                console.error(`Error creating lesson ${lesson.lesson_number}:`, error);
+            }
+        }
+        
+        closeBulkLessonModal();
+        
+        if (failCount === 0) {
+            showToast(`✅ ${successCount}개의 차시가 성공적으로 등록되었습니다!`, 'success');
+        } else {
+            showToast(`⚠️ ${successCount}개 성공, ${failCount}개 실패`, 'warning');
+        }
+        
+        // 목록 새로고침
+        loadLessons();
+        
+    } catch (error) {
+        console.error('Bulk create error:', error);
+        alert('일괄 등록 중 오류가 발생했습니다: ' + error.message);
+    }
+}

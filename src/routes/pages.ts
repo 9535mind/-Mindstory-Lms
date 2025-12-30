@@ -1035,4 +1035,267 @@ pages.get('/courses/:id', async (c) => {
   `)
 })
 
+/**
+ * GET /courses/:courseId/lessons/:lessonId
+ * 차시 학습 페이지 (영상 재생)
+ */
+pages.get('/courses/:courseId/lessons/:lessonId', async (c) => {
+  const courseId = c.req.param('courseId')
+  const lessonId = c.req.param('lessonId')
+  
+  return c.html(`
+    ${getCommonHead('차시 학습')}
+    ${getHeader()}
+    
+    <div class="min-h-screen bg-gray-50 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div id="lessonContent">
+                <div class="text-center py-12">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+                    <p class="mt-4 text-gray-600">차시 정보를 불러오는 중...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const courseId = '${courseId}'
+        const lessonId = '${lessonId}'
+        
+        let currentLesson = null
+        let allLessons = []
+        let enrollment = null
+        
+        async function loadLessonContent() {
+            try {
+                const token = AuthManager.getSessionToken()
+                
+                // 차시 정보 조회
+                const lessonResponse = await axios.get(\`/api/courses/\${courseId}/lessons/\${lessonId}\`, {
+                    headers: token ? { 'Authorization': \`Bearer \${token}\` } : {}
+                })
+                currentLesson = lessonResponse.data.data.lesson
+                enrollment = lessonResponse.data.data.enrollment
+                
+                // 전체 차시 목록 조회
+                const lessonsResponse = await axios.get(\`/api/courses/\${courseId}/lessons\`, {
+                    headers: token ? { 'Authorization': \`Bearer \${token}\` } : {}
+                })
+                allLessons = lessonsResponse.data.data
+                
+                renderLessonContent()
+                
+                // 학습 진도 기록 (로그인한 경우만)
+                if (token && enrollment) {
+                    recordProgress()
+                }
+                
+            } catch (error) {
+                console.error('Load lesson error:', error)
+                const message = error.response?.data?.error || '차시 정보를 불러오지 못했습니다.'
+                document.getElementById('lessonContent').innerHTML = \`
+                    <div class="text-center py-12">
+                        <i class="fas fa-exclamation-circle text-6xl text-red-500 mb-4"></i>
+                        <p class="text-xl text-gray-700">\${message}</p>
+                        <a href="/courses/\${courseId}" class="mt-4 inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">
+                            강좌로 돌아가기
+                        </a>
+                    </div>
+                \`
+            }
+        }
+        
+        function renderLessonContent() {
+            const currentIndex = allLessons.findIndex(l => l.id == lessonId)
+            const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null
+            const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null
+            
+            // 영상 URL 처리
+            let videoHtml = ''
+            if (currentLesson.video_url) {
+                if (currentLesson.video_provider === 'youtube') {
+                    videoHtml = \`
+                        <div class="relative pb-[56.25%] h-0">
+                            <iframe 
+                                src="\${currentLesson.video_url}" 
+                                class="absolute top-0 left-0 w-full h-full rounded-lg shadow-lg"
+                                frameborder="0" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowfullscreen>
+                            </iframe>
+                        </div>
+                    \`
+                } else {
+                    // R2 저장소 영상
+                    const videoUrl = \`/api/storage/\${currentLesson.video_url}\`
+                    videoHtml = \`
+                        <video 
+                            id="lessonVideo"
+                            class="w-full rounded-lg shadow-lg"
+                            controls 
+                            controlsList="nodownload"
+                            oncontextmenu="return false;"
+                            onended="handleVideoEnd()">
+                            <source src="\${videoUrl}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    \`
+                }
+            } else {
+                videoHtml = \`
+                    <div class="bg-gray-200 rounded-lg p-12 text-center">
+                        <i class="fas fa-video-slash text-6xl text-gray-400 mb-4"></i>
+                        <p class="text-xl text-gray-600">영상이 준비 중입니다.</p>
+                    </div>
+                \`
+            }
+            
+            const html = \`
+                <div class="grid lg:grid-cols-3 gap-6">
+                    <!-- 왼쪽: 영상 플레이어 -->
+                    <div class="lg:col-span-2">
+                        <!-- 영상 -->
+                        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                            \${videoHtml}
+                        </div>
+                        
+                        <!-- 차시 정보 -->
+                        <div class="bg-white rounded-lg shadow-lg p-6">
+                            <div class="flex items-start justify-between mb-4">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-semibold">
+                                            \${currentLesson.lesson_number}강
+                                        </span>
+                                        \${currentLesson.is_free_preview ? 
+                                            '<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold"><i class="fas fa-unlock mr-1"></i>무료</span>' : 
+                                            ''
+                                        }
+                                    </div>
+                                    <h1 class="text-3xl font-bold text-gray-900">\${currentLesson.title}</h1>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-gray-500">재생 시간</p>
+                                    <p class="text-2xl font-bold text-indigo-600">\${currentLesson.video_duration_minutes || 0}분</p>
+                                </div>
+                            </div>
+                            
+                            \${currentLesson.description ? \`
+                                <div class="border-t pt-4">
+                                    <h3 class="font-semibold text-gray-900 mb-2">학습 내용</h3>
+                                    <p class="text-gray-600 whitespace-pre-wrap">\${currentLesson.description}</p>
+                                </div>
+                            \` : ''}
+                            
+                            <!-- 네비게이션 버튼 -->
+                            <div class="border-t pt-4 mt-4 flex justify-between">
+                                \${prevLesson ? \`
+                                    <a href="/courses/\${courseId}/lessons/\${prevLesson.id}" 
+                                       class="flex items-center text-indigo-600 hover:text-indigo-800">
+                                        <i class="fas fa-chevron-left mr-2"></i>
+                                        <div class="text-left">
+                                            <p class="text-xs text-gray-500">이전 차시</p>
+                                            <p class="font-semibold">\${prevLesson.lesson_number}강. \${prevLesson.title}</p>
+                                        </div>
+                                    </a>
+                                \` : '<div></div>'}
+                                
+                                \${nextLesson ? \`
+                                    <a href="/courses/\${courseId}/lessons/\${nextLesson.id}" 
+                                       class="flex items-center text-indigo-600 hover:text-indigo-800">
+                                        <div class="text-right">
+                                            <p class="text-xs text-gray-500">다음 차시</p>
+                                            <p class="font-semibold">\${nextLesson.lesson_number}강. \${nextLesson.title}</p>
+                                        </div>
+                                        <i class="fas fa-chevron-right ml-2"></i>
+                                    </a>
+                                \` : '<div></div>'}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 오른쪽: 전체 차시 목록 -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-lg shadow-lg p-6 sticky top-6">
+                            <h2 class="text-xl font-bold text-gray-900 mb-4">
+                                <i class="fas fa-list mr-2"></i>전체 차시
+                            </h2>
+                            <div class="space-y-2 max-h-[600px] overflow-y-auto">
+                                \${allLessons.map(lesson => \`
+                                    <a href="/courses/\${courseId}/lessons/\${lesson.id}" 
+                                       class="block p-3 rounded-lg hover:bg-gray-50 transition \${lesson.id == lessonId ? 'bg-indigo-50 border-2 border-indigo-500' : 'border border-gray-200'}">
+                                        <div class="flex items-start justify-between">
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <span class="text-sm font-semibold text-gray-700">\${lesson.lesson_number}강</span>
+                                                    \${lesson.is_free_preview ? 
+                                                        '<span class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">무료</span>' : 
+                                                        ''
+                                                    }
+                                                </div>
+                                                <p class="text-sm \${lesson.id == lessonId ? 'text-indigo-700 font-semibold' : 'text-gray-600'}">\${lesson.title}</p>
+                                                <p class="text-xs text-gray-500 mt-1">
+                                                    <i class="fas fa-clock mr-1"></i>\${lesson.video_duration_minutes || 0}분
+                                                </p>
+                                            </div>
+                                            \${lesson.id == lessonId ? 
+                                                '<i class="fas fa-play-circle text-2xl text-indigo-600"></i>' : 
+                                                '<i class="fas fa-play-circle text-2xl text-gray-300"></i>'
+                                            }
+                                        </div>
+                                    </a>
+                                \`).join('')}
+                            </div>
+                            
+                            <div class="mt-6 pt-6 border-t">
+                                <a href="/courses/\${courseId}" 
+                                   class="block w-full text-center bg-gray-100 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-200 transition">
+                                    <i class="fas fa-arrow-left mr-2"></i>강좌로 돌아가기
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            \`
+            
+            document.getElementById('lessonContent').innerHTML = html
+        }
+        
+        function handleVideoEnd() {
+            // 영상 종료 시 다음 차시로 이동 제안
+            const currentIndex = allLessons.findIndex(l => l.id == lessonId)
+            const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null
+            
+            if (nextLesson) {
+                if (confirm('다음 차시로 이동하시겠습니까?')) {
+                    window.location.href = \`/courses/\${courseId}/lessons/\${nextLesson.id}\`
+                }
+            } else {
+                showToast('모든 차시를 완료했습니다! 축하합니다! 🎉', 'success')
+            }
+        }
+        
+        async function recordProgress() {
+            try {
+                const token = AuthManager.getSessionToken()
+                await axios.post(\`/api/progress/\${enrollment.id}/lessons/\${lessonId}\`, 
+                    { completed: true },
+                    { headers: { 'Authorization': \`Bearer \${token}\` } }
+                )
+                console.log('Progress recorded')
+            } catch (error) {
+                console.error('Record progress error:', error)
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLessonContent()
+        })
+    </script>
+    
+    ${getFooter()}
+    ${getCommonFoot()}
+  `)
+})
+
 export default pages
