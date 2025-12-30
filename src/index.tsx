@@ -31,6 +31,7 @@ import certifications from './routes/certifications'
 import adminCertifications from './routes/admin-certifications'
 import upload from './routes/upload'
 import ai from './routes/ai'
+import reviews from './routes/reviews'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -46,6 +47,7 @@ app.route('/api/auth', auth)
 app.route('/api/auth/kakao', authKakao)  // 카카오 소셜 로그인
 app.route('/api/auth/google', authGoogle)  // 구글 소셜 로그인
 app.route('/api/courses', courses)
+app.route('/api/courses', reviews)  // 강좌 리뷰
 app.route('/api/enrollments', enrollments)
 app.route('/api/payments', payments)
 app.route('/api/payments-v2', paymentsV2)  // 토스페이먼츠 연동

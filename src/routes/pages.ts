@@ -994,8 +994,8 @@ pages.get('/courses/:id', async (c) => {
                                                         </div>
                                                     </div>
                                                     <div class="flex items-center ml-4">
-                                                        <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-bold transition group-hover:scale-110">
-                                                            <i class="fas fa-play mr-2"></i>재생
+                                                        <button class="bg-indigo-600 hover:bg-indigo-700 text-white \${isAdmin ? 'px-7 py-4 text-lg' : 'px-4 py-2 text-sm'} rounded-lg font-bold transition group-hover:scale-110">
+                                                            <i class="fas fa-play \${isAdmin ? 'mr-3 text-xl' : 'mr-2'}"></i>재생
                                                         </button>
                                                     </div>
                                                 </div>

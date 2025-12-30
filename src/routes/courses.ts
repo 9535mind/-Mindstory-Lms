@@ -391,6 +391,7 @@ courses.get('/:courseId/lessons/:lessonId', optionalAuth, async (c) => {
     const courseId = c.req.param('courseId')
     const lessonId = c.req.param('lessonId')
     const { DB } = c.env
+    const user = c.get('user')
 
     const lesson = await DB.prepare(`
       SELECT * FROM lessons WHERE id = ? AND course_id = ?
@@ -400,7 +401,16 @@ courses.get('/:courseId/lessons/:lessonId', optionalAuth, async (c) => {
       return c.json(errorResponse('차시를 찾을 수 없습니다.'), 404)
     }
 
-    return c.json(successResponse(lesson))
+    // 수강 신청 정보 조회 (로그인한 경우)
+    let enrollment = null
+    if (user) {
+      enrollment = await DB.prepare(`
+        SELECT * FROM enrollments 
+        WHERE user_id = ? AND course_id = ? AND status IN ('active', 'completed')
+      `).bind(user.id, courseId).first()
+    }
+
+    return c.json(successResponse({ lesson, enrollment }))
 
   } catch (error) {
     console.error('Get lesson error:', error)
