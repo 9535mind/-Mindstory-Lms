@@ -37,6 +37,9 @@ async function uploadImage() {
   const fileInput = document.getElementById('courseThumbnailFile');
   const file = fileInput.files[0];
   
+  console.log('[DEBUG] 이미지 업로드 시작');
+  console.log('[DEBUG] 파일:', file);
+  
   if (!file) {
     alert('파일을 선택해주세요.');
     return;
@@ -50,6 +53,8 @@ async function uploadImage() {
     formData.append('file', file);
     
     const token = AuthManager.getSessionToken();
+    console.log('[DEBUG] 토큰:', token ? '있음' : '없음');
+    
     const response = await fetch('/api/upload/image', {
       method: 'POST',
       headers: {
@@ -58,22 +63,30 @@ async function uploadImage() {
       body: formData
     });
     
+    console.log('[DEBUG] 응답 상태:', response.status);
+    
     const result = await response.json();
+    console.log('[DEBUG] 응답 결과:', result);
     
     if (result.success) {
       // 업로드 성공 - URL을 courseThumbnail 필드에 설정
-      document.getElementById('courseThumbnail').value = result.data.url;
+      const imageUrl = result.data.url;
+      console.log('[DEBUG] 이미지 URL:', imageUrl);
+      
+      document.getElementById('courseThumbnail').value = imageUrl;
+      console.log('[DEBUG] courseThumbnail 필드 값:', document.getElementById('courseThumbnail').value);
       
       // 미리보기 표시
-      showThumbnailPreview(result.data.url);
+      showThumbnailPreview(imageUrl);
       
-      alert('이미지가 업로드되었습니다.');
+      alert('이미지가 업로드되었습니다.\n저장 버튼을 클릭하여 강좌를 저장해주세요.');
     } else {
+      console.error('[DEBUG] 업로드 실패:', result.error);
       alert(result.error || '이미지 업로드에 실패했습니다.');
     }
   } catch (error) {
-    console.error('Upload error:', error);
-    alert('이미지 업로드에 실패했습니다.');
+    console.error('[DEBUG] Upload error:', error);
+    alert('이미지 업로드에 실패했습니다: ' + error.message);
   } finally {
     // 진행 바 숨기기
     document.getElementById('uploadProgress').classList.add('hidden');
@@ -319,10 +332,16 @@ async function handleSubmit(e) {
   e.preventDefault();
   
   const courseId = document.getElementById('courseId').value;
+  const thumbnailUrl = document.getElementById('courseThumbnail').value;
+  
+  console.log('[DEBUG] 강좌 저장 시작');
+  console.log('[DEBUG] courseId:', courseId);
+  console.log('[DEBUG] thumbnail_url:', thumbnailUrl);
+  
   const formData = {
     title: document.getElementById('courseTitle').value,
     description: document.getElementById('courseDescription').value,
-    thumbnail_url: document.getElementById('courseThumbnail').value,
+    thumbnail_url: thumbnailUrl,
     course_type: document.getElementById('courseType').value,
     duration_days: parseInt(document.getElementById('courseDuration').value),
     price: parseInt(document.getElementById('coursePrice').value) || 0,
@@ -331,27 +350,34 @@ async function handleSubmit(e) {
     is_featured: document.getElementById('courseIsFeatured').checked ? 1 : 0,
     status: document.getElementById('courseStatus').value
   };
+  
+  console.log('[DEBUG] formData:', formData);
 
   try {
     let response;
     if (courseId) {
       // 수정
+      console.log('[DEBUG] 강좌 수정 API 호출');
       response = await apiRequest('PUT', `/api/admin/courses/${courseId}`, formData);
     } else {
       // 등록
+      console.log('[DEBUG] 강좌 등록 API 호출');
       response = await apiRequest('POST', '/api/admin/courses', formData);
     }
+    
+    console.log('[DEBUG] API 응답:', response);
 
     if (response.success) {
       alert(courseId ? '강좌가 수정되었습니다.' : '강좌가 등록되었습니다.');
       closeCourseModal();
       await loadCourses();
     } else {
+      console.error('[DEBUG] 저장 실패:', response.error);
       showError(response.error || '저장에 실패했습니다.');
     }
   } catch (error) {
-    console.error('Save course error:', error);
-    showError('저장에 실패했습니다.');
+    console.error('[DEBUG] Save course error:', error);
+    showError('저장에 실패했습니다: ' + error.message);
   }
 }
 
