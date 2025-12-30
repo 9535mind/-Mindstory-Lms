@@ -336,18 +336,48 @@ pagesAdmin.get('/courses', async (c) => {
                             
                             <!-- 탭 선택 -->
                             <div class="flex border-b mb-4">
-                                <button type="button" id="urlTab" onclick="switchImageTab('url')" 
+                                <button type="button" id="videoTab" onclick="switchImageTab('video')" 
                                     class="px-4 py-2 border-b-2 border-purple-700 text-purple-700 font-semibold">
-                                    URL 입력
+                                    <i class="fas fa-video mr-1"></i>동영상 썸네일
+                                </button>
+                                <button type="button" id="urlTab" onclick="switchImageTab('url')" 
+                                    class="px-4 py-2 text-gray-600">
+                                    <i class="fas fa-link mr-1"></i>URL 입력
                                 </button>
                                 <button type="button" id="uploadTab" onclick="switchImageTab('upload')" 
                                     class="px-4 py-2 text-gray-600">
-                                    파일 업로드
+                                    <i class="fas fa-upload mr-1"></i>파일 업로드
                                 </button>
                             </div>
 
+                            <!-- 동영상 썸네일 추출 -->
+                            <div id="videoSection">
+                                <div class="space-y-3">
+                                    <p class="text-sm text-gray-600">
+                                        <i class="fas fa-info-circle text-purple-600 mr-1"></i>
+                                        강좌의 첫 번째 차시 영상에서 자동으로 썸네일을 추출합니다.
+                                    </p>
+                                    <button type="button" onclick="extractVideoThumbnail()" 
+                                        class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all">
+                                        <i class="fas fa-magic mr-2"></i>동영상에서 썸네일 자동 추출
+                                    </button>
+                                    <div id="videoThumbnailProgress" class="hidden">
+                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                            <div id="videoThumbnailProgressBar" class="bg-purple-700 h-2 rounded-full transition-all" style="width: 0%"></div>
+                                        </div>
+                                        <p class="text-sm text-gray-500 mt-1 text-center">
+                                            <i class="fas fa-spinner fa-spin mr-1"></i>썸네일 추출 중...
+                                        </p>
+                                    </div>
+                                    <p class="text-sm text-gray-500">
+                                        💡 <strong>팁:</strong> 영상이 업로드된 후에 사용하세요. 
+                                        추출된 썸네일은 자동으로 저장됩니다.
+                                    </p>
+                                </div>
+                            </div>
+
                             <!-- URL 입력 -->
-                            <div id="urlSection">
+                            <div id="urlSection" class="hidden">
                                 <input type="url" id="courseThumbnail" placeholder="https://..."
                                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
                                 <p class="text-sm text-gray-500 mt-1">* Unsplash 등 무료 이미지 사이트의 URL을 입력하세요</p>

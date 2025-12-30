@@ -3,33 +3,34 @@
  */
 
 let allCourses = [];
-let currentImageTab = 'url';  // 현재 선택된 탭 ('url' 또는 'upload')
+let currentImageTab = 'video';  // 현재 선택된 탭 ('video', 'url', 'upload')
 
 // 탭 전환
 function switchImageTab(tab) {
   currentImageTab = tab;
   
   // 탭 버튼 스타일 변경
+  const videoTab = document.getElementById('videoTab');
   const urlTab = document.getElementById('urlTab');
   const uploadTab = document.getElementById('uploadTab');
   
-  if (tab === 'url') {
-    urlTab.classList.add('border-b-2', 'border-purple-700', 'text-purple-700', 'font-semibold');
-    urlTab.classList.remove('text-gray-600');
-    uploadTab.classList.remove('border-b-2', 'border-purple-700', 'text-purple-700', 'font-semibold');
-    uploadTab.classList.add('text-gray-600');
-    
-    document.getElementById('urlSection').classList.remove('hidden');
-    document.getElementById('uploadSection').classList.add('hidden');
-  } else {
-    uploadTab.classList.add('border-b-2', 'border-purple-700', 'text-purple-700', 'font-semibold');
-    uploadTab.classList.remove('text-gray-600');
-    urlTab.classList.remove('border-b-2', 'border-purple-700', 'text-purple-700', 'font-semibold');
-    urlTab.classList.add('text-gray-600');
-    
-    document.getElementById('uploadSection').classList.remove('hidden');
-    document.getElementById('urlSection').classList.add('hidden');
-  }
+  const tabs = [
+    { element: videoTab, section: 'videoSection', name: 'video' },
+    { element: urlTab, section: 'urlSection', name: 'url' },
+    { element: uploadTab, section: 'uploadSection', name: 'upload' }
+  ];
+  
+  tabs.forEach(({ element, section, name }) => {
+    if (name === tab) {
+      element.classList.add('border-b-2', 'border-purple-700', 'text-purple-700', 'font-semibold');
+      element.classList.remove('text-gray-600');
+      document.getElementById(section).classList.remove('hidden');
+    } else {
+      element.classList.remove('border-b-2', 'border-purple-700', 'text-purple-700', 'font-semibold');
+      element.classList.add('text-gray-600');
+      document.getElementById(section).classList.add('hidden');
+    }
+  });
 }
 
 // 이미지 업로드
@@ -192,11 +193,14 @@ function renderCourses(courses) {
     
     const statusBadge = getStatusBadge(course.status);
     
+    // 썸네일 처리: URL이 없거나 로딩 실패 시 기본 썸네일 생성
+    const thumbnailHtml = getThumbnailHtml(course);
+    
     return `
       <tr class="border-b hover:bg-gray-50">
         <td class="py-3 px-4">
           <div class="flex items-center">
-            ${course.thumbnail_url ? `<img src="${course.thumbnail_url}" class="w-16 h-16 object-cover rounded mr-3" onerror="this.src='https://via.placeholder.com/64'">` : ''}
+            ${thumbnailHtml}
             <div>
               <p class="font-semibold text-gray-800">${course.title}</p>
               <p class="text-sm text-gray-600">${course.course_type === 'certificate' ? '수료증 과정' : '일반 과정'}</p>
@@ -729,5 +733,82 @@ async function generateDescription() {
     descriptionTextarea.value = originalText; // 원래 텍스트 복구
   } finally {
     descriptionTextarea.disabled = false;
+  }
+}
+
+// 썸네일 HTML 생성 (Fallback 포함)
+function getThumbnailHtml(course) {
+  if (course.thumbnail_url) {
+    // 외부 URL 또는 로컬 경로
+    return `<img src="${course.thumbnail_url}" 
+                 class="w-16 h-16 object-cover rounded mr-3" 
+                 onerror="this.onerror=null; this.outerHTML=getDefaultThumbnailHtml('${escapeHtml(course.title)}')"
+                 alt="${escapeHtml(course.title)}">`;
+  } else {
+    // 썸네일이 없으면 기본 썸네일 생성
+    return getDefaultThumbnailHtml(course.title);
+  }
+}
+
+// 기본 썸네일 HTML (강좌 제목 첫 글자)
+function getDefaultThumbnailHtml(title) {
+  const firstChar = title.charAt(0).toUpperCase();
+  const colors = ['#8B5CF6', '#EC4899', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
+  const color = colors[title.charCodeAt(0) % colors.length];
+  
+  return `<div class="w-16 h-16 rounded mr-3 flex items-center justify-center text-white font-bold text-2xl" 
+               style="background-color: ${color}">
+            ${firstChar}
+          </div>`;
+}
+
+// HTML 이스케이프 (XSS 방지)
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// 동영상 썸네일 자동 추출
+async function extractVideoThumbnail() {
+  const courseId = document.getElementById('courseId').value;
+  
+  if (!courseId) {
+    alert('먼저 강좌를 저장한 후에 썸네일을 추출해주세요.');
+    return;
+  }
+  
+  // 진행 상태 표시
+  const progressDiv = document.getElementById('videoThumbnailProgress');
+  const progressBar = document.getElementById('videoThumbnailProgressBar');
+  progressDiv.classList.remove('hidden');
+  progressBar.style.width = '30%';
+  
+  try {
+    const response = await apiRequest('POST', `/api/courses/${courseId}/extract-thumbnail`);
+    
+    progressBar.style.width = '100%';
+    
+    if (response.success && response.data.thumbnail_url) {
+      // 썸네일 URL 설정
+      document.getElementById('courseThumbnail').value = response.data.thumbnail_url;
+      
+      // 미리보기 표시
+      showThumbnailPreview(response.data.thumbnail_url);
+      
+      alert('✅ 동영상 썸네일이 추출되었습니다!\n저장 버튼을 클릭하여 변경사항을 저장하세요.');
+    } else {
+      throw new Error(response.message || '썸네일 추출에 실패했습니다.');
+    }
+  } catch (error) {
+    console.error('Extract thumbnail error:', error);
+    alert('썸네일 추출에 실패했습니다.\n\n원인:\n' + 
+          '1. 강좌에 영상이 업로드되지 않았을 수 있습니다.\n' +
+          '2. 영상 형식이 지원되지 않을 수 있습니다.\n' +
+          '3. 서버 오류가 발생했을 수 있습니다.\n\n' +
+          '다른 방법으로 썸네일을 업로드해주세요.');
+  } finally {
+    progressDiv.classList.add('hidden');
+    progressBar.style.width = '0%';
   }
 }

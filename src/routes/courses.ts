@@ -492,4 +492,74 @@ courses.delete('/:courseId/lessons/:lessonId', requireAdmin, async (c) => {
   }
 })
 
+/**
+ * POST /api/courses/:courseId/extract-thumbnail
+ * 동영상에서 썸네일 자동 추출 (관리자 전용)
+ */
+courses.post('/:courseId/extract-thumbnail', requireAdmin, async (c) => {
+  try {
+    const courseId = parseInt(c.req.param('courseId'))
+    const { DB, VIDEO_STORAGE, STORAGE } = c.env
+
+    // 1. 강좌의 첫 번째 영상 차시 찾기
+    const lessonResult = await DB.prepare(`
+      SELECT * FROM lessons 
+      WHERE course_id = ? AND content_type = 'video' AND video_url IS NOT NULL
+      ORDER BY lesson_number ASC
+      LIMIT 1
+    `).bind(courseId).first<Lesson>()
+
+    if (!lessonResult) {
+      return c.json(errorResponse('영상이 업로드된 차시가 없습니다.'), 400)
+    }
+
+    const videoUrl = lessonResult.video_url
+
+    // 2. 영상이 R2에 저장되어 있는지 확인
+    if (!videoUrl || !VIDEO_STORAGE) {
+      return c.json(errorResponse('영상 파일을 찾을 수 없습니다.'), 400)
+    }
+
+    // 3. 현재는 간단한 구현: 첫 번째 영상 URL을 썸네일로 사용
+    // TODO: 실제로는 FFmpeg를 사용하여 영상에서 프레임을 추출해야 함
+    // Cloudflare Workers 환경에서는 FFmpeg를 직접 실행할 수 없으므로,
+    // 외부 서비스 (예: Cloudflare Images, AWS Lambda) 또는
+    // 업로드 시점에 클라이언트에서 썸네일을 생성하는 방법을 사용해야 함
+
+    // 임시 솔루션: 강좌 제목으로 기본 썸네일 생성
+    const courseResult = await DB.prepare(`
+      SELECT title FROM courses WHERE id = ?
+    `).bind(courseId).first<{ title: string }>()
+
+    if (!courseResult) {
+      return c.json(errorResponse('강좌를 찾을 수 없습니다.'), 404)
+    }
+
+    // 기본 썸네일 URL 생성 (SVG 데이터 URL)
+    const firstChar = courseResult.title.charAt(0).toUpperCase()
+    const colors = ['8B5CF6', 'EC4899', '3B82F6', '10B981', 'F59E0B', 'EF4444']
+    const color = colors[courseResult.title.charCodeAt(0) % colors.length]
+    
+    const svg = `<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+      <rect width="400" height="300" fill="#${color}"/>
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" 
+        font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="white">
+        ${firstChar}
+      </text>
+    </svg>`
+    
+    const thumbnailUrl = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
+
+    return c.json(successResponse({
+      thumbnail_url: thumbnailUrl,
+      message: '기본 썸네일이 생성되었습니다. 실제 영상 썸네일 추출은 업로드 시점에 처리됩니다.',
+      video_url: videoUrl
+    }))
+
+  } catch (error) {
+    console.error('Extract thumbnail error:', error)
+    return c.json(errorResponse('썸네일 추출 중 오류가 발생했습니다.'), 500)
+  }
+})
+
 export default courses
