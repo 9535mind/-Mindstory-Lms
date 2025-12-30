@@ -385,7 +385,14 @@ async function uploadVideoFile(file) {
           // 업로드 완료
           uploadedVideoKey = response.data.url; // video_key → url
           document.getElementById('uploadedVideoKey').value = uploadedVideoKey;
-          document.getElementById('uploadedFileName').textContent = file.name;
+          
+          // 업로드 정보 표시 (파일명, 크기, 재생시간)
+          updateUploadedInfo({
+            originalName: file.name,
+            filename: response.data.filename,
+            size: response.data.size,
+            duration: response.data.duration
+          });
           
           // 재생 시간 자동 설정
           if (response.data.duration) {
@@ -512,3 +519,78 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+/**
+ * 업로드된 영상 교체
+ */
+function replaceUploadedVideo() {
+  if (!confirm('현재 업로드된 영상을 다른 영상으로 교체하시겠습니까?')) {
+    return;
+  }
+  
+  // 업로드 UI 초기화
+  uploadedVideoKey = null;
+  document.getElementById('uploadedVideoKey').value = '';
+  document.getElementById('uploadedInfo').classList.add('hidden');
+  
+  // 파일 입력 초기화
+  const fileInput = document.getElementById('videoFile');
+  if (fileInput) {
+    fileInput.value = '';
+    fileInput.click(); // 파일 선택 다이얼로그 열기
+  }
+}
+
+/**
+ * 업로드된 영상 삭제
+ */
+async function deleteUploadedVideo() {
+  if (!confirm('업로드된 영상을 삭제하시겠습니까?\n\n주의: 이 작업은 되돌릴 수 없습니다.')) {
+    return;
+  }
+  
+  const videoKey = uploadedVideoKey;
+  
+  if (!videoKey) {
+    alert('삭제할 영상이 없습니다.');
+    return;
+  }
+  
+  try {
+    // R2에서 파일 삭제 API 호출
+    const response = await apiRequest('DELETE', `/api/storage/videos/${videoKey}`);
+    
+    if (response.success) {
+      // UI 초기화
+      uploadedVideoKey = null;
+      document.getElementById('uploadedVideoKey').value = '';
+      document.getElementById('uploadedInfo').classList.add('hidden');
+      
+      // 파일 입력 초기화
+      const fileInput = document.getElementById('videoFile');
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      
+      alert('✅ 영상이 삭제되었습니다.');
+    } else {
+      throw new Error(response.message || '삭제 실패');
+    }
+  } catch (error) {
+    console.error('Delete video error:', error);
+    alert('영상 삭제에 실패했습니다.\n\n' + error.message);
+  }
+}
+
+/**
+ * 업로드 완료 정보 업데이트
+ */
+function updateUploadedInfo(data) {
+  // 파일명 표시
+  document.getElementById('uploadedFileName').textContent = data.originalName || data.filename;
+  
+  // 파일 정보 표시
+  const fileSize = (data.size / (1024 * 1024)).toFixed(2); // MB
+  const duration = data.duration ? `${data.duration}분` : '알 수 없음';
+  document.getElementById('uploadedFileInfo').textContent = `크기: ${fileSize}MB | 재생시간: ${duration}`;
+}

@@ -261,3 +261,44 @@ upload.get('/storage/videos/*', async (c) => {
     return c.notFound()
   }
 })
+
+/**
+ * DELETE /api/storage/videos/:path
+ * R2 VIDEO_STORAGE에서 영상 파일 삭제 (관리자 전용)
+ */
+upload.delete('/storage/videos/*', requireAdmin, async (c) => {
+  try {
+    const { VIDEO_STORAGE } = c.env
+    
+    if (!VIDEO_STORAGE) {
+      return c.json(errorResponse('영상 스토리지가 설정되지 않았습니다.'), 500)
+    }
+
+    // URL에서 파일 경로 추출
+    const path = c.req.path.replace('/api/storage/', '')
+
+    console.log('[VIDEO DELETE] Deleting:', path)
+
+    // R2에서 파일 존재 확인
+    const object = await VIDEO_STORAGE.get(path)
+    
+    if (!object) {
+      console.log('[VIDEO DELETE] Not found:', path)
+      return c.json(errorResponse('파일을 찾을 수 없습니다.'), 404)
+    }
+
+    // R2에서 파일 삭제
+    await VIDEO_STORAGE.delete(path)
+    
+    console.log('[VIDEO DELETE] Deleted successfully:', path)
+
+    return c.json(successResponse({ 
+      path: path,
+      message: '영상이 삭제되었습니다.' 
+    }))
+
+  } catch (error) {
+    console.error('Delete video storage error:', error)
+    return c.json(errorResponse('영상 삭제 중 오류가 발생했습니다.'), 500)
+  }
+})

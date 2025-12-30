@@ -1371,11 +1371,28 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                                 <!-- 업로드 완료 정보 -->
                                 <div id="uploadedInfo" class="mt-4 hidden">
                                     <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                                        <div class="flex items-center">
-                                            <i class="fas fa-check-circle text-green-600 mr-2"></i>
-                                            <span class="text-sm font-medium text-green-800">업로드 완료</span>
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                                                <span class="text-sm font-medium text-green-800">업로드 완료</span>
+                                            </div>
+                                            <div class="flex space-x-2">
+                                                <button type="button" onclick="replaceUploadedVideo()" 
+                                                    class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
+                                                    title="다른 영상으로 교체">
+                                                    <i class="fas fa-exchange-alt mr-1"></i>교체
+                                                </button>
+                                                <button type="button" onclick="deleteUploadedVideo()" 
+                                                    class="text-xs bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors"
+                                                    title="업로드된 영상 삭제">
+                                                    <i class="fas fa-trash mr-1"></i>삭제
+                                                </button>
+                                            </div>
                                         </div>
-                                        <p class="text-sm text-green-700 mt-1" id="uploadedFileName"></p>
+                                        <div class="mt-2">
+                                            <p class="text-sm text-green-700 font-medium" id="uploadedFileName"></p>
+                                            <p class="text-xs text-green-600 mt-1" id="uploadedFileInfo"></p>
+                                        </div>
                                         <input type="hidden" id="uploadedVideoKey">
                                     </div>
                                 </div>
