@@ -398,14 +398,22 @@ GET /static/style.css
 ### 관리자
 - 이메일: `admin@mindstory.co.kr`
 - 비밀번호: `admin123`
+- 이름: 박종석 (관리자)
 
 ### 학생
 - 이메일: `student1@example.com`
 - 비밀번호: `password123`
+- 이름: 김민수
+
 - 이메일: `student2@example.com`
 - 비밀번호: `password123`
+- 이름: 이영희
+
 - 이메일: `student3@example.com`
 - 비밀번호: `password123`
+- 이름: 박철수
+
+**⚠️ 중요**: 학생 계정 비밀번호가 `test123`에서 `password123`으로 변경되었습니다.
 
 ---
 
