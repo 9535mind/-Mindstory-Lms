@@ -37,7 +37,14 @@ const app = new Hono<{ Bindings: Bindings }>()
 
 // 미들웨어
 app.use('*', logger())
-app.use('/api/*', cors())
+app.use('/api/*', cors({
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  exposeHeaders: ['Content-Length', 'X-Request-Id'],
+  maxAge: 600,
+  credentials: false,
+}))
 
 // 정적 파일 서빙 (Cloudflare Pages용 - root 제거)
 app.use('/static/*', serveStatic())
