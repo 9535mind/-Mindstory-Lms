@@ -993,6 +993,13 @@ pages.get('/courses/:id', async (c) => {
         }
         
         function goToLesson(courseId, lessonId, isFreePreview, isEnrolled) {
+            // 관리자는 모든 영상 시청 가능
+            const user = AuthManager.getCurrentUser()
+            if (user && user.role === 'admin') {
+                window.location.href = \`/courses/\${courseId}/lessons/\${lessonId}\`
+                return
+            }
+            
             // 무료 미리보기이거나 수강 중이면 바로 이동
             if (isFreePreview || isEnrolled) {
                 window.location.href = \`/courses/\${courseId}/lessons/\${lessonId}\`
