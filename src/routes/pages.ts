@@ -1161,11 +1161,17 @@ pages.get('/courses/:courseId/lessons/:lessonId', async (c) => {
                 
             } catch (error) {
                 console.error('Load lesson error:', error)
+                console.error('Error details:', {
+                    message: error.message,
+                    response: error.response,
+                    stack: error.stack
+                })
                 const message = error.response?.data?.error || '차시 정보를 불러오지 못했습니다.'
                 document.getElementById('lessonContent').innerHTML = \`
                     <div class="text-center py-12">
                         <i class="fas fa-exclamation-circle text-6xl text-red-500 mb-4"></i>
                         <p class="text-xl text-gray-700">\${message}</p>
+                        <p class="text-sm text-gray-500 mt-2">Error: \${error.message || JSON.stringify(error)}</p>
                         <a href="/courses/\${courseId}" class="mt-4 inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">
                             강좌로 돌아가기
                         </a>
@@ -1361,7 +1367,23 @@ pages.get('/courses/:courseId/lessons/:lessonId', async (c) => {
             }
         }
         
-        document.addEventListener('DOMContentLoaded', () => {
+        // 모든 스크립트 로드 후 실행
+        window.addEventListener('load', () => {
+            console.log('[LESSON] Page loaded, axios:', typeof axios, 'AuthManager:', typeof AuthManager)
+            if (typeof axios === 'undefined' || typeof AuthManager === 'undefined') {
+                console.error('[LESSON] Required libraries not loaded!')
+                document.getElementById('lessonContent').innerHTML = \`
+                    <div class="text-center py-12">
+                        <i class="fas fa-exclamation-circle text-6xl text-red-500 mb-4"></i>
+                        <p class="text-xl text-gray-700">필수 라이브러리 로드 실패</p>
+                        <p class="text-sm text-gray-500 mt-2">axios: \${typeof axios}, AuthManager: \${typeof AuthManager}</p>
+                        <button onclick="location.reload()" class="mt-4 bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">
+                            새로고침
+                        </button>
+                    </div>
+                \`
+                return
+            }
             loadLessonContent()
         })
     </script>
