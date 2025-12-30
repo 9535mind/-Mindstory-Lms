@@ -237,6 +237,10 @@ function openNewCourseModal() {
   document.getElementById('modalTitle').textContent = '새 강좌 등록';
   document.getElementById('courseForm').reset();
   document.getElementById('courseId').value = '';
+  
+  // 차시 미리보기 섹션 숨김 (새 강좌는 차시가 없음)
+  document.getElementById('lessonPreviewSection').classList.add('hidden');
+  
   document.getElementById('courseModal').classList.remove('hidden');
   document.getElementById('courseModal').classList.add('flex');
 }
@@ -261,6 +265,12 @@ async function editCourse(courseId) {
       document.getElementById('courseIsFree').checked = course.is_free === 1;
       document.getElementById('courseIsFeatured').checked = course.is_featured === 1;
       document.getElementById('courseStatus').value = course.status || 'active';
+      
+      // 차시 미리보기 섹션 표시
+      document.getElementById('lessonPreviewSection').classList.remove('hidden');
+      
+      // 차시 목록 로드
+      refreshLessonPreview();
       
       document.getElementById('courseModal').classList.remove('hidden');
       document.getElementById('courseModal').classList.add('flex');
@@ -429,3 +439,67 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+/**
+ * 차시 목록 미리보기 새로고침
+ */
+async function refreshLessonPreview() {
+  const courseId = document.getElementById('courseId').value;
+  if (!courseId) return;
+  
+  const listContainer = document.getElementById('lessonPreviewList');
+  listContainer.innerHTML = '<div class="text-center text-gray-500 py-4"><i class="fas fa-spinner fa-spin mr-2"></i>로딩 중...</div>';
+  
+  try {
+    const response = await apiRequest('GET', `/api/courses/${courseId}/lessons`);
+    
+    if (response.success && response.data) {
+      const lessons = response.data;
+      document.getElementById('previewLessonCount').textContent = lessons.length;
+      
+      if (lessons.length === 0) {
+        listContainer.innerHTML = `
+          <div class="text-center text-gray-500 py-8">
+            <i class="fas fa-inbox text-3xl mb-2"></i>
+            <p>등록된 차시가 없습니다.</p>
+            <p class="text-sm mt-2">차시 관리 페이지에서 차시를 추가하세요.</p>
+          </div>
+        `;
+      } else {
+        listContainer.innerHTML = lessons.map(lesson => `
+          <div class="flex items-center justify-between bg-white p-3 rounded-lg hover:bg-gray-50 transition-colors">
+            <div class="flex items-center flex-1">
+              <span class="bg-purple-100 text-purple-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm mr-3">
+                ${lesson.lesson_number}
+              </span>
+              <div class="flex-1">
+                <p class="font-medium text-gray-800">${lesson.title}</p>
+                <div class="flex items-center space-x-3 text-xs text-gray-500 mt-1">
+                  ${lesson.video_duration_minutes ? `<span><i class="fas fa-clock mr-1"></i>${lesson.video_duration_minutes}분</span>` : ''}
+                  ${lesson.video_url ? '<span class="text-green-600"><i class="fas fa-video mr-1"></i>영상 있음</span>' : '<span class="text-gray-400"><i class="fas fa-video-slash mr-1"></i>영상 없음</span>'}
+                  ${lesson.is_free_preview === 1 ? '<span class="bg-green-100 text-green-800 px-2 py-0.5 rounded"><i class="fas fa-unlock mr-1"></i>무료</span>' : ''}
+                  ${lesson.status !== 'active' ? '<span class="bg-gray-100 text-gray-800 px-2 py-0.5 rounded"><i class="fas fa-eye-slash mr-1"></i>비공개</span>' : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+    } else {
+      listContainer.innerHTML = '<div class="text-center text-red-500 py-4"><i class="fas fa-exclamation-circle mr-2"></i>차시 목록을 불러오는데 실패했습니다.</div>';
+    }
+  } catch (error) {
+    console.error('Load lessons preview error:', error);
+    listContainer.innerHTML = '<div class="text-center text-red-500 py-4"><i class="fas fa-exclamation-circle mr-2"></i>차시 목록을 불러오는데 실패했습니다.</div>';
+  }
+}
+
+/**
+ * 차시 관리 페이지로 이동
+ */
+function goToLessonManagement() {
+  const courseId = document.getElementById('courseId').value;
+  if (courseId) {
+    window.location.href = `/admin/courses/${courseId}/lessons`;
+  }
+}

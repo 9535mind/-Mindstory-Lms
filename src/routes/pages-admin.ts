@@ -438,6 +438,37 @@ pagesAdmin.get('/courses', async (c) => {
                                 <option value="draft">임시저장</option>
                             </select>
                         </div>
+
+                        <!-- 차시 목록 미리보기 (수정 모드에서만 표시) -->
+                        <div id="lessonPreviewSection" class="md:col-span-2 hidden">
+                            <div class="border-t pt-6">
+                                <div class="flex justify-between items-center mb-4">
+                                    <label class="block text-lg font-semibold text-gray-800">
+                                        <i class="fas fa-list-ol mr-2 text-purple-600"></i>차시 목록
+                                    </label>
+                                    <button type="button" onclick="refreshLessonPreview()" class="text-blue-600 hover:text-blue-800 text-sm">
+                                        <i class="fas fa-sync-alt mr-1"></i>새로고침
+                                    </button>
+                                </div>
+                                
+                                <div id="lessonPreviewList" class="space-y-2 max-h-64 overflow-y-auto bg-gray-50 rounded-lg p-4">
+                                    <!-- 차시 목록이 여기에 표시됩니다 -->
+                                    <div class="text-center text-gray-500 py-4">
+                                        <i class="fas fa-spinner fa-spin mr-2"></i>로딩 중...
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 flex justify-between items-center text-sm">
+                                    <span class="text-gray-600">
+                                        총 <strong id="previewLessonCount" class="text-purple-600">0</strong>개 차시
+                                    </span>
+                                    <button type="button" onclick="goToLessonManagement()" 
+                                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                                        <i class="fas fa-list-ul mr-2"></i>차시 관리 페이지로 이동
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex justify-end space-x-4 pt-6 border-t">
@@ -1261,6 +1292,19 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
 
                             <!-- 직접 업로드 탭 -->
                             <div id="uploadTabContent" class="video-tab-content hidden">
+                                <!-- 일괄 업로드 옵션 -->
+                                <div class="mb-4 flex items-center justify-between">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="bulkUploadMode" class="mr-2" onchange="toggleBulkUpload()">
+                                        <span class="text-sm font-medium text-gray-700">
+                                            <i class="fas fa-layer-group mr-1"></i>일괄 업로드 (여러 파일 동시 선택)
+                                        </span>
+                                    </label>
+                                    <button type="button" onclick="showBulkUploadHelp()" class="text-blue-600 hover:text-blue-800 text-sm">
+                                        <i class="fas fa-question-circle mr-1"></i>사용법
+                                    </button>
+                                </div>
+
                                 <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                                     <input type="file" id="videoFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo" 
                                         class="hidden" onchange="handleVideoFileSelect(event)">
@@ -1269,6 +1313,9 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                                         <p class="text-gray-600 mb-2">클릭하여 영상 파일을 선택하거나</p>
                                         <p class="text-gray-600 mb-2">파일을 드래그 앤 드롭하세요</p>
                                         <p class="text-sm text-gray-500">MP4, WebM, MOV, AVI (최대 500MB)</p>
+                                        <p class="text-xs text-purple-600 mt-2" id="bulkUploadHint" style="display: none;">
+                                            <i class="fas fa-info-circle mr-1"></i>여러 파일을 동시에 선택할 수 있습니다
+                                        </p>
                                     </label>
                                 </div>
                                 
@@ -1308,10 +1355,29 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
 
                         <!-- 무료 미리보기 -->
                         <div class="md:col-span-2">
-                            <label class="flex items-center">
-                                <input type="checkbox" id="lessonIsFree" class="mr-2">
+                            <label class="flex items-center mb-3">
+                                <input type="checkbox" id="lessonIsFree" class="mr-2" onchange="toggleFreePreviewTime()">
                                 <span class="text-sm font-medium text-gray-700">무료 미리보기 (비로그인 사용자도 시청 가능)</span>
                             </label>
+                            
+                            <!-- 무료 체험 시간 설정 -->
+                            <div id="freePreviewTimeSection" class="hidden ml-6 mt-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    무료 체험 시간 (분)
+                                </label>
+                                <div class="flex items-center space-x-4">
+                                    <input type="number" id="lessonFreePreviewMinutes" min="0" max="10" value="3"
+                                        class="w-32 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <span class="text-sm text-gray-600">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        0 = 전체 무료, 1~10 = 제한된 시간만 무료
+                                    </span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    * 3~5분 권장: 수강생이 강좌 맛보기 가능<br>
+                                    * 0분 설정 시: 전체 영상 무료 공개
+                                </p>
+                            </div>
                         </div>
 
                         <!-- 공개 여부 -->
@@ -1496,6 +1562,18 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
             function closeLessonModal() {
               document.getElementById('lessonModal').classList.add('hidden');
               document.getElementById('lessonModal').classList.remove('flex');
+            }
+
+            // 무료 체험 시간 섹션 토글
+            function toggleFreePreviewTime() {
+              const checkbox = document.getElementById('lessonIsFree');
+              const section = document.getElementById('freePreviewTimeSection');
+              
+              if (checkbox.checked) {
+                section.classList.remove('hidden');
+              } else {
+                section.classList.add('hidden');
+              }
             }
 
             // 폼 제출 처리
