@@ -886,13 +886,27 @@ pages.get('/courses/:id', async (c) => {
         
         async function loadCourseDetail() {
             try {
+                console.log('[DEBUG] Loading course:', courseId)
+                console.log('[DEBUG] AuthManager:', typeof AuthManager, AuthManager)
+                
                 const response = await axios.get(\`/api/courses/\${courseId}\`)
+                console.log('[DEBUG] API Response:', response.data)
+                
                 const { course, lessons, enrollment } = response.data.data
+                
+                console.log('[DEBUG] Course data:', course)
+                console.log('[DEBUG] Lessons count:', lessons?.length)
+                console.log('[DEBUG] Enrollment:', enrollment)
                 
                 // 현재 사용자 확인
                 const currentUser = AuthManager.getCurrentUser()
+                console.log('[DEBUG] Current User:', currentUser)
+                
                 const isAdmin = currentUser && currentUser.role === 'admin'
                 const hasAccess = isAdmin || enrollment
+                
+                console.log('[DEBUG] isAdmin:', isAdmin, 'hasAccess:', hasAccess)
+                console.log('[DEBUG] Starting HTML render...')
                 
                 const detailHtml = \`
                     <div class="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -988,10 +1002,18 @@ pages.get('/courses/:id', async (c) => {
                     </div>
                 \`
                 
+                console.log('[DEBUG] HTML length:', detailHtml.length)
+                console.log('[DEBUG] Setting innerHTML...')
                 document.getElementById('courseDetail').innerHTML = detailHtml
+                console.log('[DEBUG] Page rendered successfully!')
                 
             } catch (error) {
-                console.error('Failed to load course:', error)
+                console.error('[ERROR] Failed to load course:', error)
+                console.error('[ERROR] Error details:', error.message, error.stack)
+                if (error.response) {
+                    console.error('[ERROR] Response status:', error.response.status)
+                    console.error('[ERROR] Response data:', error.response.data)
+                }
                 document.getElementById('courseDetail').innerHTML = \`
                     <div class="text-center py-12">
                         <i class="fas fa-exclamation-circle text-5xl text-red-500 mb-4"></i>

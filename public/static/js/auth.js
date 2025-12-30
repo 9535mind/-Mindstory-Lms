@@ -38,6 +38,9 @@ class AuthManager {
   }
 }
 
+// AuthManager를 window 객체에 명시적으로 등록
+window.AuthManager = AuthManager
+
 // 세션 토큰 가져오기
 function getSessionToken() {
   return localStorage.getItem('session_token') || sessionStorage.getItem('session_token');
