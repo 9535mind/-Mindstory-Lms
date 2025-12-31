@@ -534,36 +534,49 @@ document.addEventListener('DOMContentLoaded', () => {
  * 업로드 후 차시 저장 (빠른 저장)
  */
 function saveLessonAfterUpload() {
+  console.log('💾 저장 버튼 클릭됨');
+  
   // 필수 입력 확인
-  const title = document.getElementById('lessonTitle')?.value.trim();
-  const lessonNumber = document.getElementById('lessonNumber')?.value;
+  const titleInput = document.getElementById('lessonTitle');
+  const lessonNumberInput = document.getElementById('lessonNumber');
+  
+  const title = titleInput?.value?.trim();
+  const lessonNumber = lessonNumberInput?.value?.trim();
+  
+  console.log('📝 입력 값:', { title, lessonNumber, uploadedVideoKey });
   
   if (!title) {
     alert('차시 제목을 입력해주세요.');
-    document.getElementById('lessonTitle')?.focus();
+    titleInput?.focus();
     return;
   }
   
-  if (!lessonNumber) {
-    alert('차시 순서를 입력해주세요.');
-    document.getElementById('lessonNumber')?.focus();
+  if (!lessonNumber || lessonNumber === '' || lessonNumber === '0') {
+    alert('차시 순서를 입력해주세요. (예: 1, 2, 3...)');
+    lessonNumberInput?.focus();
     return;
   }
   
   if (!uploadedVideoKey) {
-    alert('업로드된 영상이 없습니다.');
+    alert('업로드된 영상이 없습니다.\n\n먼저 영상을 업로드한 후 저장해주세요.');
     return;
   }
   
   // 확인 후 저장
-  if (confirm('차시를 저장하시겠습니까?')) {
-    // 모달의 저장 버튼 클릭
-    const saveButton = document.querySelector('#lessonModal button[type="submit"]');
-    if (saveButton) {
-      saveButton.click();
+  console.log('✅ 모든 검증 통과, 저장 진행...');
+  
+  // 모달의 저장 버튼 클릭 (폼 제출)
+  const saveButton = document.querySelector('#lessonModal button[type="submit"]');
+  if (saveButton) {
+    console.log('🎯 저장 버튼 찾음, 클릭...');
+    saveButton.click();
+  } else {
+    console.log('⚠️ 저장 버튼을 찾을 수 없음, 폼 직접 제출...');
+    const form = document.getElementById('lessonForm');
+    if (form) {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     } else {
-      // 또는 직접 폼 제출
-      document.getElementById('lessonForm')?.dispatchEvent(new Event('submit'));
+      alert('오류: 폼을 찾을 수 없습니다.');
     }
   }
 }
@@ -1145,12 +1158,29 @@ async function handleVideoUrlUpload() {
       // 전역 변수에 저장
       uploadedVideoKey = result.video_id;
 
-      // 영상 메타데이터 가져와서 재생 시간 자동 설정
-      if (result.video_id) {
-        fetchVideoMetadata(result.video_id);
+      // 재생 시간 즉시 설정 (응답에 duration이 있으면)
+      if (result.duration) {
+        const durationInMinutes = Math.ceil(result.duration / 60);
+        const durationInput = document.getElementById('lessonDuration');
+        if (durationInput) {
+          durationInput.value = durationInMinutes;
+          console.log(`✅ 재생 시간 즉시 설정: ${durationInMinutes}분 (${result.duration}초)`);
+        }
+      } else {
+        // duration이 없으면 메타데이터 API 호출
+        console.log('⏳ duration 없음, 메타데이터 API 호출...');
+        if (result.video_id) {
+          fetchVideoMetadata(result.video_id);
+        }
       }
 
-      alert('✅ 영상 URL이 등록되었습니다!\n\n이제 "저장" 버튼을 클릭하여 차시를 저장하세요.');
+      // 썸네일 URL 저장
+      if (result.thumbnail_url) {
+        window.currentVideoThumbnail = result.thumbnail_url;
+        console.log(`✅ 썸네일 URL 저장: ${result.thumbnail_url}`);
+      }
+
+      alert('✅ 영상 URL이 등록되었습니다!\n\n재생 시간이 자동으로 설정되었습니다.\n이제 "저장" 버튼을 클릭하여 차시를 저장하세요.');
       
       // URL 입력란 초기화
       urlInput.value = '';

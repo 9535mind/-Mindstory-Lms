@@ -116,6 +116,15 @@ apiVideo.post('/upload', requireAdmin, async (c) => {
       ).run()
     }
 
+    // duration 추출
+    let duration = null;
+    if (uploadResult.assets?.mp4 && uploadResult.assets.mp4.length > 0) {
+      duration = uploadResult.assets.mp4[0]?.duration || uploadResult.assets.mp4[0]?.length;
+    }
+    if (!duration && (uploadResult as any).duration) {
+      duration = (uploadResult as any).duration;
+    }
+    
     return c.json(successResponse({
       video_id: uploadResult.videoId,
       title: uploadResult.title,
@@ -123,6 +132,7 @@ apiVideo.post('/upload', requireAdmin, async (c) => {
       player_url: uploadResult.assets.player,
       thumbnail_url: uploadResult.assets.thumbnail,
       is_public: uploadResult.public,
+      duration: duration, // 초 단위
       status: uploadResult.status?.ingest?.status || 'processing',
       created_at: uploadResult.createdAt,
       lesson_id: lessonId
@@ -197,6 +207,15 @@ apiVideo.post('/upload-url', requireAdmin, async (c) => {
       ).run()
     }
 
+    // duration 추출
+    let duration = null;
+    if (video.assets?.mp4 && video.assets.mp4.length > 0) {
+      duration = video.assets.mp4[0]?.duration || video.assets.mp4[0]?.length;
+    }
+    if (!duration && (video as any).duration) {
+      duration = (video as any).duration;
+    }
+    
     return c.json(successResponse({
       video_id: video.videoId,
       title: video.title,
@@ -204,6 +223,7 @@ apiVideo.post('/upload-url', requireAdmin, async (c) => {
       player_url: video.assets.player,
       thumbnail_url: video.assets.thumbnail,
       is_public: video.public,
+      duration: duration, // 초 단위
       status: video.status?.ingest?.status || 'processing',
       created_at: video.createdAt,
       lesson_id: lesson_id
@@ -228,6 +248,30 @@ apiVideo.get('/:videoId', requireAdmin, async (c) => {
     
     const video = await client.videos.get(videoId)
     
+    // duration 추출 (여러 소스 시도)
+    let duration = null;
+    
+    // 방법 1: video.assets.mp4에서 추출
+    if (video.assets?.mp4 && video.assets.mp4.length > 0) {
+      duration = video.assets.mp4[0]?.duration || video.assets.mp4[0]?.length;
+    }
+    
+    // 방법 2: video.assets.hls에서 추출
+    if (!duration && video.assets?.hls) {
+      duration = video.assets.hls?.duration;
+    }
+    
+    // 방법 3: video 객체 자체에서 추출
+    if (!duration && (video as any).duration) {
+      duration = (video as any).duration;
+    }
+    
+    console.log('🎬 Video metadata:', {
+      videoId: video.videoId,
+      duration: duration,
+      assets: video.assets
+    });
+    
     return c.json(successResponse({
       video_id: video.videoId,
       title: video.title,
@@ -235,7 +279,7 @@ apiVideo.get('/:videoId', requireAdmin, async (c) => {
       player_url: video.assets.player,
       thumbnail_url: video.assets.thumbnail,
       is_public: video.public,
-      duration: video.assets.mp4 ? video.assets.mp4[0]?.length : null,
+      duration: duration, // 초 단위
       status: video.status,
       created_at: video.createdAt,
       updated_at: video.updatedAt
