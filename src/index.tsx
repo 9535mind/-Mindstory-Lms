@@ -21,6 +21,232 @@ app.get('/api/health', (c) => {
   })
 })
 
+// Login page
+app.get('/login', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>로그인 - 마인드스토리 원격평생교육원</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center">
+        <div class="max-w-md w-full mx-4">
+            <div class="bg-white rounded-2xl shadow-2xl p-8">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                        🎓 마인드스토리
+                    </h1>
+                    <p class="text-gray-600">원격평생교육원</p>
+                </div>
+
+                <form id="loginForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            이메일
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="example@email.com"
+                            required
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            비밀번호
+                        </label>
+                        <input 
+                            type="password" 
+                            id="password"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="••••••••"
+                            required
+                        >
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <label class="flex items-center">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-600">로그인 상태 유지</span>
+                        </label>
+                        <a href="#" class="text-sm text-blue-600 hover:text-blue-700">
+                            비밀번호 찾기
+                        </a>
+                    </div>
+
+                    <button 
+                        type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-200"
+                    >
+                        로그인
+                    </button>
+                </form>
+
+                <div class="mt-6 p-4 bg-yellow-50 rounded-lg">
+                    <p class="text-sm text-yellow-800 text-center">
+                        ⚠️ 데모 버전: 데이터베이스 미연결
+                    </p>
+                    <p class="text-xs text-gray-600 text-center mt-2">
+                        실제 로그인 기능은 D1 Database 설정 후 사용 가능합니다
+                    </p>
+                </div>
+
+                <div class="mt-6 text-center">
+                    <p class="text-sm text-gray-600">
+                        계정이 없으신가요? 
+                        <a href="/register" class="text-blue-600 hover:text-blue-700 font-medium">
+                            회원가입
+                        </a>
+                    </p>
+                </div>
+
+                <div class="mt-6 text-center">
+                    <a href="/" class="text-sm text-gray-500 hover:text-gray-700">
+                        ← 홈으로 돌아가기
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                alert('데모 버전입니다.\\n\\n입력하신 정보:\\n이메일: ' + email + '\\n\\nD1 Database 연결 후 로그인 기능이 활성화됩니다.');
+            });
+        </script>
+    </body>
+    </html>
+  `)
+})
+
+// Register page
+app.get('/register', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>회원가입 - 마인드스토리 원격평생교육원</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center py-12">
+        <div class="max-w-md w-full mx-4">
+            <div class="bg-white rounded-2xl shadow-2xl p-8">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                        🎓 회원가입
+                    </h1>
+                    <p class="text-gray-600">마인드스토리 원격평생교육원</p>
+                </div>
+
+                <form id="registerForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            이름
+                        </label>
+                        <input 
+                            type="text" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="홍길동"
+                            required
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            이메일
+                        </label>
+                        <input 
+                            type="email" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="example@email.com"
+                            required
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            비밀번호
+                        </label>
+                        <input 
+                            type="password" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="8자 이상"
+                            required
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            비밀번호 확인
+                        </label>
+                        <input 
+                            type="password" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="비밀번호 재입력"
+                            required
+                        >
+                    </div>
+
+                    <div class="flex items-start">
+                        <input type="checkbox" class="mt-1 rounded border-gray-300" required>
+                        <label class="ml-2 text-sm text-gray-600">
+                            <a href="#" class="text-blue-600 hover:text-blue-700">이용약관</a> 및 
+                            <a href="#" class="text-blue-600 hover:text-blue-700">개인정보처리방침</a>에 동의합니다
+                        </label>
+                    </div>
+
+                    <button 
+                        type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-200"
+                    >
+                        가입하기
+                    </button>
+                </form>
+
+                <div class="mt-6 p-4 bg-yellow-50 rounded-lg">
+                    <p class="text-sm text-yellow-800 text-center">
+                        ⚠️ 데모 버전: 데이터베이스 미연결
+                    </p>
+                </div>
+
+                <div class="mt-6 text-center">
+                    <p class="text-sm text-gray-600">
+                        이미 계정이 있으신가요? 
+                        <a href="/login" class="text-blue-600 hover:text-blue-700 font-medium">
+                            로그인
+                        </a>
+                    </p>
+                </div>
+
+                <div class="mt-6 text-center">
+                    <a href="/" class="text-sm text-gray-500 hover:text-gray-700">
+                        ← 홈으로 돌아가기
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.getElementById('registerForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                alert('데모 버전입니다.\\n\\nD1 Database 연결 후 회원가입 기능이 활성화됩니다.');
+            });
+        </script>
+    </body>
+    </html>
+  `)
+})
+
 // Home page
 app.get('/', (c) => {
   return c.html(`
@@ -90,10 +316,16 @@ app.get('/', (c) => {
                     </ul>
                 </div>
 
-                <div class="mt-8 text-center">
+                <div class="mt-8 text-center space-x-4">
+                    <a 
+                        href="/login"
+                        class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200"
+                    >
+                        로그인
+                    </a>
                     <button 
                         onclick="testAPI()"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200"
+                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200"
                     >
                         API 테스트
                     </button>
