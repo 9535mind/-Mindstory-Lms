@@ -1188,7 +1188,23 @@ async function handleVideoUrlUpload() {
     setTimeout(() => {
       uploadProgress.classList.add('hidden');
       const uploadedInfo = document.getElementById('uploadedInfo');
-      uploadedInfo.classList.remove('hidden');
+      
+      console.log('🔍 uploadedInfo 요소:', uploadedInfo);
+      console.log('🔍 현재 클래스:', uploadedInfo?.className);
+      
+      if (uploadedInfo) {
+        uploadedInfo.classList.remove('hidden');
+        console.log('✅ uploadedInfo 표시 완료');
+      } else {
+        console.error('❌ uploadedInfo 요소를 찾을 수 없습니다!');
+      }
+      
+      // hidden input에도 저장
+      const hiddenInput = document.getElementById('uploadedVideoKey');
+      if (hiddenInput) {
+        hiddenInput.value = result.video_id;
+        console.log('✅ uploadedVideoKey 저장:', result.video_id);
+      }
       
       // 전역 변수에 저장
       uploadedVideoKey = result.video_id;

@@ -1597,8 +1597,8 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                                     </p>
                                 </div>
                             </div>
-                                
-                                <!-- 업로드 진행률 -->
+                            
+                            <!-- 업로드 진행률 -->
                                 <div id="uploadProgress" class="mt-4 hidden">
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-sm font-medium text-gray-700" id="uploadFileName"></span>
