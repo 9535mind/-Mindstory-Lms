@@ -25,6 +25,7 @@
     "git:log": "git log --oneline"
   },
   "dependencies": {
+    "@api.video/nodejs-client": "^2.6.8",
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
     "hono": "^4.11.3",

@@ -33,6 +33,7 @@ import upload from './routes/upload'
 import ai from './routes/ai'
 import reviews from './routes/reviews'
 import videoExternal from './routes/video-external'
+import videoApiVideo from './routes/video-apivideo'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -71,6 +72,7 @@ app.route('/api/upload', upload)  // 파일 업로드
 app.route('/api', upload)  // 스토리지 파일 서빙
 app.route('/api/ai', ai)  // AI 도우미
 app.route('/api/video-external', videoExternal)  // 외부 영상 스토리지
+app.route('/api/video-apivideo', videoApiVideo)  // api.video 영상 관리
 
 // 페이지 라우트
 app.route('/', pages)

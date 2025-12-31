@@ -883,3 +883,70 @@ async function bulkCreateLessons(lessons) {
         alert('일괄 등록 중 오류가 발생했습니다: ' + error.message);
     }
 }
+
+/**
+ * api.video 업로드 함수
+ */
+async function uploadToApiVideo(file, lessonId, title) {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', title || file.name);
+    formData.append('is_public', 'false'); // 비공개 설정
+    
+    if (lessonId) {
+      formData.append('lesson_id', lessonId);
+    }
+
+    const response = await fetch('/api/video-apivideo/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: formData
+    });
+
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || '업로드 실패');
+    }
+
+    return result.data;
+
+  } catch (error) {
+    console.error('api.video upload error:', error);
+    throw error;
+  }
+}
+
+/**
+ * YouTube URL을 api.video로 업로드
+ */
+async function uploadYouTubeToApiVideo(youtubeUrl, lessonId, title) {
+  try {
+    const response = await apiRequest('POST', '/api/video-apivideo/upload-url', {
+      url: youtubeUrl,
+      title: title,
+      is_public: false,
+      lesson_id: lessonId
+    });
+
+    if (!response.success) {
+      throw new Error(response.error || 'URL 업로드 실패');
+    }
+
+    return response.data;
+
+  } catch (error) {
+    console.error('YouTube to api.video error:', error);
+    throw error;
+  }
+}
+
+/**
+ * 헬퍼: 토큰 가져오기
+ */
+function getToken() {
+  return localStorage.getItem('session_token') || sessionStorage.getItem('session_token');
+}
