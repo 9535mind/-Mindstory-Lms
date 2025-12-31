@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mindstory-lms",
+  "compatibility_date": "2025-12-27",
+  "pages_build_output_dir": "./dist",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  // D1 Database for LMS
+  // Note: For local development, use --local flag
+  // Production database_id will be added after deployment
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mindstory-production",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  // Environment variables
+  "vars": {
+    "OPENAI_BASE_URL": "https://api.openai.com/v1"
+  }
+  // R2 Storage for video files and documents
+  ,
+    {
+    },
+    {
+    }
+  ]
+}
