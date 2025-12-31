@@ -531,6 +531,44 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
+ * 업로드 후 차시 저장 (빠른 저장)
+ */
+function saveLessonAfterUpload() {
+  // 필수 입력 확인
+  const title = document.getElementById('lessonTitle')?.value.trim();
+  const lessonNumber = document.getElementById('lessonNumber')?.value;
+  
+  if (!title) {
+    alert('차시 제목을 입력해주세요.');
+    document.getElementById('lessonTitle')?.focus();
+    return;
+  }
+  
+  if (!lessonNumber) {
+    alert('차시 순서를 입력해주세요.');
+    document.getElementById('lessonNumber')?.focus();
+    return;
+  }
+  
+  if (!uploadedVideoKey) {
+    alert('업로드된 영상이 없습니다.');
+    return;
+  }
+  
+  // 확인 후 저장
+  if (confirm('차시를 저장하시겠습니까?')) {
+    // 모달의 저장 버튼 클릭
+    const saveButton = document.querySelector('#lessonModal button[type="submit"]');
+    if (saveButton) {
+      saveButton.click();
+    } else {
+      // 또는 직접 폼 제출
+      document.getElementById('lessonForm')?.dispatchEvent(new Event('submit'));
+    }
+  }
+}
+
+/**
  * 업로드된 영상 교체
  */
 function replaceUploadedVideo() {
