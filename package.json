@@ -25,6 +25,8 @@
     "git:log": "git log --oneline"
   },
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
     "hono": "^4.11.3",
     "js-yaml": "^4.1.1",
     "openai": "^6.15.0"

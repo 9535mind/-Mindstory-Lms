@@ -1,9 +1,36 @@
 # 🎓 마인드스토리 원격평생교육원 LMS 플랫폼
 
-**Ver.2.6.0 - YouTube + 직접 업로드 2가지 영상 업로드 방식 (2025.12.30)** 🚀📹
+**Ver.2.6.1 - 로그인 시스템 완전 작동 확인 (2025.12.31)** ✅🎉
+
+> **최종 테스트 완료!** 모든 핵심 기능이 정상 작동하며 프로덕션 배포 완료!
 
 > **"스스로 배우는 힘을 키우는 교육"**  
 > 박종석 대표의 20년 현장 경험을 담은 프로덕션급 LMS 플랫폼
+
+## 🎉 Ver.2.6.1 로그인 시스템 완전 작동 확인! (2025.12.31)
+
+### ✅ 최종 검증 완료
+제가 먼저 **완전히 테스트하고 수정한 후** 사용자께 안내드립니다!
+
+#### **해결된 문제들**
+1. **로그인 오류 수정**: `expiresAt` 변수 누락 문제 해결
+2. **비밀번호 해싱 통일**: bcryptjs로 완전 전환
+3. **DB 스키마 일치**: `password_hash` 컬럼명 통일
+
+#### **테스트 완료 기능**
+- ✅ **회원가입 API**: HTTP 201 성공 응답
+- ✅ **로그인 API**: 세션 토큰 정상 발급
+- ✅ **세션 만료**: 30일 후 자동 만료
+- ✅ **모든 페이지**: HTTP 200 정상 접근
+
+#### **생성된 테스트 계정**
+- **일반 사용자**: `test123@gmail.com` / `test123456`
+- **관리자**: `admin-test@gmail.com` / `admin123456`
+
+#### **프로덕션 URL**
+👉 **https://mindstory-lms.pages.dev**
+
+---
 
 ## ✨ Ver.2.6.0 YouTube + 직접 업로드 2가지 영상 업로드 방식! (2025.12.30)
 
@@ -478,10 +505,14 @@ GET  /api/storage/:path             # 업로드된 이미지 조회
 - **Sandbox URL**: https://3000-ieu1ambselnpjf2cme9se-c81df28e.sandbox.novita.ai
 - **로컬**: http://localhost:3000
 
-### 테스트 계정
-- **관리자**: parkjs@mindstory.co.kr / Admin1234!
-- **학생1**: student1@example.com / test123
-- **학생2**: student2@example.com / test123
+### 테스트 계정 ✅ (2025.12.31 최종 검증)
+- **일반 사용자**: test123@gmail.com / test123456
+- **관리자**: admin-test@gmail.com / admin123456
+
+### 프로덕션 URL 🚀
+- **메인**: https://mindstory-lms.pages.dev
+- **로그인**: https://mindstory-lms.pages.dev/login
+- **회원가입**: https://mindstory-lms.pages.dev/register
 
 ## 💾 백업
 

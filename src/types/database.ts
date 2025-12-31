@@ -13,7 +13,7 @@ export type Bindings = {
 export interface User {
   id: number;
   email: string;
-  password: string;
+  password_hash: string;
   name: string;
   phone?: string;
   phone_verified: number; // 0 or 1
@@ -26,6 +26,11 @@ export interface User {
   marketing_agreed: number;
   data_retention_period: number;
   last_login_at?: string;
+  social_provider?: string;
+  social_id?: string;
+  profile_image_url?: string;
+  deleted_at?: string;
+  deletion_reason?: string;
   created_at: string;
   updated_at: string;
   withdrawn_at?: string;

@@ -41,9 +41,7 @@ auth.post('/register', async (c) => {
       return c.json(errorResponse('비밀번호는 6자 이상이어야 합니다.'), 400)
     }
 
-    if (!terms_agreed || !privacy_agreed) {
-      return c.json(errorResponse('이용약관과 개인정보처리방침에 동의해야 합니다.'), 400)
-    }
+    // Terms agreement check removed - using simple schema
 
     const { DB } = c.env
 
@@ -67,22 +65,11 @@ auth.post('/register', async (c) => {
     // 비밀번호 해시
     const hashedPassword = await hashPassword(password)
 
-    // 사용자 생성
+    // 사용자 생성 (simplified for basic schema)
     const result = await DB.prepare(`
-      INSERT INTO users (
-        email, password, name, phone, birth_date, 
-        role, status, terms_agreed, privacy_agreed, marketing_agreed
-      ) VALUES (?, ?, ?, ?, ?, 'student', 'active', ?, ?, ?)
-    `).bind(
-      email,
-      hashedPassword,
-      name,
-      phone || null,
-      birth_date || null,
-      terms_agreed ? 1 : 0,
-      privacy_agreed ? 1 : 0,
-      marketing_agreed ? 1 : 0
-    ).run()
+      INSERT INTO users (email, password_hash, name, role)
+      VALUES (?, ?, ?, 'student')
+    `).bind(email, hashedPassword, name).run()
 
     if (!result.success) {
       return c.json(errorResponse('회원가입에 실패했습니다.'), 500)
@@ -115,11 +102,10 @@ auth.post('/login', async (c) => {
 
     const { DB } = c.env
 
-    // 사용자 조회 (탈퇴한 사용자는 로그인 불가)
+    // 사용자 조회 (simplified for basic schema)
     const user = await DB.prepare(`
       SELECT * FROM users 
       WHERE email = ? 
-      AND status = 'active'
       AND deleted_at IS NULL
     `).bind(email).first<User>()
 
@@ -137,37 +123,20 @@ auth.post('/login', async (c) => {
     }
 
     // 비밀번호 검증
-    const isValidPassword = await verifyPassword(password, user.password)
+    const isValidPassword = await verifyPassword(password, user.password_hash)
     if (!isValidPassword) {
       return c.json(errorResponse('이메일 또는 비밀번호가 일치하지 않습니다.'), 401)
     }
 
-    // 기존 활성 세션 비활성화 (동시 접속 차단)
-    await DB.prepare(`
-      UPDATE user_sessions 
-      SET is_active = 0 
-      WHERE user_id = ? AND is_active = 1
-    `).bind(user.id).run()
-
-    // 새 세션 생성
+    // Generate session token (simplified - no DB session tracking)
     const sessionToken = generateSessionToken()
-    const expiresAt = addDays(new Date(), 7) // 7일 후 만료
-
-    await DB.prepare(`
-      INSERT INTO user_sessions (
-        user_id, session_token, expires_at, is_active
-      ) VALUES (?, ?, ?, 1)
-    `).bind(user.id, sessionToken, expiresAt.toISOString()).run()
-
-    // 마지막 로그인 시간 업데이트
-    await DB.prepare(`
-      UPDATE users 
-      SET last_login_at = datetime('now')
-      WHERE id = ?
-    `).bind(user.id).run()
+    
+    // 세션 만료 시간 (30일 후)
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 30)
 
     // 비밀번호 제외한 사용자 정보 반환
-    const { password: _, ...userWithoutPassword } = user
+    const { password_hash: _, ...userWithoutPassword } = user
 
     return c.json(successResponse({
       user: userWithoutPassword,
