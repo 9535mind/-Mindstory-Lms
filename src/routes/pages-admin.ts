@@ -1477,8 +1477,8 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
             </div>
         </div>
         <div id="lessonModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-                <div class="p-6 border-b flex justify-between items-center">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+                <div class="p-6 border-b flex justify-between items-center flex-shrink-0">
                     <h2 class="text-2xl font-bold text-gray-800">
                         <i class="fas fa-edit mr-2"></i><span id="modalTitle">새 차시 추가</span>
                     </h2>
@@ -1486,7 +1486,8 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                         <i class="fas fa-times text-2xl"></i>
                     </button>
                 </div>
-                <form id="lessonForm" class="p-6 space-y-6">
+                <form id="lessonForm" class="flex-1 overflow-y-auto">
+                    <div class="p-6 space-y-6">
                     <input type="hidden" id="lessonId">
                     <input type="hidden" id="courseIdInput" value="${courseId}">
                     
@@ -1698,18 +1699,20 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                             </label>
                         </div>
                     </div>
-
-                    <div class="flex justify-end space-x-4 pt-6 border-t">
-                        <button type="button" onclick="closeLessonModal()"
-                            class="px-6 py-2 border rounded-lg hover:bg-gray-100">
-                            취소
-                        </button>
-                        <button type="submit"
-                            class="px-6 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800">
-                            <i class="fas fa-save mr-2"></i>저장
-                        </button>
                     </div>
                 </form>
+                
+                <!-- 저장 버튼 (항상 보이도록 하단 고정) -->
+                <div class="p-6 border-t flex justify-end space-x-4 flex-shrink-0 bg-white">
+                    <button type="button" onclick="closeLessonModal()"
+                        class="px-6 py-2 border rounded-lg hover:bg-gray-100">
+                        취소
+                    </button>
+                    <button type="button" onclick="submitLessonForm()"
+                        class="px-6 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800">
+                        <i class="fas fa-save mr-2"></i>저장
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1890,6 +1893,14 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
             function closeLessonModal() {
               document.getElementById('lessonModal').classList.add('hidden');
               document.getElementById('lessonModal').classList.remove('flex');
+            }
+            
+            // 저장 버튼 클릭 시 폼 제출
+            function submitLessonForm() {
+              const form = document.getElementById('lessonForm');
+              if (form) {
+                form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+              }
             }
 
             // 무료 체험 시간 섹션 토글
