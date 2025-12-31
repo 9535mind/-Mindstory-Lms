@@ -30,7 +30,7 @@ enrollments.get('/my', requireAuth, async (c) => {
     const status = c.req.query('status') // active, completed, expired, refunded
 
     let query = `
-      SELECT e.*, c.title, c.thumbnail_url, c.total_lessons, c.total_duration_minutes
+      SELECT e.*, c.title, c.thumbnail_url
       FROM enrollments e
       JOIN courses c ON e.course_id = c.id
       WHERE e.user_id = ?
@@ -43,7 +43,7 @@ enrollments.get('/my', requireAuth, async (c) => {
       bindings.push(status)
     }
     
-    query += ` ORDER BY e.created_at DESC`
+    query += ` ORDER BY e.enrolled_at DESC`
 
     const result = await DB.prepare(query).bind(...bindings).all()
 

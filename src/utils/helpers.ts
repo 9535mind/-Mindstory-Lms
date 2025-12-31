@@ -137,9 +137,13 @@ export async function getCurrentUser(c: Context) {
 
   const env = c.env as { DB: D1Database }
   
-  // 세션 조회
+  // 세션 조회 (명시적 컬럼 선택으로 id 중복 방지)
   const session = await env.DB.prepare(`
-    SELECT s.*, u.* 
+    SELECT 
+      u.id, u.email, u.name, u.role, u.created_at, u.updated_at,
+      u.social_provider, u.social_id, u.profile_image_url,
+      u.deleted_at, u.deletion_reason,
+      s.session_token, s.expires_at
     FROM user_sessions s
     JOIN users u ON s.user_id = u.id
     WHERE s.session_token = ? 
