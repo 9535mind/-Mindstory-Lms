@@ -473,8 +473,8 @@ function getVideoData() {
       alert('올바른 YouTube URL을 입력해주세요.');
       return null;
     }
-  } else {
-    // 직접 업로드 방식
+  } else if (currentVideoTab === 'fileupload') {
+    // 파일 업로드 방식
     if (!uploadedVideoKey) {
       alert('영상 파일을 업로드해주세요.');
       return null;
@@ -485,6 +485,29 @@ function getVideoData() {
       video_url: uploadedVideoKey,
       video_id: null
     };
+  } else if (currentVideoTab === 'urlupload') {
+    // URL 업로드 방식
+    if (!uploadedVideoKey) {
+      alert('영상 URL을 입력해주세요.');
+      return null;
+    }
+
+    // window.uploadedVideoData에서 전체 데이터 가져오기
+    if (window.uploadedVideoData) {
+      console.log('✅ URL 업로드 데이터 사용:', window.uploadedVideoData);
+      return {
+        video_provider: window.uploadedVideoData.video_provider || 'apivideo',
+        video_url: window.uploadedVideoData.video_url,
+        video_id: window.uploadedVideoData.video_id
+      };
+    } else {
+      console.error('❌ uploadedVideoData 없음');
+      alert('영상 정보를 찾을 수 없습니다. 다시 업로드해주세요.');
+      return null;
+    }
+  } else {
+    alert('영상을 선택해주세요.');
+    return null;
   }
 }
 
@@ -1206,8 +1229,17 @@ async function handleVideoUrlUpload() {
         console.log('✅ uploadedVideoKey 저장:', result.video_id);
       }
       
-      // 전역 변수에 저장
+      // 전역 변수에 video_id 저장
       uploadedVideoKey = result.video_id;
+      
+      // 전체 영상 데이터를 전역 변수에 저장 (URL 업로드용)
+      window.uploadedVideoData = {
+        video_id: result.video_id,
+        video_provider: result.video_type || 'apivideo',
+        video_url: result.video_url || result.player_url,
+        thumbnail_url: result.thumbnail_url
+      };
+      console.log('✅ uploadedVideoData 저장:', window.uploadedVideoData);
 
       console.log('📦 Upload result:', result);
       console.log('🔍 Duration 확인:', {
