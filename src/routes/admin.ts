@@ -16,25 +16,19 @@ admin.get('/dashboard/stats', requireAdmin, async (c) => {
   try {
     // 기본 통계
     const [users, courses, activeEnroll] = await Promise.all([
-      DB.prepare(`SELECT COUNT(*) as count FROM users WHERE status = 'active'`).first(),
-      DB.prepare(`SELECT COUNT(*) as count FROM courses WHERE status = 'active'`).first(),
-      DB.prepare(`SELECT COUNT(*) as count FROM enrollments WHERE status = 'active'`).first(),
+      DB.prepare(`SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL`).first(),
+      DB.prepare(`SELECT COUNT(*) as count FROM courses WHERE status = 'published'`).first(),
+      DB.prepare(`SELECT COUNT(*) as count FROM enrollments WHERE completed_at IS NULL`).first(),
     ])
 
-    // 이번 달 매출 (월별)
-    const now = new Date()
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-    const monthlyRevenue = await DB.prepare(`
-      SELECT SUM(final_amount) as total 
-      FROM payments 
-      WHERE status = 'completed' AND created_at >= ?
-    `).bind(startOfMonth).first()
+    // 이번 달 매출 (payments 테이블이 없으므로 0으로 설정)
+    const monthlyRevenue = 0
 
     return c.json(successResponse({
       total_users: users?.count || 0,
       total_courses: courses?.count || 0,
       active_enrollments: activeEnroll?.count || 0,
-      monthly_revenue: monthlyRevenue?.total || 0
+      monthly_revenue: monthlyRevenue
     }))
   } catch (error) {
     console.error('Dashboard stats error:', error)
@@ -46,21 +40,23 @@ admin.get('/dashboard/stats', requireAdmin, async (c) => {
 admin.get('/dashboard', requireAdmin, async (c) => {
   const { DB } = c.env
 
-  const [users, courses, enrollments, revenue, activeEnroll, completedEnroll] = await Promise.all([
-    DB.prepare(`SELECT COUNT(*) as count FROM users WHERE status = 'active'`).first(),
-    DB.prepare(`SELECT COUNT(*) as count FROM courses WHERE status = 'active'`).first(),
+  const [users, courses, enrollments, activeEnroll, completedEnroll] = await Promise.all([
+    DB.prepare(`SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL`).first(),
+    DB.prepare(`SELECT COUNT(*) as count FROM courses WHERE status = 'published'`).first(),
     DB.prepare(`SELECT COUNT(*) as count FROM enrollments`).first(),
-    DB.prepare(`SELECT SUM(final_amount) as total FROM payments WHERE status = 'completed'`).first(),
-    DB.prepare(`SELECT COUNT(*) as count FROM enrollments WHERE status = 'active'`).first(),
-    DB.prepare(`SELECT COUNT(*) as count FROM enrollments WHERE status = 'completed'`).first(),
+    DB.prepare(`SELECT COUNT(*) as count FROM enrollments WHERE completed_at IS NULL`).first(),
+    DB.prepare(`SELECT COUNT(*) as count FROM enrollments WHERE completed_at IS NOT NULL`).first(),
   ])
+  
+  // payments 테이블이 없으므로 revenue는 0으로 설정
+  const revenue = { total: 0 }
 
   const recentEnroll = await DB.prepare(`
     SELECT e.*, u.name as user_name, c.title as course_title
     FROM enrollments e
     JOIN users u ON e.user_id = u.id
     JOIN courses c ON e.course_id = c.id
-    ORDER BY e.created_at DESC
+    ORDER BY e.enrolled_at DESC
     LIMIT 10
   `).all()
 
@@ -68,7 +64,7 @@ admin.get('/dashboard', requireAdmin, async (c) => {
     SELECT c.*, COUNT(e.id) as enrollment_count
     FROM courses c
     LEFT JOIN enrollments e ON c.id = e.course_id
-    WHERE c.status = 'active'
+    WHERE c.status = 'published'
     GROUP BY c.id
     ORDER BY enrollment_count DESC
     LIMIT 5
@@ -97,8 +93,9 @@ admin.get('/users', requireAdmin, async (c) => {
 
   const [users, total] = await Promise.all([
     DB.prepare(`
-      SELECT id, email, name, phone, role, status, phone_verified, created_at
+      SELECT id, email, name, phone, role, created_at
       FROM users
+      WHERE deleted_at IS NULL
       ORDER BY created_at DESC
       LIMIT ? OFFSET ?
     `).bind(limit, offset).all(),
@@ -130,7 +127,7 @@ admin.get('/enrollments', requireAdmin, async (c) => {
       FROM enrollments e
       JOIN users u ON e.user_id = u.id
       JOIN courses c ON e.course_id = c.id
-      ORDER BY e.created_at DESC
+      ORDER BY e.enrolled_at DESC
       LIMIT ? OFFSET ?
     `).bind(limit, offset).all(),
     DB.prepare(`SELECT COUNT(*) as count FROM enrollments`).first()
