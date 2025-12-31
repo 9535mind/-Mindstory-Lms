@@ -227,3 +227,81 @@ function renderPagination(pagination, containerId, onPageChange) {
   html += '</div>'
   container.innerHTML = html
 }
+
+// API 요청 헬퍼
+async function apiRequest(method, url, data = null) {
+  const token = localStorage.getItem('session_token') || sessionStorage.getItem('session_token')
+  
+  const options = {
+    method,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }
+  
+  if (token) {
+    options.headers['Authorization'] = `Bearer ${token}`
+  }
+  
+  if (data) {
+    options.body = JSON.stringify(data)
+  }
+  
+  const response = await fetch(url, options)
+  return await response.json()
+}
+
+// 관리자 권한 확인 (페이지 진입 시)
+async function requireAdmin() {
+  const token = localStorage.getItem('session_token') || sessionStorage.getItem('session_token')
+  
+  if (!token) {
+    alert('로그인이 필요합니다.')
+    window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname)
+    return null
+  }
+  
+  try {
+    const response = await apiRequest('GET', '/api/auth/me')
+    
+    if (!response.success) {
+      alert('인증에 실패했습니다.')
+      window.location.href = '/login'
+      return null
+    }
+    
+    const user = response.data
+    
+    if (user.role !== 'admin') {
+      alert('관리자 권한이 필요합니다.')
+      window.location.href = '/'
+      return null
+    }
+    
+    return user
+  } catch (error) {
+    console.error('Auth error:', error)
+    alert('인증에 실패했습니다.')
+    window.location.href = '/login'
+    return null
+  }
+}
+
+// 로그아웃
+async function logout() {
+  const token = localStorage.getItem('session_token') || sessionStorage.getItem('session_token')
+  
+  if (token) {
+    try {
+      await apiRequest('POST', '/api/auth/logout')
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
+  
+  localStorage.removeItem('session_token')
+  localStorage.removeItem('user')
+  sessionStorage.removeItem('session_token')
+  
+  window.location.href = '/login'
+}
