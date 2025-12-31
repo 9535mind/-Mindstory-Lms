@@ -240,13 +240,7 @@ admin.post('/courses', requireAdmin, async (c) => {
       title,
       description,
       thumbnail_url,
-      course_type = 'general',
-      duration_days = 30,
-      price = 0,
-      discount_price = 0,
-      is_free = 0,
-      is_featured = 0,
-      status = 'active'
+      status = 'draft'
     } = body
 
     // 필수 필드 검증
@@ -254,22 +248,20 @@ admin.post('/courses', requireAdmin, async (c) => {
       return c.json(errorResponse('필수 항목을 입력해주세요'), 400)
     }
 
+    // 현재 로그인한 관리자의 ID를 instructor_id로 사용
+    const session = c.get('session')
+    const instructorId = session?.user_id || null
+
     const result = await DB.prepare(`
       INSERT INTO courses (
-        title, description, thumbnail_url, course_type, duration_days,
-        price, discount_price, is_free, is_featured, status,
+        title, description, thumbnail_url, instructor_id, status,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      ) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `).bind(
       title,
       description,
       thumbnail_url || null,
-      course_type,
-      duration_days,
-      price,
-      discount_price,
-      is_free,
-      is_featured,
+      instructorId,
       status
     ).run()
 
@@ -279,7 +271,7 @@ admin.post('/courses', requireAdmin, async (c) => {
     }))
   } catch (error) {
     console.error('Create course error:', error)
-    return c.json(errorResponse('강좌 등록 실패'), 500)
+    return c.json(errorResponse('강좌 등록 실패: ' + (error as Error).message), 500)
   }
 })
 
@@ -294,12 +286,6 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
       title,
       description,
       thumbnail_url,
-      course_type,
-      duration_days,
-      price,
-      discount_price,
-      is_free,
-      is_featured,
       status
     } = body
 
@@ -313,12 +299,6 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
         title = ?,
         description = ?,
         thumbnail_url = ?,
-        course_type = ?,
-        duration_days = ?,
-        price = ?,
-        discount_price = ?,
-        is_free = ?,
-        is_featured = ?,
         status = ?,
         updated_at = datetime('now')
       WHERE id = ?
@@ -326,12 +306,6 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
       title,
       description,
       thumbnail_url || null,
-      course_type,
-      duration_days,
-      price,
-      discount_price,
-      is_free,
-      is_featured,
       status,
       courseId
     ).run()
@@ -343,7 +317,7 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
     return c.json(successResponse({ message: '강좌가 수정되었습니다' }))
   } catch (error) {
     console.error('Update course error:', error)
-    return c.json(errorResponse('강좌 수정 실패'), 500)
+    return c.json(errorResponse('강좌 수정 실패: ' + (error as Error).message), 500)
   }
 })
 
