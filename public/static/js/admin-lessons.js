@@ -538,12 +538,12 @@ function saveLessonAfterUpload() {
   
   // 필수 입력 확인
   const titleInput = document.getElementById('lessonTitle');
-  const lessonNumberInput = document.getElementById('lessonNumber');
+  const lessonNumberInput = document.getElementById('lessonOrder'); // 수정: lessonNumber → lessonOrder
   
   const title = titleInput?.value?.trim();
   const lessonNumber = lessonNumberInput?.value?.trim();
   
-  console.log('📝 입력 값:', { title, lessonNumber, uploadedVideoKey });
+  console.log('📝 입력 값:', { title, lessonNumber, lessonNumberInput, uploadedVideoKey });
   
   if (!title) {
     alert('차시 제목을 입력해주세요.');
@@ -1194,14 +1194,20 @@ async function handleVideoUrlUpload() {
       uploadedVideoKey = result.video_id;
 
       console.log('📦 Upload result:', result);
+      console.log('🔍 Duration 확인:', {
+        'result.duration': result.duration,
+        'result.data?.duration': result.data?.duration,
+        'type': typeof result.duration
+      });
 
       // 재생 시간 즉시 설정 (응답에 duration이 있으면)
-      if (result.duration && result.duration > 0) {
-        const durationInMinutes = Math.ceil(result.duration / 60);
+      const duration = result.duration || result.data?.duration;
+      if (duration && duration > 0) {
+        const durationInMinutes = Math.ceil(duration / 60);
         const durationInput = document.getElementById('lessonDuration');
         if (durationInput) {
           durationInput.value = durationInMinutes;
-          console.log(`✅ 재생 시간 즉시 설정: ${durationInMinutes}분 (${result.duration}초)`);
+          console.log(`✅ 재생 시간 즉시 설정: ${durationInMinutes}분 (${duration}초)`);
         } else {
           console.error('❌ lessonDuration 입력 필드를 찾을 수 없습니다!');
         }
@@ -1229,8 +1235,8 @@ async function handleVideoUrlUpload() {
         console.log(`✅ 썸네일 URL 저장: ${result.thumbnail_url}`);
       }
 
-      const alertMessage = result.duration && result.duration > 0
-        ? '✅ 영상 URL이 등록되었습니다!\n\n재생 시간: ' + Math.ceil(result.duration / 60) + '분\n\n이제 "저장" 버튼을 클릭하여 차시를 저장하세요.'
+      const alertMessage = duration && duration > 0
+        ? '✅ 영상 URL이 등록되었습니다!\n\n재생 시간: ' + Math.ceil(duration / 60) + '분\n\n이제 "저장" 버튼을 클릭하여 차시를 저장하세요.'
         : '✅ 영상 URL이 등록되었습니다!\n\n영상이 인코딩 중입니다. 30초 후 재생 시간이 자동으로 설정됩니다.\n\n지금 바로 저장하거나, 잠시 후 저장해주세요.';
       
       alert(alertMessage);

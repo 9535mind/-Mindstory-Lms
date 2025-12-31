@@ -1322,7 +1322,7 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
             <div class="bg-white rounded-lg shadow p-6 mb-6">
                 <div class="flex justify-between items-start">
                     <div class="flex items-start">
-                        <img id="courseThumbnail" src="" alt="강좌 썸네일" class="w-32 h-32 object-cover rounded-lg mr-6" onerror="this.src='https://via.placeholder.com/128'">
+                        <img id="courseThumbnail" src="" alt="강좌 썸네일" class="w-32 h-32 object-cover rounded-lg mr-6" onerror="this.style.display='none'">
                         <div>
                             <h2 id="courseTitle" class="text-2xl font-bold text-gray-800 mb-2">로딩중...</h2>
                             <p id="courseDescription" class="text-gray-600 mb-4">로딩중...</p>
@@ -1750,7 +1750,13 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                   const course = response.data;
                   document.getElementById('courseTitle').textContent = course.title;
                   document.getElementById('courseDescription').textContent = course.description || '';
-                  document.getElementById('courseThumbnail').src = course.thumbnail_url || 'https://via.placeholder.com/128';
+                  const thumbnailImg = document.getElementById('courseThumbnail');
+                  if (course.thumbnail_url) {
+                    thumbnailImg.src = course.thumbnail_url;
+                    thumbnailImg.style.display = 'block';
+                  } else {
+                    thumbnailImg.style.display = 'none';
+                  }
                   document.getElementById('enrolledCount').textContent = course.enrolled_count || 0;
                 } else {
                   showError('강좌 정보를 불러오는데 실패했습니다.');
