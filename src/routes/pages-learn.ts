@@ -140,7 +140,7 @@ app.get('/courses/:courseId/learn', async (c) => {
 
         async function loadCourseData() {
             try {
-                const courseId = ${courseId};
+                const courseId = parseInt('${courseId}');
                 
                 // Load course info
                 const courseResponse = await apiRequest('GET', \`/api/courses/\${courseId}\`);
@@ -197,7 +197,7 @@ app.get('/courses/:courseId/learn', async (c) => {
                     message: error?.message || 'Unknown error',
                     name: error?.name,
                     stack: error?.stack,
-                    courseId: courseId
+                    courseId: '${courseId}'
                 });
                 showError('강좌를 불러오는 중 오류가 발생했습니다.');
             }
@@ -632,7 +632,7 @@ app.get('/courses/:courseId/learn', async (c) => {
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
-            const user = await checkAuth();
+            const user = await getCurrentUser();
             if (!user) {
                 window.location.href = '/login';
                 return;
