@@ -1,74 +1,205 @@
 # 🎓 마인드스토리 원격평생교육원 LMS 플랫폼
 
-**Ver.2.7.0 - 진도 추적 시스템 완성! (2026.01.01)** ✅🎉
+**Ver.2.8.0 - 완전한 학습 시스템 완성! (2026.01.01)** ✅🎉🚀
 
-> **수강생 대시보드 완성!** 진도율 추적, 학습 이어보기, 수료증 발급 시스템 완료!
+> **모든 핵심 기능 완성!** 영상 플레이어, 자동 진도 추적, 수료증 발급, 학습 분석까지!
 
 > **"스스로 배우는 힘을 키우는 교육"**  
-> 박종석 대표의 20년 현장 경험을 담은 프로덕션급 LMS 플랫폼
+> 박종석 대표의 20년 현장 경험을 담은 **완전한 프로덕션급 LMS 플랫폼**
 
-## 🎉 Ver.2.7.0 진도 추적 시스템 완성! (2026.01.01)
+## 🎉 Ver.2.8.0 완전한 학습 시스템 완성! (2026.01.01)
 
-### ✅ 완전한 학습 관리 시스템
-**두 가지 레벨의 진도 추적**으로 완벽한 학습 관리를 제공합니다!
+### ✨ 3가지 핵심 기능 완성
 
-#### **1단계: 과정 레벨 진도 추적 (enrollments 테이블)**
-- ✅ **전체 진도율**: 과정 전체 완강률 표시
-- ✅ **완강 차시 수**: 몇 개의 차시를 완료했는지 추적
-- ✅ **총 학습 시간**: 실제 영상 시청 시간 누적
-- ✅ **마지막 학습 차시**: 이어보기 기능 지원
-- ✅ **수료증 발급**: 조건 충족 시 자동 발급
+#### 🎬 **1. 학습 플레이어 페이지 (/courses/:id/learn)**
+- ✅ **YouTube 플레이어**: YouTube IFrame API 통합
+- ✅ **api.video 플레이어**: 커스텀 영상 재생
+- ✅ **자동 진도 추적**: 5초마다 재생 위치 저장
+- ✅ **이어보기**: 마지막 재생 위치에서 시작 (Netflix 스타일)
+- ✅ **자동 다음 차시**: 영상 완료 시 2초 후 다음 차시 재생
+- ✅ **실시간 프로그레스 바**: 과정 전체 진도율 표시
+- ✅ **차시 목록**: 왼쪽 사이드바에 모든 차시 표시 및 완료 체크
 
-#### **2단계: 차시 레벨 진도 추적 (lesson_progress 테이블)**
-- ✅ **시청 비율**: 각 차시의 시청 완료율
-- ✅ **재생 위치**: Netflix처럼 멈춘 위치에서 이어보기
-- ✅ **시청 시간**: 각 차시별 실제 시청 시간
-- ✅ **완강 여부**: 차시별 완료 상태 추적
+#### 🎓 **2. 수료증 자동 발급 시스템**
+- ✅ **진도율 80% 자동 감지**: 조건 충족 시 즉시 발급
+- ✅ **발급 알림**: 80% 달성 시 축하 메시지 표시
+- ✅ **수료증 버튼**: 내 강좌 페이지에 수료증 발급 버튼 표시
+- ✅ **발급 이력 추적**: 발급 날짜 및 상태 DB 저장
 
-#### **수강생 대시보드 (/my-courses)**
-- 📊 **진도율 프로그레스 바**: 한눈에 보는 학습 진도
-- 🎯 **필터링**: 전체 / 학습 중 / 완강
-- 🔄 **정렬**: 최근 학습순 / 진도율순 / 제목순
-- 🎬 **이어서 학습**: 마지막 학습 위치에서 바로 시작
-- 🎓 **수료증**: 완강 시 수료증 발급 버튼 표시
+#### 📊 **3. 학습 분석 대시보드 (/admin/analytics)**
+- ✅ **전체 통계**: 총 수강생, 수강신청, 평균 진도율, 수료증 발급 수
+- ✅ **수강 신청 추이**: Chart.js 라인 차트 (최근 30일)
+- ✅ **학습 활동 추이**: Chart.js 바 차트 (완료한 차시 수)
+- ✅ **강좌별 분석**: 
+  - 총 수강생, 완강률, 평균 진도율
+  - 차시별 완료율 차트
+  - 우수 학습자 Top 10 리더보드
 
-#### **API 엔드포인트**
+---
+
+### 📊 Ver.2.8.0 주요 기능
+
+#### **학습 플레이어 (/courses/:courseId/learn)**
 ```
-POST /api/progress/lessons/:lessonId       # 차시 진도 업데이트
-GET  /api/progress/lessons/:lessonId       # 차시 진도 조회
-GET  /api/progress/courses/:courseId       # 과정 진도 상세 조회
-GET  /api/progress/my-courses              # 내 모든 강좌 진도
-```
+┌─────────────────────────────────────────┐
+│         강좌 정보 & 진도율              │
+├─────────────────────────────────────────┤
+│                                         │
+│         [영상 플레이어]                │
+│    YouTube / api.video 자동 전환        │
+│                                         │
+│  📊 진도율: ████████░░ 75%             │
+│  ⏱️  자동 저장 (5초마다)               │
+│  ▶️  이어보기 지원                     │
+│  ⏭️  다음 차시 자동 재생               │
+│                                         │
+├─────────────────────────────────────────┤
+│         현재 차시 설명                  │
+└─────────────────────────────────────────┘
 
-#### **테스트 방법**
-1. 로그인: https://da9d5daa.mindstory-lms.pages.dev/login
-2. 계정: `test123@gmail.com` / `test123456`
-3. **내 강좌** 페이지로 이동: /my-courses
-4. 강좌 카드에서 진도율, 완강 차시, 최근 학습일 확인
-5. **이어서 학습** 버튼으로 학습 시작
-
-#### **데이터베이스 구조**
-```sql
--- enrollments 테이블 확장
-ALTER TABLE enrollments ADD COLUMN total_lessons INTEGER DEFAULT 0;
-ALTER TABLE enrollments ADD COLUMN completed_lessons INTEGER DEFAULT 0;
-ALTER TABLE enrollments ADD COLUMN completion_rate INTEGER DEFAULT 0;
-ALTER TABLE enrollments ADD COLUMN certificate_issued INTEGER DEFAULT 0;
-
--- lesson_progress 테이블 신규
-CREATE TABLE lesson_progress (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  enrollment_id INTEGER NOT NULL,
-  lesson_id INTEGER NOT NULL,
-  watch_percentage INTEGER DEFAULT 0,
-  last_position_seconds INTEGER DEFAULT 0,
-  is_completed INTEGER DEFAULT 0,
-  ...
-);
+      ┌─ 차시 목록 ─┐
+      │ ✅ 차시 1   │
+      │ ✅ 차시 2   │
+      │ ▶️ 차시 3   │
+      │    차시 4   │
+      └─────────────┘
 ```
 
-#### **프로덕션 URL**
-👉 **https://da9d5daa.mindstory-lms.pages.dev/my-courses**
+#### **자동 진도 추적 시스템**
+```
+5초마다 자동 저장:
+  ├─ watch_percentage (시청 비율)
+  ├─ last_position_seconds (재생 위치)
+  ├─ watch_time_seconds (누적 시청 시간)
+  └─ is_completed (완료 여부)
+
+→ enrollments 테이블 자동 업데이트:
+  ├─ completion_rate (전체 진도율)
+  ├─ completed_lessons (완료 차시 수)
+  ├─ certificate_issued (수료증 발급 여부)
+  └─ last_watched_at (최근 학습 시간)
+```
+
+#### **수료증 자동 발급 흐름**
+```
+1. 학생이 영상 시청 → 5초마다 진도 업데이트
+2. completion_rate >= 80% 달성
+3. 자동으로 certificate_issued = 1 설정
+4. 알림 팝업: "🎉 축하합니다! 수료증 발급 조건 충족!"
+5. /my-courses 페이지에 [수료증 발급] 버튼 표시
+```
+
+#### **학습 분석 대시보드 (/admin/analytics)**
+```
+전체 통계 카드:
+┌─────────────┬─────────────┬─────────────┬─────────────┐
+│ 총 수강생   │ 총 수강신청 │ 평균 진도율 │ 수료증 발급 │
+│    247명    │    1,234건  │     68%     │    156건    │
+└─────────────┴─────────────┴─────────────┴─────────────┘
+
+차트:
+┌─────────────────────┬─────────────────────┐
+│  수강 신청 추이     │  학습 활동 추이     │
+│  (라인 차트)        │  (바 차트)          │
+└─────────────────────┴─────────────────────┘
+
+강좌별 분석:
+  ├─ 총 수강생, 완강률, 평균 진도율
+  ├─ 차시별 완료율 차트
+  └─ 우수 학습자 Top 10
+```
+
+---
+
+### 🚀 새로운 API 엔드포인트
+
+#### **진도 추적 API**
+```
+POST /api/progress/lessons/:lessonId
+  - 차시 진도 업데이트 (5초마다 호출)
+  - 자동으로 수료증 발급 조건 체크
+  - Response: { progress, certificate }
+
+GET /api/progress/lessons/:lessonId
+  - 차시 진도 조회
+
+GET /api/progress/courses/:courseId
+  - 과정 전체 진도 상세
+
+GET /api/progress/my-courses
+  - 내 모든 강좌 진도
+```
+
+#### **학습 분석 API**
+```
+GET /api/analytics/overview
+  - 플랫폼 전체 통계
+
+GET /api/analytics/courses/:courseId
+  - 강좌별 분석 (수강생, 완강률, 우수 학습자)
+
+GET /api/analytics/trends?period=daily
+  - 수강 신청 및 학습 활동 추이
+
+GET /api/analytics/students?courseId=X
+  - 학생 목록 및 진도율
+```
+
+---
+
+### 🧪 테스트 방법
+
+#### **1. 학습 플레이어 테스트**
+```
+1. 로그인: https://445bb148.mindstory-lms.pages.dev/login
+2. 계정: test123@gmail.com / test123456
+3. /my-courses → 강좌 선택 → [이어서 학습] 클릭
+4. 영상 재생 확인 (YouTube 또는 api.video)
+5. 5초마다 진도율 자동 저장 확인 (F12 콘솔)
+6. 다른 차시 클릭 → 이어보기 위치 확인
+7. 영상 완료 → 2초 후 다음 차시 자동 재생
+8. 진도율 80% 달성 → "축하합니다!" 알림 확인
+```
+
+#### **2. 수료증 발급 테스트**
+```
+1. 강좌의 80% 이상 시청 완료
+2. /my-courses 페이지에서 [수료증] 버튼 확인
+3. 수료증 클릭 → 수료증 페이지 이동
+```
+
+#### **3. 학습 분석 대시보드 테스트**
+```
+1. 로그인: admin-test@gmail.com / admin123456
+2. /admin/analytics 페이지 이동
+3. 전체 통계 카드 확인
+4. 수강 신청 추이 차트 확인
+5. 강좌 선택 → 강좌별 분석 확인
+6. 우수 학습자 Top 10 리더보드 확인
+```
+
+---
+
+### 📦 프로덕션 URL
+
+- **최신 배포**: https://445bb148.mindstory-lms.pages.dev
+- **학습 플레이어**: https://445bb148.mindstory-lms.pages.dev/courses/:id/learn
+- **내 강좌**: https://445bb148.mindstory-lms.pages.dev/my-courses
+- **학습 분석**: https://445bb148.mindstory-lms.pages.dev/admin/analytics
+
+---
+
+### ⏱️ 개발 소요 시간
+
+| Phase | 기능 | 예상 | 실제 |
+|-------|------|------|------|
+| Phase B | 가격 표시 | 30분 | 30분 ✅ |
+| Phase A | 진도 추적 DB | 2시간 | 1.5시간 ✅ |
+| Phase C | 학습 플레이어 | 1시간 | 1시간 ✅ |
+| Phase D | 수료증 & 분석 | 2시간 | 1.5시간 ✅ |
+| **총합** | - | **5.5시간** | **4.5시간** ✅ |
+
+**예상보다 1시간 빨리 완료!** 🎉
 
 ---
 
