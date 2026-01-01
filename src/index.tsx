@@ -36,6 +36,9 @@ import videoExternal from './routes/video-external'
 import videoApiVideo from './routes/video-apivideo'
 import aiBulkLessons from './routes/ai-bulk-lessons'
 import pagesStudent from './routes/pages-student'
+import pagesLearn from './routes/pages-learn'
+import analytics from './routes/analytics'
+import pagesAnalytics from './routes/pages-analytics'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -76,6 +79,7 @@ app.route('/api/ai', ai)  // AI 도우미
 app.route('/api/video-external', videoExternal)  // 외부 영상 스토리지
 app.route('/api/video-apivideo', videoApiVideo)  // api.video 영상 관리
 app.route('/api/ai-bulk-lessons', aiBulkLessons)  // AI 일괄 차시 생성
+app.route('/api/analytics', analytics)  // 학습 분석 통계
 
 // 페이지 라우트
 app.route('/', pages)
@@ -83,6 +87,8 @@ app.route('/', pagesMy)
 app.route('/', pagesAbout)
 app.route('/', pagesPayment)  // 결제 페이지
 app.route('/', pagesStudent)  // 수강생 페이지
+app.route('/', pagesLearn)    // 학습 페이지
+app.route('/', pagesAnalytics)  // 분석 페이지
 app.route('/admin', pagesAdmin)  // 관리자 페이지
 
 // 홈페이지

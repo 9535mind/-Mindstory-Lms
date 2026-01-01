@@ -92,6 +92,20 @@ app.post('/lessons/:lessonId', async (c) => {
       ? Math.round((progressStats.completed_lessons / progressStats.total_lessons) * 100)
       : 0
 
+    // Check for certificate eligibility (80% completion)
+    const shouldIssueCertificate = completion_rate >= 80
+    const now = new Date().toISOString()
+    
+    // Get current certificate status
+    const currentEnrollment = await DB.prepare(`
+      SELECT certificate_issued, certificate_issued_at FROM enrollments WHERE id = ?
+    `).bind(enrollment.id).first()
+
+    const certificateIssued = shouldIssueCertificate ? 1 : currentEnrollment.certificate_issued
+    const certificateIssuedAt = shouldIssueCertificate && !currentEnrollment.certificate_issued 
+      ? now 
+      : currentEnrollment.certificate_issued_at
+
     await DB.prepare(`
       UPDATE enrollments
       SET 
@@ -102,6 +116,8 @@ app.post('/lessons/:lessonId', async (c) => {
         progress = ?,
         last_lesson_id = ?,
         last_watched_at = CURRENT_TIMESTAMP,
+        certificate_issued = ?,
+        certificate_issued_at = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).bind(
@@ -111,8 +127,13 @@ app.post('/lessons/:lessonId', async (c) => {
       completion_rate,
       completion_rate,
       lessonId,
+      certificateIssued,
+      certificateIssuedAt,
       enrollment.id
     ).run()
+
+    // Check if certificate was just issued
+    const certificateJustIssued = shouldIssueCertificate && !currentEnrollment.certificate_issued
 
     return c.json({
       success: true,
@@ -120,6 +141,12 @@ app.post('/lessons/:lessonId', async (c) => {
         watch_percentage,
         is_completed,
         completion_rate
+      },
+      certificate: {
+        eligible: shouldIssueCertificate,
+        issued: certificateIssued === 1,
+        just_issued: certificateJustIssued,
+        issued_at: certificateIssuedAt
       }
     })
 

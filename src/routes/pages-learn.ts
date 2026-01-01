@@ -1,0 +1,556 @@
+/**
+ * Learning Pages Router
+ * Student lesson learning/watching pages
+ */
+
+import { Hono } from 'hono'
+import type { Bindings } from '../types/database'
+
+const app = new Hono<{ Bindings: Bindings }>()
+
+/**
+ * Course Learning Page
+ * GET /courses/:courseId/learn
+ */
+app.get('/courses/:courseId/learn', async (c) => {
+  const courseId = c.req.param('courseId')
+  
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>강좌 학습 - 마인드스토리 LMS</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script src="/static/js/auth.js"></script>
+        <style>
+            .lesson-item.active {
+                background-color: #EBF8FF;
+                border-left: 4px solid #3B82F6;
+            }
+            .lesson-item.completed {
+                opacity: 0.7;
+            }
+            .lesson-item.completed .lesson-title::after {
+                content: " ✓";
+                color: #10B981;
+            }
+            #videoPlayer {
+                width: 100%;
+                height: 600px;
+            }
+        </style>
+    </head>
+    <body class="bg-gray-50">
+        <!-- 헤더 -->
+        <header class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex justify-between items-center">
+                    <a href="/" class="text-xl font-bold text-blue-600">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        강좌로 돌아가기
+                    </a>
+                    <span id="headerUserName" class="text-gray-700"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 메인 컨텐츠 -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 영상 플레이어 (왼쪽 2/3) -->
+                <div class="lg:col-span-2">
+                    <!-- 강좌 정보 -->
+                    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                        <h1 id="courseTitle" class="text-2xl font-bold text-gray-900 mb-2">
+                            로딩 중...
+                        </h1>
+                        <p id="courseDescription" class="text-gray-600 mb-4">
+                            로딩 중...
+                        </p>
+                        <!-- 진도율 프로그레스 바 -->
+                        <div class="mb-2">
+                            <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                <span>진도율</span>
+                                <span id="progressPercentage" class="font-semibold">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 영상 플레이어 -->
+                    <div class="bg-black rounded-lg shadow-lg mb-6">
+                        <div id="videoContainer" class="relative">
+                            <div id="videoPlayer" class="flex items-center justify-center text-white">
+                                <div class="text-center">
+                                    <i class="fas fa-spinner fa-spin text-6xl mb-4"></i>
+                                    <p class="text-xl">영상을 불러오는 중...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 현재 차시 정보 -->
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <h2 id="currentLessonTitle" class="text-xl font-bold text-gray-900 mb-2">
+                            차시를 선택해주세요
+                        </h2>
+                        <p id="currentLessonDescription" class="text-gray-600">
+                            왼쪽 목록에서 학습할 차시를 선택하세요.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 차시 목록 (오른쪽 1/3) -->
+                <div class="lg:col-span-1">
+                    <div class="bg-white rounded-lg shadow-sm sticky top-4">
+                        <div class="p-4 border-b">
+                            <h3 class="text-lg font-bold text-gray-900">
+                                <i class="fas fa-list mr-2"></i>차시 목록
+                            </h3>
+                            <p class="text-sm text-gray-600 mt-1">
+                                <span id="lessonStats">0/0 차시 완료</span>
+                            </p>
+                        </div>
+                        <div id="lessonList" class="overflow-y-auto" style="max-height: 600px;">
+                            <div class="p-8 text-center text-gray-500">
+                                <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+                                <p>차시 목록을 불러오는 중...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <script>
+        let courseData = null;
+        let lessonsData = [];
+        let currentLesson = null;
+        let enrollmentData = null;
+        let player = null; // YouTube or api.video player
+        let progressUpdateInterval = null;
+
+        const PROGRESS_UPDATE_INTERVAL = 5000; // 5초마다 진도 업데이트
+
+        async function loadCourseData() {
+            try {
+                const courseId = ${courseId};
+                
+                // Load course info
+                const courseResponse = await apiRequest('GET', \`/api/courses/\${courseId}\`);
+                if (!courseResponse.success) {
+                    showError('강좌 정보를 불러올 수 없습니다.');
+                    return;
+                }
+                courseData = courseResponse.course;
+                
+                // Load lessons
+                const lessonsResponse = await apiRequest('GET', \`/api/courses/\${courseId}/lessons\`);
+                if (!lessonsResponse.success) {
+                    showError('차시 목록을 불러올 수 없습니다.');
+                    return;
+                }
+                lessonsData = lessonsResponse.lessons || [];
+                
+                // Load progress
+                const progressResponse = await apiRequest('GET', \`/api/progress/courses/\${courseId}\`);
+                if (progressResponse.success) {
+                    enrollmentData = progressResponse.enrollment;
+                    updateProgressDisplay();
+                }
+                
+                // Render UI
+                renderCourseInfo();
+                renderLessonList();
+                
+                // Load first incomplete lesson or last watched
+                const firstIncomplete = lessonsData.find(l => !l.is_completed);
+                if (firstIncomplete) {
+                    loadLesson(firstIncomplete.id);
+                } else if (lessonsData.length > 0) {
+                    loadLesson(lessonsData[0].id);
+                }
+                
+            } catch (error) {
+                console.error('Load course error:', error);
+                showError('강좌를 불러오는 중 오류가 발생했습니다.');
+            }
+        }
+
+        function renderCourseInfo() {
+            document.getElementById('courseTitle').textContent = courseData.title;
+            document.getElementById('courseDescription').textContent = courseData.description || '강좌 설명이 없습니다.';
+        }
+
+        function updateProgressDisplay() {
+            if (!enrollmentData) return;
+            
+            const progress = enrollmentData.completion_rate || 0;
+            document.getElementById('progressPercentage').textContent = progress + '%';
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        function renderLessonList() {
+            const container = document.getElementById('lessonList');
+            
+            if (lessonsData.length === 0) {
+                container.innerHTML = \`
+                    <div class="p-8 text-center text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-2"></i>
+                        <p>등록된 차시가 없습니다.</p>
+                    </div>
+                \`;
+                return;
+            }
+
+            const completedCount = lessonsData.filter(l => l.is_completed).length;
+            document.getElementById('lessonStats').textContent = \`\${completedCount}/\${lessonsData.length} 차시 완료\`;
+
+            container.innerHTML = lessonsData.map(lesson => {
+                const isActive = currentLesson && currentLesson.id === lesson.id;
+                const isCompleted = lesson.is_completed;
+                const watchPercentage = lesson.watch_percentage || 0;
+
+                return \`
+                    <div class="lesson-item border-b hover:bg-gray-50 cursor-pointer p-4 \${isActive ? 'active' : ''} \${isCompleted ? 'completed' : ''}"
+                         onclick="loadLesson(\${lesson.id})">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                \${isCompleted 
+                                    ? '<i class="fas fa-check text-green-600"></i>' 
+                                    : '<span class="text-sm font-semibold text-blue-600">' + lesson.lesson_number + '</span>'}
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="lesson-title font-semibold text-gray-900 mb-1">
+                                    \${lesson.title}
+                                </h4>
+                                <div class="flex items-center text-sm text-gray-600">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    <span>\${lesson.video_duration_minutes || 0}분</span>
+                                </div>
+                                \${watchPercentage > 0 && !isCompleted ? \`
+                                    <div class="mt-2">
+                                        <div class="w-full bg-gray-200 rounded-full h-1">
+                                            <div class="bg-blue-500 h-1 rounded-full" style="width: \${watchPercentage}%"></div>
+                                        </div>
+                                    </div>
+                                \` : ''}
+                            </div>
+                        </div>
+                    </div>
+                \`;
+            }).join('');
+        }
+
+        async function loadLesson(lessonId) {
+            try {
+                // Stop previous progress tracking
+                stopProgressTracking();
+
+                // Find lesson
+                currentLesson = lessonsData.find(l => l.id === lessonId);
+                if (!currentLesson) {
+                    showError('차시를 찾을 수 없습니다.');
+                    return;
+                }
+
+                // Update UI
+                document.getElementById('currentLessonTitle').textContent = 
+                    \`차시 \${currentLesson.lesson_number}: \${currentLesson.title}\`;
+                document.getElementById('currentLessonDescription').textContent = 
+                    currentLesson.description || '차시 설명이 없습니다.';
+
+                // Load video player
+                await loadVideoPlayer(currentLesson);
+
+                // Start progress tracking
+                startProgressTracking();
+
+                // Update lesson list active state
+                renderLessonList();
+
+            } catch (error) {
+                console.error('Load lesson error:', error);
+                showError('차시를 불러오는 중 오류가 발생했습니다.');
+            }
+        }
+
+        async function loadVideoPlayer(lesson) {
+            const container = document.getElementById('videoPlayer');
+            
+            // Determine video provider
+            const provider = lesson.video_provider || 'youtube';
+            
+            if (provider === 'youtube') {
+                await loadYouTubePlayer(lesson);
+            } else if (provider === 'apivideo' || provider === 'api.video') {
+                await loadApiVideoPlayer(lesson);
+            } else {
+                container.innerHTML = \`
+                    <div class="text-center p-12">
+                        <i class="fas fa-exclamation-triangle text-6xl text-yellow-500 mb-4"></i>
+                        <p class="text-xl">지원하지 않는 영상 형식입니다.</p>
+                    </div>
+                \`;
+            }
+        }
+
+        async function loadYouTubePlayer(lesson) {
+            const container = document.getElementById('videoPlayer');
+            
+            // Extract video ID from URL
+            let videoId = lesson.video_id;
+            if (!videoId && lesson.video_url) {
+                const match = lesson.video_url.match(/(?:youtube\\.com\\/(?:[^\\/]+\\/.+\\/|(?:v|e(?:mbed)?)\\/|.*[?&]v=)|youtu\\.be\\/)([^"&?\\/ ]{11})/);
+                videoId = match ? match[1] : null;
+            }
+
+            if (!videoId) {
+                container.innerHTML = '<p class="text-white p-12 text-center">YouTube 영상 ID를 찾을 수 없습니다.</p>';
+                return;
+            }
+
+            // Load YouTube IFrame API
+            if (!window.YT) {
+                await loadYouTubeAPI();
+            }
+
+            container.innerHTML = '<div id="youtubePlayer"></div>';
+
+            player = new YT.Player('youtubePlayer', {
+                height: '600',
+                width: '100%',
+                videoId: videoId,
+                playerVars: {
+                    autoplay: 1,
+                    controls: 1,
+                    modestbranding: 1,
+                    rel: 0
+                },
+                events: {
+                    onReady: onYouTubePlayerReady,
+                    onStateChange: onYouTubePlayerStateChange
+                }
+            });
+        }
+
+        function loadYouTubeAPI() {
+            return new Promise((resolve) => {
+                if (window.YT && window.YT.Player) {
+                    resolve();
+                    return;
+                }
+
+                window.onYouTubeIframeAPIReady = resolve;
+
+                const tag = document.createElement('script');
+                tag.src = 'https://www.youtube.com/iframe_api';
+                document.head.appendChild(tag);
+            });
+        }
+
+        function onYouTubePlayerReady(event) {
+            console.log('✅ YouTube player ready');
+        }
+
+        function onYouTubePlayerStateChange(event) {
+            // YT.PlayerState.PLAYING = 1
+            // YT.PlayerState.PAUSED = 2
+            // YT.PlayerState.ENDED = 0
+            
+            if (event.data === YT.PlayerState.ENDED) {
+                markLessonCompleted();
+            }
+        }
+
+        async function loadApiVideoPlayer(lesson) {
+            const container = document.getElementById('videoPlayer');
+            
+            const videoId = lesson.video_id;
+            if (!videoId) {
+                container.innerHTML = '<p class="text-white p-12 text-center">영상 ID를 찾을 수 없습니다.</p>';
+                return;
+            }
+
+            // api.video embed URL
+            const embedUrl = \`https://embed.api.video/vod/\${videoId}\`;
+
+            container.innerHTML = \`
+                <iframe 
+                    id="apiVideoPlayer"
+                    src="\${embedUrl}" 
+                    width="100%" 
+                    height="600" 
+                    frameborder="0" 
+                    scrolling="no" 
+                    allowfullscreen
+                    allow="autoplay; fullscreen; picture-in-picture">
+                </iframe>
+            \`;
+
+            // Listen to api.video events (postMessage)
+            window.addEventListener('message', handleApiVideoMessage);
+        }
+
+        function handleApiVideoMessage(event) {
+            if (event.origin !== 'https://embed.api.video') return;
+
+            const data = event.data;
+            
+            if (data.type === 'ended') {
+                markLessonCompleted();
+            }
+        }
+
+        function startProgressTracking() {
+            progressUpdateInterval = setInterval(async () => {
+                await updateProgress();
+            }, PROGRESS_UPDATE_INTERVAL);
+        }
+
+        function stopProgressTracking() {
+            if (progressUpdateInterval) {
+                clearInterval(progressUpdateInterval);
+                progressUpdateInterval = null;
+            }
+        }
+
+        async function updateProgress() {
+            if (!currentLesson || !player) return;
+
+            try {
+                let currentTime = 0;
+                let duration = 1;
+                let watchPercentage = 0;
+
+                // Get player state
+                if (player.getCurrentTime && player.getDuration) {
+                    // YouTube player
+                    currentTime = player.getCurrentTime();
+                    duration = player.getDuration();
+                    watchPercentage = Math.round((currentTime / duration) * 100);
+                } else {
+                    // api.video - estimate from duration
+                    duration = currentLesson.video_duration_minutes * 60;
+                    currentTime = duration * 0.5; // Rough estimate
+                    watchPercentage = 50; // Rough estimate
+                }
+
+                if (watchPercentage > 100) watchPercentage = 100;
+
+                // Update progress
+                const response = await apiRequest('POST', \`/api/progress/lessons/\${currentLesson.id}\`, {
+                    watch_percentage: watchPercentage,
+                    last_position_seconds: Math.floor(currentTime),
+                    watch_time_seconds: 5, // 5 seconds since last update
+                    is_completed: watchPercentage >= 90 ? 1 : 0
+                });
+
+                if (response.success) {
+                    console.log(\`✅ Progress updated: \${watchPercentage}%\`);
+                    
+                    // Update local data
+                    currentLesson.watch_percentage = watchPercentage;
+                    
+                    // Reload enrollment progress
+                    const progressResponse = await apiRequest('GET', \`/api/progress/courses/\${courseData.id}\`);
+                    if (progressResponse.success) {
+                        enrollmentData = progressResponse.enrollment;
+                        updateProgressDisplay();
+                    }
+                }
+
+            } catch (error) {
+                console.error('❌ Progress update error:', error);
+            }
+        }
+
+        async function markLessonCompleted() {
+            if (!currentLesson) return;
+
+            try {
+                const response = await apiRequest('POST', \`/api/progress/lessons/\${currentLesson.id}\`, {
+                    watch_percentage: 100,
+                    last_position_seconds: currentLesson.video_duration_minutes * 60,
+                    is_completed: 1
+                });
+
+                if (response.success) {
+                    console.log('✅ Lesson marked as completed');
+                    currentLesson.is_completed = true;
+                    renderLessonList();
+                    
+                    // Check for certificate eligibility
+                    const progressResponse = await apiRequest('GET', \`/api/progress/courses/\${courseData.id}\`);
+                    if (progressResponse.success) {
+                        enrollmentData = progressResponse.enrollment;
+                        updateProgressDisplay();
+                        
+                        if (enrollmentData.completion_rate >= 80) {
+                            showCertificateNotification();
+                        }
+                    }
+
+                    // Auto-play next lesson
+                    const currentIndex = lessonsData.findIndex(l => l.id === currentLesson.id);
+                    if (currentIndex >= 0 && currentIndex < lessonsData.length - 1) {
+                        setTimeout(() => {
+                            loadLesson(lessonsData[currentIndex + 1].id);
+                        }, 2000);
+                    }
+                }
+
+            } catch (error) {
+                console.error('Mark completed error:', error);
+            }
+        }
+
+        function showCertificateNotification() {
+            alert('🎉 축하합니다! 진도율 80%를 달성하여 수료증 발급 조건을 충족했습니다!');
+        }
+
+        function showError(message) {
+            document.getElementById('videoPlayer').innerHTML = \`
+                <div class="text-center p-12">
+                    <i class="fas fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
+                    <p class="text-xl text-white">\${message}</p>
+                    <button onclick="location.reload()" 
+                            class="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        다시 시도
+                    </button>
+                </div>
+            \`;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) {
+                window.location.href = '/login';
+                return;
+            }
+
+            document.getElementById('headerUserName').textContent = user.name + ' 님';
+            loadCourseData();
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            stopProgressTracking();
+            if (window.removeEventListener) {
+                window.removeEventListener('message', handleApiVideoMessage);
+            }
+        });
+        </script>
+    </body>
+    </html>
+  `)
+})
+
+export default app
