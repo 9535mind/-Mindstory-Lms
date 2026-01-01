@@ -318,9 +318,31 @@ courses.post('/:id/lessons', requireAdmin, async (c) => {
       video_provider, video_id, video_url, video_duration_minutes, is_free_preview 
     } = body
 
+    // ✅ 필수 필드 검증 강화
     if (!title || !lesson_number) {
       return c.json(errorResponse('차시 번호와 제목은 필수입니다.'), 400)
     }
+    
+    // ✅ video_provider 정규화 (apivideo, api.video → apivideo)
+    let normalizedProvider = video_provider || 'youtube';
+    if (normalizedProvider === 'api.video') {
+      normalizedProvider = 'apivideo';
+    }
+    
+    // ✅ video_url 검증 (영상이 있을 경우 URL 필수)
+    if (normalizedProvider !== 'youtube' && !video_url) {
+      console.error('❌ video_url missing:', { video_provider, video_url, video_id });
+      return c.json(errorResponse('영상 URL이 필요합니다. 영상을 다시 업로드해주세요.'), 400);
+    }
+    
+    console.log('✅ 차시 생성 요청:', { 
+      courseId, 
+      title, 
+      lesson_number, 
+      video_provider: normalizedProvider, 
+      video_url, 
+      video_id 
+    });
 
     const { DB } = c.env
 
@@ -355,7 +377,7 @@ courses.post('/:id/lessons', requireAdmin, async (c) => {
       title,
       description || null,
       content_type || 'video',
-      video_provider || null,
+      normalizedProvider,  // ✅ 정규화된 provider 사용
       video_id || null,
       video_url || null,
       video_duration_minutes || null,
@@ -376,9 +398,23 @@ courses.post('/:id/lessons', requireAdmin, async (c) => {
       title
     }, '차시가 생성되었습니다.'), 201)
 
-  } catch (error) {
-    console.error('Create lesson error:', error)
-    return c.json(errorResponse('서버 오류가 발생했습니다.'), 500)
+  } catch (error: any) {
+    console.error('❌ Create lesson error:', error);
+    
+    // ✅ 구체적인 에러 메시지 반환
+    let errorMessage = '서버 오류가 발생했습니다.';
+    
+    if (error.message?.includes('UNIQUE constraint')) {
+      errorMessage = '이미 존재하는 차시 번호입니다.';
+    } else if (error.message?.includes('NOT NULL constraint')) {
+      errorMessage = '필수 항목이 누락되었습니다. 영상 URL을 확인해주세요.';
+    } else if (error.message?.includes('FOREIGN KEY constraint')) {
+      errorMessage = '과정 정보를 찾을 수 없습니다.';
+    } else if (error.message) {
+      errorMessage = `오류: ${error.message}`;
+    }
+    
+    return c.json(errorResponse(errorMessage), 500)
   }
 })
 

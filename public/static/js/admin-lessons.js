@@ -443,72 +443,105 @@ async function uploadVideoFile(file) {
 }
 
 /**
- * 차시 폼 제출 시 영상 정보 처리
+ * YouTube 탭 - 영상 데이터 추출
  */
-function getVideoData() {
-  if (currentVideoTab === 'youtube') {
-    // YouTube URL 방식
-    const videoUrl = document.getElementById('lessonVideoUrl').value.trim();
-    if (!videoUrl) {
-      return null;
-    }
-
-    // YouTube URL을 embed 형식으로 변환
-    let videoId = '';
-    if (videoUrl.includes('youtube.com/watch?v=')) {
-      videoId = videoUrl.split('v=')[1].split('&')[0];
-    } else if (videoUrl.includes('youtu.be/')) {
-      videoId = videoUrl.split('youtu.be/')[1].split('?')[0];
-    } else if (videoUrl.includes('youtube.com/embed/')) {
-      videoId = videoUrl.split('embed/')[1].split('?')[0];
-    }
-
-    if (videoId) {
-      return {
-        video_provider: 'youtube',
-        video_url: `https://www.youtube.com/embed/${videoId}`,
-        video_id: videoId
-      };
-    } else {
-      alert('올바른 YouTube URL을 입력해주세요.');
-      return null;
-    }
-  } else if (currentVideoTab === 'fileupload') {
-    // 파일 업로드 방식
-    if (!uploadedVideoKey) {
-      alert('영상 파일을 업로드해주세요.');
-      return null;
-    }
-
-    return {
-      video_provider: 'r2',
-      video_url: uploadedVideoKey,
-      video_id: null
-    };
-  } else if (currentVideoTab === 'urlupload') {
-    // URL 업로드 방식
-    if (!uploadedVideoKey) {
-      alert('영상 URL을 입력해주세요.');
-      return null;
-    }
-
-    // window.uploadedVideoData에서 전체 데이터 가져오기
-    if (window.uploadedVideoData) {
-      console.log('✅ URL 업로드 데이터 사용:', window.uploadedVideoData);
-      return {
-        video_provider: window.uploadedVideoData.video_provider || 'apivideo',
-        video_url: window.uploadedVideoData.video_url,
-        video_id: window.uploadedVideoData.video_id
-      };
-    } else {
-      console.error('❌ uploadedVideoData 없음');
-      alert('영상 정보를 찾을 수 없습니다. 다시 업로드해주세요.');
-      return null;
-    }
-  } else {
-    alert('영상을 선택해주세요.');
+function getYouTubeVideoData() {
+  const input = document.getElementById('lessonVideoUrl');
+  const videoUrl = input?.value?.trim();
+  
+  if (!videoUrl) {
+    alert('YouTube URL을 입력해주세요.');
+    input?.focus();
     return null;
   }
+
+  // YouTube URL에서 video ID 추출
+  let videoId = '';
+  if (videoUrl.includes('youtube.com/watch?v=')) {
+    videoId = videoUrl.split('v=')[1].split('&')[0];
+  } else if (videoUrl.includes('youtu.be/')) {
+    videoId = videoUrl.split('youtu.be/')[1].split('?')[0];
+  } else if (videoUrl.includes('youtube.com/embed/')) {
+    videoId = videoUrl.split('embed/')[1].split('?')[0];
+  }
+
+  if (!videoId) {
+    alert('올바른 YouTube URL을 입력해주세요.\n\n예시:\n- https://youtube.com/watch?v=abc123\n- https://youtu.be/abc123');
+    input?.focus();
+    return null;
+  }
+
+  return {
+    video_provider: 'youtube',
+    video_url: `https://www.youtube.com/embed/${videoId}`,
+    video_id: videoId
+  };
+}
+
+/**
+ * 파일 업로드 탭 - 영상 데이터 추출
+ */
+function getFileUploadVideoData() {
+  if (!window.currentLessonVideo) {
+    alert('영상 파일을 업로드해주세요.');
+    return null;
+  }
+  
+  // window.currentLessonVideo에 저장된 데이터 사용
+  return {
+    video_provider: window.currentLessonVideo.provider || 'apivideo',
+    video_url: window.currentLessonVideo.url,
+    video_id: window.currentLessonVideo.video_id
+  };
+}
+
+/**
+ * URL 업로드 탭 - 영상 데이터 추출
+ */
+function getUrlUploadVideoData() {
+  if (!window.currentLessonVideo) {
+    alert('영상 URL을 입력하고 등록해주세요.');
+    return null;
+  }
+  
+  // window.currentLessonVideo에 저장된 데이터 사용
+  return {
+    video_provider: window.currentLessonVideo.provider || 'apivideo',
+    video_url: window.currentLessonVideo.url,
+    video_id: window.currentLessonVideo.video_id
+  };
+}
+
+/**
+ * 차시 폼 제출 시 영상 정보 처리 (통합 함수)
+ */
+function getVideoData() {
+  console.log('📹 getVideoData 호출, 현재 탭:', currentVideoTab);
+  
+  // 탭별 핸들러 맵핑
+  const handlers = {
+    'youtube': getYouTubeVideoData,
+    'fileupload': getFileUploadVideoData,
+    'urlupload': getUrlUploadVideoData
+  };
+  
+  const handler = handlers[currentVideoTab];
+  
+  if (!handler) {
+    console.error('❌ 알 수 없는 탭:', currentVideoTab);
+    alert('영상 탭을 선택해주세요.');
+    return null;
+  }
+  
+  const videoData = handler();
+  
+  if (videoData) {
+    console.log('✅ 영상 데이터:', videoData);
+  } else {
+    console.error('❌ 영상 데이터 없음');
+  }
+  
+  return videoData;
 }
 
 /**
@@ -1229,17 +1262,20 @@ async function handleVideoUrlUpload() {
         console.log('✅ uploadedVideoKey 저장:', result.video_id);
       }
       
-      // 전역 변수에 video_id 저장
+      // 전역 변수에 video_id 저장 (후방 호환성)
       uploadedVideoKey = result.video_id;
       
-      // 전체 영상 데이터를 전역 변수에 저장 (URL 업로드용)
-      window.uploadedVideoData = {
+      // ✅ 통합 데이터 구조로 저장 (모든 탭 공통)
+      window.currentLessonVideo = {
+        provider: result.video_type || 'apivideo',
+        url: result.player_url || result.video_url,
         video_id: result.video_id,
-        video_provider: result.video_type || 'apivideo',
-        video_url: result.video_url || result.player_url,
-        thumbnail_url: result.thumbnail_url
+        duration: result.duration || result.data?.duration || null,
+        thumbnail: result.thumbnail_url || null,
+        source: 'url',
+        uploaded_at: new Date().toISOString()
       };
-      console.log('✅ uploadedVideoData 저장:', window.uploadedVideoData);
+      console.log('✅ currentLessonVideo 저장:', window.currentLessonVideo);
 
       console.log('📦 Upload result:', result);
       console.log('🔍 Duration 확인:', {

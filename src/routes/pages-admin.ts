@@ -1700,19 +1700,19 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                         </div>
                     </div>
                     </div>
+                    
+                    <!-- ✅ 저장 버튼을 form 안으로 이동 (sticky footer) -->
+                    <div class="p-6 border-t flex justify-end space-x-4 sticky bottom-0 bg-white z-10">
+                        <button type="button" onclick="closeLessonModal()"
+                            class="px-6 py-2 border rounded-lg hover:bg-gray-100">
+                            취소
+                        </button>
+                        <button type="submit"
+                            class="px-6 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800">
+                            <i class="fas fa-save mr-2"></i>저장
+                        </button>
+                    </div>
                 </form>
-                
-                <!-- 저장 버튼 (항상 보이도록 하단 고정) -->
-                <div class="p-6 border-t flex justify-end space-x-4 flex-shrink-0 bg-white">
-                    <button type="button" onclick="closeLessonModal()"
-                        class="px-6 py-2 border rounded-lg hover:bg-gray-100">
-                        취소
-                    </button>
-                    <button type="button" onclick="submitLessonForm()"
-                        class="px-6 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800">
-                        <i class="fas fa-save mr-2"></i>저장
-                    </button>
-                </div>
             </div>
         </div>
 
