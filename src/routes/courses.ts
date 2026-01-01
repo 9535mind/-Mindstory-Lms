@@ -329,11 +329,17 @@ courses.post('/:id/lessons', requireAdmin, async (c) => {
       normalizedProvider = 'apivideo';
     }
     
-    // ✅ video_url 검증 (영상이 있을 경우 URL 필수)
-    if (normalizedProvider !== 'youtube' && !video_url) {
-      console.error('❌ video_url missing:', { video_provider, video_url, video_id });
-      return c.json(errorResponse('영상 URL이 필요합니다. 영상을 다시 업로드해주세요.'), 400);
-    }
+    // ✅ 디버깅 로그 추가
+    console.log('📝 차시 생성 데이터:', {
+      courseId,
+      title,
+      lesson_number,
+      video_provider: normalizedProvider,
+      video_url,
+      video_id,
+      video_duration_minutes,
+      is_free_preview
+    });
     
     console.log('✅ 차시 생성 요청:', { 
       courseId, 
