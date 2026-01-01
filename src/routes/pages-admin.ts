@@ -1932,19 +1932,45 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
             // 폼 제출 처리
             async function handleSubmit(e) {
               e.preventDefault();
+              console.log('🚀 handleSubmit 시작');
               
               const lessonId = document.getElementById('lessonId').value;
               
               // 영상 데이터 가져오기 (admin-lessons.js의 함수 호출)
               const videoData = getVideoData();
               if (!videoData) {
+                console.error('❌ videoData가 null/undefined');
                 return; // 영상 데이터 검증 실패
+              }
+              
+              console.log('✅ videoData 확인 완료:', videoData);
+              
+              const title = document.getElementById('lessonTitle').value;
+              const lessonOrder = document.getElementById('lessonOrder').value;
+              
+              console.log('📝 입력값 확인:', {
+                title,
+                lessonOrder,
+                titleLength: title?.length,
+                lessonOrderValue: lessonOrder
+              });
+              
+              if (!title || !title.trim()) {
+                alert('차시 제목을 입력해주세요.');
+                document.getElementById('lessonTitle').focus();
+                return;
+              }
+              
+              if (!lessonOrder || parseInt(lessonOrder) < 1) {
+                alert('차시 순서를 입력해주세요. (1 이상)');
+                document.getElementById('lessonOrder').focus();
+                return;
               }
               
               const formData = {
                 course_id: parseInt(courseId),
-                title: document.getElementById('lessonTitle').value,
-                lesson_number: parseInt(document.getElementById('lessonOrder').value),
+                title: title.trim(),
+                lesson_number: parseInt(lessonOrder),
                 video_duration_minutes: parseInt(document.getElementById('lessonDuration').value) || 0,
                 video_provider: videoData.video_provider,
                 video_url: videoData.video_url,
