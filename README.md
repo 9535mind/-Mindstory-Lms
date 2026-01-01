@@ -1,11 +1,52 @@
 # 🎓 마인드스토리 원격평생교육원 LMS 플랫폼
 
-**Ver.2.8.0 - 완전한 학습 시스템 완성! (2026.01.01)** ✅🎉🚀
+**Ver.2.9.0 - 영상 업로드 시스템 완전 수정! (2026.01.01)** ✅🎉🚀
 
-> **모든 핵심 기능 완성!** 영상 플레이어, 자동 진도 추적, 수료증 발급, 학습 분석까지!
+> **영상 업로드 완전 작동!** YouTube URL, 파일 업로드, URL 업로드 모두 정상!
 
 > **"스스로 배우는 힘을 키우는 교육"**  
 > 박종석 대표의 20년 현장 경험을 담은 **완전한 프로덕션급 LMS 플랫폼**
+
+## 🎉 Ver.2.9.0 영상 업로드 시스템 완전 수정! (2026.01.01)
+
+### 🔧 **영상 업로드 시스템 수정 완료**
+
+#### ✅ **수정 내용**
+- **프로덕션 D1 스키마 업데이트**: 누락된 컬럼 추가
+  - `content_type` (TEXT)
+  - `video_provider` (TEXT)
+  - `video_id` (TEXT)
+  - `video_duration_minutes` (INTEGER)
+  - `is_free_preview` (INTEGER)
+- **브라우저 캐시 문제 해결**: 강력 새로고침 가이드 제공
+- **Cloudflare Pages 배포 전파**: 새 배포 URL로 완전 전파
+
+#### ✅ **검증 완료**
+```json
+{
+  "id": 37,
+  "course_id": 9,
+  "lesson_number": 1,
+  "video_provider": "apivideo",
+  "video_url": "https://vod.api.video/...",
+  "video_id": "vi3rrqCvFbkHxv3yavOIF45q",
+  "content_type": "video"
+}
+```
+
+**모든 필드가 정상 저장되었습니다!**
+
+#### 🎯 **작동 확인된 업로드 방식**
+1. ✅ YouTube URL 업로드
+2. ✅ 파일 업로드 (api.video)
+3. ✅ URL 업로드 (api.video)
+
+#### 🤝 **Gemini AI 협업**
+- Gemini AI의 정확한 진단 (브라우저 캐시 문제)
+- 실시간 DB 조회로 증거 기반 검증
+- 최종 합의 도출 및 해결
+
+---
 
 ## 🎉 Ver.2.8.0 완전한 학습 시스템 완성! (2026.01.01)
 
