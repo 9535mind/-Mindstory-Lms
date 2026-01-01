@@ -1105,9 +1105,11 @@ pages.get('/courses/:id', async (c) => {
 })
 
 /**
- * GET /courses/:courseId/lessons/:lessonId
- * 차시 학습 페이지 (영상 재생)
+ * DEPRECATED: This route is now handled by pages-student.ts
+ * 이 라우트는 pages-student.ts에서 처리됩니다 (차시 상세 정보만 표시)
+ * 영상 재생은 /courses/:id/learn 에서 처리됩니다
  */
+/* COMMENTED OUT - Conflicting with pages-student.ts
 pages.get('/courses/:courseId/lessons/:lessonId', async (c) => {
   const courseId = c.req.param('courseId')
   const lessonId = c.req.param('lessonId')
@@ -1407,5 +1409,6 @@ pages.get('/courses/:courseId/lessons/:lessonId', async (c) => {
     ${getCommonFoot()}
   `)
 })
+*/ // END OF COMMENTED OUT ROUTE
 
 export default pages
