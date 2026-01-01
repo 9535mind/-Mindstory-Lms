@@ -1,11 +1,38 @@
 # 🎓 마인드스토리 원격평생교육원 LMS 플랫폼
 
-**Ver.2.9.0 - 영상 업로드 시스템 완전 수정! (2026.01.01)** ✅🎉🚀
+**Ver.2.10.0 - 프로덕션 D1 스키마 완전 동기화! (2026.01.01)** ✅🎉🚀
 
-> **영상 업로드 완전 작동!** YouTube URL, 파일 업로드, URL 업로드 모두 정상!
+> **데이터베이스 스키마 완전 동기화!** 로컬과 프로덕션 D1 스키마 100% 일치!
 
 > **"스스로 배우는 힘을 키우는 교육"**  
 > 박종석 대표의 20년 현장 경험을 담은 **완전한 프로덕션급 LMS 플랫폼**
+
+## 🎉 Ver.2.10.0 프로덕션 D1 스키마 완전 동기화! (2026.01.01)
+
+### 🔧 **프로덕션 D1 스키마 수정 완료**
+
+#### ✅ **`courses` 테이블 누락 컬럼 추가**
+- `price` (INTEGER DEFAULT 0)
+- `total_lessons` (INTEGER DEFAULT 0)
+- `total_duration_minutes` (INTEGER DEFAULT 0)
+- `completion_requirement` (INTEGER DEFAULT 80)
+- `certificate_enabled` (INTEGER DEFAULT 1)
+- `category` (TEXT)
+- `difficulty` (TEXT DEFAULT 'beginner')
+
+#### ✅ **`lessons` 테이블 스키마 완전 동기화 확인**
+- `content_type` (TEXT DEFAULT 'video') ✅
+- `video_provider` (TEXT) ✅
+- `video_id` (TEXT) ✅
+- `video_duration_minutes` (INTEGER DEFAULT 0) ✅
+- `is_free_preview` (INTEGER DEFAULT 0) ✅
+
+#### 🎯 **테스트 환경 완전 초기화**
+- ✅ 모든 테스트 데이터 삭제 완료
+- ✅ 신규 관리자 계정 생성: `admin@lms.kr`
+- ✅ 테스트 강좌 1개 생성 완료: "테스트 강좌 1 (과목1)"
+
+---
 
 ## 🎉 Ver.2.9.0 영상 업로드 시스템 완전 수정! (2026.01.01)
 
@@ -757,14 +784,17 @@ GET  /api/storage/:path             # 업로드된 이미지 조회
 - **Sandbox URL**: https://3000-ieu1ambselnpjf2cme9se-c81df28e.sandbox.novita.ai
 - **로컬**: http://localhost:3000
 
-### 테스트 계정 ✅ (2025.12.31 최종 검증)
+### 테스트 계정 ✅ (2026.01.01 최종 검증)
+- **신규 관리자**: admin@lms.kr / admin123456 ⭐ NEW!
 - **일반 사용자**: test123@gmail.com / test123456
-- **관리자**: admin-test@gmail.com / admin123456
+- **기존 관리자**: admin-test@gmail.com / admin123456
 
 ### 프로덕션 URL 🚀
+- **최신 배포**: https://881002dc.mindstory-lms.pages.dev ⭐ NEW!
 - **메인**: https://mindstory-lms.pages.dev
-- **로그인**: https://mindstory-lms.pages.dev/login
-- **회원가입**: https://mindstory-lms.pages.dev/register
+- **로그인**: https://881002dc.mindstory-lms.pages.dev/login
+- **회원가입**: https://881002dc.mindstory-lms.pages.dev/register
+- **관리자 대시보드**: https://881002dc.mindstory-lms.pages.dev/admin/dashboard
 
 ## 💾 백업
 
