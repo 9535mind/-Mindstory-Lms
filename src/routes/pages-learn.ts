@@ -149,10 +149,17 @@ app.get('/courses/:courseId/learn', async (c) => {
                 console.log('✅ Course response:', courseResponse);
                 if (!courseResponse.success) {
                     console.error('❌ Course info failed:', courseResponse);
-                    showError('강좌 정보를 불러올 수 없습니다.');
+                    const errorMsg = courseResponse.error || '강좌 정보를 불러올 수 없습니다.';
+                    showError(errorMsg);
+                    // Redirect to courses list if course not found or access denied
+                    if (courseResponse.error?.includes('찾을 수 없') || courseResponse.error?.includes('권한')) {
+                        setTimeout(() => {
+                            window.location.href = '/courses';
+                        }, 2000);
+                    }
                     return;
                 }
-                courseData = courseResponse.course;
+                courseData = courseResponse.data || courseResponse.course;
                 console.log('✅ Course data loaded:', courseData);
                 
                 // Load lessons
@@ -164,7 +171,7 @@ app.get('/courses/:courseId/learn', async (c) => {
                     showError('차시 목록을 불러올 수 없습니다.');
                     return;
                 }
-                lessonsData = lessonsResponse.lessons || [];
+                lessonsData = lessonsResponse.data || lessonsResponse.lessons || [];
                 console.log('✅ Lessons loaded:', lessonsData.length, 'lessons');
                 
                 // Load progress (optional - don't block if fails)

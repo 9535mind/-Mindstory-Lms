@@ -630,4 +630,78 @@ courses.post('/:courseId/extract-thumbnail', requireAdmin, async (c) => {
   }
 })
 
+/**
+ * GET /api/courses/:courseId/lessons/:lessonId
+ * 차시 상세 조회 (공개 API)
+ */
+courses.get('/:courseId/lessons/:lessonId', optionalAuth, async (c) => {
+  try {
+    const courseId = c.req.param('courseId')
+    const lessonId = c.req.param('lessonId')
+    const { DB } = c.env
+    const user = c.get('user')
+
+    // 차시 조회
+    const lesson = await DB.prepare(`
+      SELECT * FROM lessons WHERE id = ? AND course_id = ?
+    `).bind(lessonId, courseId).first<Lesson>()
+
+    if (!lesson) {
+      return c.json(errorResponse('차시를 찾을 수 없습니다.'), 404)
+    }
+
+    // 강좌 정보 조회
+    const course = await DB.prepare(`
+      SELECT * FROM courses WHERE id = ?
+    `).bind(courseId).first<Course>()
+
+    if (!course) {
+      return c.json(errorResponse('강좌를 찾을 수 없습니다.'), 404)
+    }
+
+    // 수강 여부 확인
+    let enrollment = null
+    if (user) {
+      enrollment = await DB.prepare(`
+        SELECT * FROM enrollments 
+        WHERE user_id = ? AND course_id = ?
+      `).bind(user.id, courseId).first()
+    }
+
+    // 진도 정보 조회 (수강 중인 경우만)
+    let progress = null
+    if (enrollment) {
+      progress = await DB.prepare(`
+        SELECT * FROM lesson_progress 
+        WHERE enrollment_id = ? AND lesson_id = ?
+      `).bind(enrollment.id, lessonId).first()
+    }
+
+    // 다음 차시 정보
+    const nextLesson = await DB.prepare(`
+      SELECT id, lesson_number, title 
+      FROM lessons 
+      WHERE course_id = ? AND lesson_number > ? 
+      ORDER BY lesson_number ASC 
+      LIMIT 1
+    `).bind(courseId, lesson.lesson_number).first()
+
+    return c.json(successResponse({
+      lesson,
+      course: {
+        id: course.id,
+        title: course.title,
+        instructor_id: course.instructor_id
+      },
+      enrollment,
+      progress,
+      nextLesson
+    }))
+
+  } catch (error) {
+    console.error('Get lesson detail error:', error)
+    return c.json(errorResponse('서버 오류가 발생했습니다.'), 500)
+  }
+})
+
 export default courses
