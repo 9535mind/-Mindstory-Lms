@@ -648,10 +648,7 @@ app.get('/courses/:courseId/learn', async (c) => {
                     } catch (err) {
                         console.warn('⚠️ Progress check failed (non-critical):', err);
                     }
-                } else {
-                    console.warn('⚠️ Mark completed failed (non-critical):', response);
-                }
-
+                    
                     // Auto-play next lesson
                     const currentIndex = lessonsData.findIndex(l => l.id === currentLesson.id);
                     if (currentIndex >= 0 && currentIndex < lessonsData.length - 1) {
@@ -659,6 +656,8 @@ app.get('/courses/:courseId/learn', async (c) => {
                             loadLesson(lessonsData[currentIndex + 1].id);
                         }, 2000);
                     }
+                } else {
+                    console.warn('⚠️ Mark completed failed (non-critical):', response);
                 }
 
             } catch (error) {
