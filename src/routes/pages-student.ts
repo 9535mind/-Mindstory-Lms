@@ -281,4 +281,269 @@ app.get('/my-courses', (c) => {
   `)
 })
 
+/**
+ * Lesson Detail Page
+ * GET /courses/:courseId/lessons/:lessonId
+ */
+app.get('/courses/:courseId/lessons/:lessonId', (c) => {
+  const courseId = c.req.param('courseId')
+  const lessonId = c.req.param('lessonId')
+  
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>차시 상세 - 마인드스토리 LMS</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script src="/static/js/auth.js"></script>
+    </head>
+    <body class="bg-gray-50">
+        <!-- 헤더 -->
+        <header class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex justify-between items-center">
+                    <a href="/courses/${courseId}" class="text-xl font-bold text-blue-600">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        강좌로 돌아가기
+                    </a>
+                    <span id="headerUserName" class="text-gray-700"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 메인 컨텐츠 -->
+        <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 로딩 상태 -->
+            <div id="loadingState" class="text-center py-12">
+                <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+                <p class="text-gray-600">차시 정보를 불러오는 중...</p>
+            </div>
+
+            <!-- 차시 상세 컨텐츠 -->
+            <div id="lessonContent" class="hidden">
+                <!-- 차시 헤더 -->
+                <div class="bg-white rounded-lg shadow-sm p-8 mb-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex-1">
+                            <span id="lessonNumber" class="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold mb-3">
+                                차시 1
+                            </span>
+                            <h1 id="lessonTitle" class="text-3xl font-bold text-gray-900 mb-2">
+                                차시 제목
+                            </h1>
+                            <div class="flex items-center text-gray-600 space-x-4 mt-3">
+                                <span>
+                                    <i class="fas fa-clock mr-2"></i>
+                                    <span id="lessonDuration">0</span>분
+                                </span>
+                                <span id="freePreviewBadge" class="hidden">
+                                    <i class="fas fa-unlock-alt mr-2 text-green-600"></i>
+                                    <span class="text-green-600 font-semibold">무료 미리보기</span>
+                                </span>
+                            </div>
+                        </div>
+                        <button id="startLearningBtn" 
+                                onclick="startLearning()"
+                                class="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg shadow-lg hover:shadow-xl transition-all">
+                            <i class="fas fa-play mr-2"></i>
+                            수강하기
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 차시 설명 -->
+                <div class="bg-white rounded-lg shadow-sm p-8 mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-4">
+                        <i class="fas fa-info-circle mr-2 text-blue-600"></i>
+                        차시 소개
+                    </h2>
+                    <p id="lessonDescription" class="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        차시 설명이 없습니다.
+                    </p>
+                </div>
+
+                <!-- 학습 목표 -->
+                <div class="bg-white rounded-lg shadow-sm p-8 mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-4">
+                        <i class="fas fa-bullseye mr-2 text-green-600"></i>
+                        학습 목표
+                    </h2>
+                    <ul class="space-y-3">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-600 mr-3 mt-1"></i>
+                            <span class="text-gray-700">차시의 핵심 개념을 이해하고 설명할 수 있습니다.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-600 mr-3 mt-1"></i>
+                            <span class="text-gray-700">학습한 내용을 실무에 적용할 수 있습니다.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-600 mr-3 mt-1"></i>
+                            <span class="text-gray-700">다음 차시를 위한 기초 지식을 습득합니다.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 교육자료 -->
+                <div class="bg-white rounded-lg shadow-sm p-8">
+                    <h2 class="text-xl font-bold text-gray-900 mb-4">
+                        <i class="fas fa-file-download mr-2 text-purple-600"></i>
+                        교육자료
+                    </h2>
+                    <div id="materialsSection" class="space-y-3">
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-600 text-2xl mr-4"></i>
+                                <div>
+                                    <p class="font-semibold text-gray-900">강의자료.pdf</p>
+                                    <p class="text-sm text-gray-600">PDF 문서</p>
+                                </div>
+                            </div>
+                            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                <i class="fas fa-download mr-2"></i>
+                                다운로드
+                            </button>
+                        </div>
+                        
+                        <p class="text-center text-gray-500 py-8">
+                            <i class="fas fa-inbox text-4xl mb-2"></i><br>
+                            등록된 교육자료가 없습니다.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 다음 차시 안내 -->
+                <div id="nextLessonSection" class="hidden mt-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-90 mb-1">다음 차시</p>
+                            <h3 id="nextLessonTitle" class="text-xl font-bold">다음 차시 제목</h3>
+                        </div>
+                        <button id="nextLessonBtn" 
+                                onclick="goToNextLesson()"
+                                class="px-6 py-3 bg-white text-blue-600 rounded-lg hover:bg-gray-100 font-semibold">
+                            <i class="fas fa-arrow-right mr-2"></i>
+                            다음 차시로
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 에러 상태 -->
+            <div id="errorState" class="hidden text-center py-12">
+                <i class="fas fa-exclamation-triangle text-4xl text-red-600 mb-4"></i>
+                <p id="errorMessage" class="text-gray-600 mb-4">차시를 불러올 수 없습니다.</p>
+                <button onclick="location.reload()" 
+                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    다시 시도
+                </button>
+            </div>
+        </main>
+
+        <script>
+        const courseId = ${courseId};
+        const lessonId = ${lessonId};
+        let lessonData = null;
+        let courseData = null;
+        let allLessons = [];
+
+        async function loadLessonDetail() {
+            try {
+                // Load lesson detail
+                const response = await apiRequest('GET', \`/api/courses/\${courseId}/lessons/\${lessonId}\`);
+                
+                if (!response.success) {
+                    showError(response.error || '차시를 불러올 수 없습니다.');
+                    return;
+                }
+
+                lessonData = response.data.lesson;
+                
+                // Load course info
+                const courseResponse = await apiRequest('GET', \`/api/courses/\${courseId}\`);
+                if (courseResponse.success) {
+                    courseData = courseResponse.course;
+                }
+
+                // Load all lessons for navigation
+                const lessonsResponse = await apiRequest('GET', \`/api/courses/\${courseId}/lessons\`);
+                if (lessonsResponse.success) {
+                    allLessons = lessonsResponse.lessons || [];
+                }
+
+                renderLessonDetail();
+                
+            } catch (error) {
+                console.error('Load lesson error:', error);
+                showError('차시를 불러오는 중 오류가 발생했습니다.');
+            }
+        }
+
+        function renderLessonDetail() {
+            // Hide loading, show content
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('lessonContent').classList.remove('hidden');
+
+            // Lesson header
+            document.getElementById('lessonNumber').textContent = \`차시 \${lessonData.lesson_number}\`;
+            document.getElementById('lessonTitle').textContent = lessonData.title;
+            document.getElementById('lessonDuration').textContent = lessonData.video_duration_minutes || lessonData.duration_minutes || 0;
+            
+            // Free preview badge
+            if (lessonData.is_free_preview || lessonData.is_free) {
+                document.getElementById('freePreviewBadge').classList.remove('hidden');
+            }
+
+            // Description
+            document.getElementById('lessonDescription').textContent = 
+                lessonData.description || '이 차시에 대한 자세한 설명이 아직 등록되지 않았습니다.';
+
+            // Next lesson
+            const currentIndex = allLessons.findIndex(l => l.id === lessonData.id);
+            if (currentIndex >= 0 && currentIndex < allLessons.length - 1) {
+                const nextLesson = allLessons[currentIndex + 1];
+                document.getElementById('nextLessonSection').classList.remove('hidden');
+                document.getElementById('nextLessonTitle').textContent = nextLesson.title;
+                window.nextLessonId = nextLesson.id;
+            }
+        }
+
+        function startLearning() {
+            window.location.href = \`/courses/\${courseId}/learn?lessonId=\${lessonId}\`;
+        }
+
+        function goToNextLesson() {
+            if (window.nextLessonId) {
+                window.location.href = \`/courses/\${courseId}/lessons/\${window.nextLessonId}\`;
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('lessonContent').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) {
+                window.location.href = '/login';
+                return;
+            }
+
+            document.getElementById('headerUserName').textContent = user.name + ' 님';
+            loadLessonDetail();
+        });
+        </script>
+    </body>
+    </html>
+  `)
+})
+
 export default app

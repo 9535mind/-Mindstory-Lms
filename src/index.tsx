@@ -39,6 +39,7 @@ import pagesStudent from './routes/pages-student'
 import pagesLearn from './routes/pages-learn'
 import analytics from './routes/analytics'
 import pagesAnalytics from './routes/pages-analytics'
+import pagesCourseDetail from './routes/pages-course-detail'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -87,6 +88,7 @@ app.route('/', pagesMy)
 app.route('/', pagesAbout)
 app.route('/', pagesPayment)  // 결제 페이지
 app.route('/', pagesStudent)  // 수강생 페이지
+app.route('/', pagesCourseDetail)  // 강좌 상세 페이지
 app.route('/', pagesLearn)    // 학습 페이지
 app.route('/', pagesAnalytics)  // 분석 페이지
 app.route('/admin', pagesAdmin)  // 관리자 페이지

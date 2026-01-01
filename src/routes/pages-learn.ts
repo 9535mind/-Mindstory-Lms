@@ -169,12 +169,27 @@ app.get('/courses/:courseId/learn', async (c) => {
                 renderCourseInfo();
                 renderLessonList();
                 
-                // Load first incomplete lesson or last watched
-                const firstIncomplete = lessonsData.find(l => !l.is_completed);
-                if (firstIncomplete) {
-                    loadLesson(firstIncomplete.id);
-                } else if (lessonsData.length > 0) {
-                    loadLesson(lessonsData[0].id);
+                // Check if specific lesson is requested via URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const requestedLessonId = urlParams.get('lessonId');
+                
+                if (requestedLessonId) {
+                    // Load requested lesson
+                    const requestedLesson = lessonsData.find(l => l.id == requestedLessonId);
+                    if (requestedLesson) {
+                        loadLesson(requestedLesson.id);
+                    } else {
+                        // Fallback to first lesson
+                        loadLesson(lessonsData[0]?.id);
+                    }
+                } else {
+                    // Load first incomplete lesson or last watched
+                    const firstIncomplete = lessonsData.find(l => !l.is_completed);
+                    if (firstIncomplete) {
+                        loadLesson(firstIncomplete.id);
+                    } else if (lessonsData.length > 0) {
+                        loadLesson(lessonsData[0].id);
+                    }
                 }
                 
             } catch (error) {
