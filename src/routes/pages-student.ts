@@ -547,7 +547,7 @@ app.get('/courses/:courseId/lessons/:lessonId', (c) => {
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
-            const user = await checkAuth();
+            const user = await getCurrentUser();
             if (!user) {
                 window.location.href = '/login';
                 return;
