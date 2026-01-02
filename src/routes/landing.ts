@@ -126,23 +126,51 @@ landing.get('/', (c) => {
                 }
             }
             
-            /* Hero Gradient */
-            .hero-gradient {
-                background: linear-gradient(135deg, #6366F1 0%, #A855F7 100%);
+            /* Hero Section with Image Slider */
+            .hero-section {
                 position: relative;
                 overflow: hidden;
+                min-height: 600px;
             }
             
-            .hero-gradient::before {
+            .hero-slider {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 0;
+            }
+            
+            .hero-slide {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                opacity: 0;
+                transition: opacity 1.5s ease-in-out;
+                background-size: cover;
+                background-position: center;
+            }
+            
+            .hero-slide.active {
+                opacity: 1;
+            }
+            
+            .hero-slide::after {
                 content: '';
                 position: absolute;
                 top: 0;
                 left: 0;
-                right: 0;
-                bottom: 0;
-                background: url('https://www.genspark.ai/api/files/s/Nx5k1tgA') center/cover;
-                opacity: 0.2;
-                z-index: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, rgba(99, 102, 241, 0.85) 0%, rgba(168, 85, 247, 0.85) 100%);
+            }
+            
+            .hero-content {
+                position: relative;
+                z-index: 10;
             }
             
             /* Glassmorphism */
@@ -248,14 +276,14 @@ landing.get('/', (c) => {
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center py-4">
                     <div class="flex items-center">
-                        <a href="/" class="text-2xl font-bold" style="color: var(--color-primary);">
+                        <a href="/" class="text-2xl md:text-3xl font-bold" style="color: var(--color-primary);">
                             마인드스토리 원격평생교육원
                         </a>
                     </div>
-                    <nav class="hidden md:flex space-x-8 items-center">
-                        <a href="/" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200">홈</a>
-                        <a href="#courses" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200">과정 안내</a>
-                        <a href="/my-courses" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200">내 강의실</a>
+                    <nav class="hidden md:flex space-x-8 items-center text-lg">
+                        <a href="/" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200 font-medium">홈</a>
+                        <a href="#courses" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200 font-medium">과정 안내</a>
+                        <a href="/my-courses" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200 font-medium">내 강의실</a>
                         
                         <!-- 관리자 모드 전환 버튼 -->
                         <div id="adminModeSwitch" class="flex items-center space-x-2" style="display:none">
@@ -267,8 +295,8 @@ landing.get('/', (c) => {
                         </div>
                     </nav>
                     <div id="headerAuthButtons" class="flex items-center space-x-4">
-                        <a href="/login" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200">로그인</a>
-                        <a href="/register" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200">회원가입</a>
+                        <a href="/login" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200 text-lg font-medium">로그인</a>
+                        <a href="/register" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-200 text-lg font-semibold">회원가입</a>
                     </div>
                     <div id="headerUserMenu" class="flex items-center space-x-4" style="display:none">
                         <span class="text-gray-700 font-medium" id="headerUserName"></span>
@@ -279,16 +307,25 @@ landing.get('/', (c) => {
         </header>
 
         <!-- 히어로 섹션 -->
-        <section class="hero-gradient text-white py-32 md:py-40">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <section class="hero-section text-white py-20 md:py-24">
+            <!-- 배경 이미지 슬라이더 -->
+            <div class="hero-slider">
+                <div class="hero-slide active" style="background-image: url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80');"></div>
+                <div class="hero-slide" style="background-image: url('https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1920&q=80');"></div>
+                <div class="hero-slide" style="background-image: url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1920&q=80');"></div>
+                <div class="hero-slide" style="background-image: url('https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=1920&q=80');"></div>
+            </div>
+            
+            <!-- 콘텐츠 -->
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 hero-content">
                 <div class="text-center">
-                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-                        마음을 이해하고<br>성장하는 여정
+                    <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-8 leading-tight">
+                        마음을 이해하고 성장하는 여정
                     </h1>
-                    <p class="text-2xl md:text-3xl lg:text-4xl mb-8 font-bold tracking-tight">
+                    <p class="text-2xl md:text-3xl lg:text-4xl mb-6 font-bold tracking-tight">
                         마인드스토리 원격평생교육원
                     </p>
-                    <p class="text-lg md:text-xl lg:text-2xl mb-10 opacity-90 leading-relaxed max-w-4xl mx-auto">
+                    <p class="text-lg md:text-xl lg:text-2xl mb-12 opacity-90 leading-relaxed max-w-4xl mx-auto">
                         마인드 타임 코칭, 부모-자녀 대화법, 감정코칭까지<br>
                         전문가와 함께하는 온라인 평생교육
                     </p>
@@ -743,7 +780,25 @@ landing.get('/', (c) => {
                 
                 // 팝업 로드
                 PopupManager.loadPopups('home')
+                
+                // 히어로 이미지 슬라이더
+                initHeroSlider()
             })
+            
+            // 히어로 이미지 슬라이더
+            function initHeroSlider() {
+                const slides = document.querySelectorAll('.hero-slide')
+                let currentSlide = 0
+                
+                function nextSlide() {
+                    slides[currentSlide].classList.remove('active')
+                    currentSlide = (currentSlide + 1) % slides.length
+                    slides[currentSlide].classList.add('active')
+                }
+                
+                // 5초마다 자동 전환
+                setInterval(nextSlide, 5000)
+            }
         </script>
     </body>
     </html>
