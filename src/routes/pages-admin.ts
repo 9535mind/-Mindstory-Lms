@@ -1635,7 +1635,7 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                                 </div>
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                                     <!-- YouTube 바로가기 -->
-                                    <a href="https://studio.youtube.com/channel/UCXF55ON7qD6Z_iVYhkcOffg/videos" 
+                                    <a href="https://studio.youtube.com" 
                                        target="_blank"
                                        class="flex items-center justify-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-all transform hover:scale-105">
                                         <i class="fab fa-youtube mr-2"></i>YouTube
@@ -1694,10 +1694,10 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                                     <label class="text-sm font-medium text-gray-700">
                                         <i class="fab fa-youtube mr-1 text-red-600"></i>YouTube 영상 URL
                                     </label>
-                                    <a href="https://studio.youtube.com/channel/UCXF55ON7qD6Z_iVYhkcOffg/videos" 
+                                    <a href="https://studio.youtube.com" 
                                        target="_blank" 
                                        class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
-                                        <i class="fab fa-youtube mr-2"></i>내 YouTube 동영상
+                                        <i class="fab fa-youtube mr-2"></i>YouTube Studio
                                         <i class="fas fa-external-link-alt ml-2 text-xs"></i>
                                     </a>
                                 </div>
@@ -1768,31 +1768,53 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                                     </div>
                                     
                                     <div class="mb-4">
-                                        <label class="text-sm font-medium text-gray-700">
-                                            <i class="fas fa-link mr-1 text-purple-600"></i>영상 URL <span class="text-red-500">*</span>
+                                        <label class="text-sm font-medium text-gray-700 mb-2 flex items-center justify-between">
+                                            <span>
+                                                <i class="fas fa-link mr-1 text-purple-600"></i>영상 URL <span class="text-red-500">*</span>
+                                            </span>
+                                            <a href="https://dashboard.api.video/videos" 
+                                               target="_blank"
+                                               class="inline-flex items-center px-2 py-1 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 transition-colors">
+                                                <i class="fas fa-upload mr-1"></i>api.video 업로드
+                                                <i class="fas fa-external-link-alt ml-1 text-xs opacity-75"></i>
+                                            </a>
                                         </label>
-                                        <div class="mt-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                                            <p class="text-xs text-purple-800 mb-2">
-                                                <i class="fas fa-video mr-1"></i>
-                                                <strong>api.video 영상 URL 입력</strong>
-                                            </p>
-                                            <p class="text-xs text-purple-700">
-                                                위의 <strong class="text-purple-600">"api.video 업로드"</strong> 버튼을 클릭하여 api.video에 영상을 업로드한 후,<br>
-                                                해당 영상의 <strong>embed URL</strong>을 복사하여 아래에 붙여넣으세요.
-                                            </p>
-                                            <p class="text-xs text-purple-600 mt-2">
-                                                📝 예시: <code class="bg-white px-2 py-1 rounded text-xs">https://embed.api.video/vod/vi5I289O62sJxi6s1xSoAEGf</code>
+                                        
+                                        <input type="url" id="videoUrlInput" 
+                                            placeholder="https://embed.api.video/vod/vi... 또는 YouTube URL"
+                                            class="w-full px-4 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                            onchange="handleVideoUrlUpload()">
+                                        
+                                        <div class="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                                            <p class="text-xs text-green-800">
+                                                ✅ <strong>영상 등록 완료!</strong> 👆 화면 맨 아래로 스크롤하여 [저장] 버튼을 클릭하세요
                                             </p>
                                         </div>
+                                        
+                                        <details class="mt-2">
+                                            <summary class="text-xs text-purple-700 cursor-pointer hover:text-purple-900 flex items-center">
+                                                <i class="fas fa-info-circle mr-1"></i>
+                                                <strong>사용 방법 보기</strong>
+                                            </summary>
+                                            <div class="mt-2 p-3 bg-purple-50 border border-purple-200 rounded-lg text-xs">
+                                                <p class="text-purple-800 mb-2">
+                                                    <strong>1)</strong> 위의 <strong>"api.video 업로드"</strong> 버튼 클릭
+                                                </p>
+                                                <p class="text-purple-700 mb-2">
+                                                    <strong>2)</strong> api.video에서 영상 업로드
+                                                </p>
+                                                <p class="text-purple-700 mb-2">
+                                                    <strong>3)</strong> 영상의 <strong>embed URL</strong> 복사
+                                                </p>
+                                                <p class="text-purple-700 mb-2">
+                                                    <strong>4)</strong> 위 입력창에 URL 붙여넣기
+                                                </p>
+                                                <p class="text-purple-600 mt-2 p-2 bg-white rounded">
+                                                    📝 예시: <code class="text-xs">https://embed.api.video/vod/vi5I289O62sJxi6s1xSoAEGf</code>
+                                                </p>
+                                            </div>
+                                        </details>
                                     </div>
-                                    <input type="url" id="videoUrlInput" 
-                                        placeholder="https://embed.api.video/vod/vi..."
-                                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                        onchange="handleVideoUrlUpload()">
-                                    <p class="text-sm text-gray-500 mt-2">
-                                        <i class="fas fa-lightbulb mr-1 text-yellow-500"></i>
-                                        <strong>팁:</strong> YouTube URL도 여기에 입력 가능합니다
-                                    </p>
                                 </div>
                             </div>
                             
