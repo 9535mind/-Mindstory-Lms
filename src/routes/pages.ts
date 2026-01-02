@@ -13,7 +13,10 @@ const getHeader = () => `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center py-4">
             <div class="flex items-center">
-                <a href="/" class="text-2xl font-bold text-indigo-600">마인드스토리 원격평생교육원</a>
+                <a href="/" class="text-xl md:text-2xl font-bold text-indigo-600" style="line-height: 1.2;">
+                <span class="block md:inline">마인드스토리</span>
+                <span class="block md:inline">원격 평생교육원</span>
+            </a>
             </div>
             <nav class="hidden md:flex space-x-8 items-center">
                 <a href="/" class="text-gray-700 hover:text-indigo-600">홈</a>
@@ -30,8 +33,9 @@ const getHeader = () => `
                 </div>
             </nav>
             <div id="headerAuthButtons" class="flex items-center space-x-4">
-                <a href="/login" class="text-gray-700 hover:text-indigo-600">로그인</a>
-                <a href="/register" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">회원가입</a>
+                <!-- 모바일: 헤더 로그인/회원가입 버튼 숨김 (하단 통합) -->
+                <a href="/login" class="hidden md:block text-gray-700 hover:text-indigo-600">로그인</a>
+                <a href="/register" class="hidden md:block bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">회원가입</a>
             </div>
             <div id="headerUserMenu" class="flex items-center space-x-4" style="display:none">
                 <span class="text-gray-700" id="headerUserName"></span>
@@ -194,22 +198,38 @@ pages.get('/login', (c) => {
                     <div>
                         <label for="email" class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
                         <input id="email" name="email" type="email" required
-                            class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            class="appearance-none rounded-lg relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-base"
                             placeholder="이메일을 입력하세요">
                     </div>
                     <div>
                         <label for="password" class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
                         <input id="password" name="password" type="password" required
-                            class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            class="appearance-none rounded-lg relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-base"
                             placeholder="비밀번호를 입력하세요">
+                    </div>
+                    
+                    <!-- 아이디/비밀번호 기억하기 체크박스 -->
+                    <div class="flex items-center">
+                        <input id="rememberMe" name="rememberMe" type="checkbox"
+                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <label for="rememberMe" class="ml-2 block text-sm text-gray-900">
+                            아이디/비밀번호 기억하기
+                        </label>
                     </div>
                 </div>
 
-                <div>
+                <div class="space-y-3">
                     <button type="submit"
-                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-base font-semibold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                        <i class="fas fa-sign-in-alt mr-2"></i>
                         로그인
                     </button>
+                    
+                    <a href="/register"
+                        class="group relative w-full flex justify-center py-3 px-4 border-2 border-indigo-600 text-base font-semibold rounded-lg text-indigo-600 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                        <i class="fas fa-user-plus mr-2"></i>
+                        회원가입
+                    </a>
                 </div>
             </form>
             
@@ -262,6 +282,19 @@ pages.get('/login', (c) => {
         function loginWithKakao() {
             window.location.href = '/api/auth/kakao/login';
         }
+        
+        // 로컬스토리지에서 저장된 로그인 정보 불러오기
+        window.addEventListener('DOMContentLoaded', () => {
+            const rememberedEmail = localStorage.getItem('rememberedEmail')
+            const rememberedPassword = localStorage.getItem('rememberedPassword')
+            const rememberMe = localStorage.getItem('rememberMe') === 'true'
+            
+            if (rememberMe && rememberedEmail && rememberedPassword) {
+                document.getElementById('email').value = rememberedEmail
+                document.getElementById('password').value = rememberedPassword
+                document.getElementById('rememberMe').checked = true
+            }
+        })
     </script>
     <script>
         // 이미 로그인된 경우 리다이렉트
@@ -276,6 +309,18 @@ pages.get('/login', (c) => {
             
             const email = document.getElementById('email').value
             const password = document.getElementById('password').value
+            const rememberMe = document.getElementById('rememberMe').checked
+            
+            // 아이디/비밀번호 기억하기 처리
+            if (rememberMe) {
+                localStorage.setItem('rememberedEmail', email)
+                localStorage.setItem('rememberedPassword', password)
+                localStorage.setItem('rememberMe', 'true')
+            } else {
+                localStorage.removeItem('rememberedEmail')
+                localStorage.removeItem('rememberedPassword')
+                localStorage.removeItem('rememberMe')
+            }
             
             try {
                 const response = await axios.post('/api/auth/login', { email, password })

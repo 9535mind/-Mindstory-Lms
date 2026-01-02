@@ -267,37 +267,39 @@ app.get('/courses/:id', async (c) => {
                         return;
                     }
 
-                    // 차시 목록 렌더링
+                    // 차시 목록 렌더링 (모바일 최적화: 글씨 크기 50% 증가 + 플레이 버튼 크게)
                     const lessonsHTML = lessonsData.map((lesson, index) => \`
-                        <div class="border rounded-lg p-4 hover:border-purple-300 hover:shadow-md transition">
-                            <div class="flex items-start">
-                                <div class="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">
-                                    \${lesson.lesson_number}
-                                </div>
-                                <div class="ml-4 flex-1">
-                                    <h3 class="text-lg font-semibold text-gray-900 mb-2">
-                                        \${lesson.title}
-                                        \${lesson.is_free || lesson.is_free_preview ? '<span class="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded">무료</span>' : ''}
-                                    </h3>
-                                    <p class="text-gray-600 text-sm mb-3">\${lesson.description || '차시 설명이 없습니다.'}</p>
-                                    <div class="flex items-center text-sm text-gray-500 space-x-4">
-                                        <span>
-                                            <i class="fas fa-clock mr-1"></i>
-                                            \${lesson.video_duration_minutes || lesson.duration_minutes || 0}분
-                                        </span>
-                                        <span>
-                                            <i class="fas fa-video mr-1"></i>
-                                            \${lesson.video_provider === 'youtube' ? 'YouTube' : 'api.video'}
-                                        </span>
+                        <div class="border rounded-lg p-4 md:p-4 hover:border-purple-300 hover:shadow-md transition">
+                            <div class="flex items-start flex-col md:flex-row">
+                                <div class="flex items-start w-full md:w-auto">
+                                    <div class="flex-shrink-0 w-14 h-14 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-xl md:text-base">
+                                        \${lesson.lesson_number}
+                                    </div>
+                                    <div class="ml-4 flex-1">
+                                        <h3 class="text-xl md:text-lg font-semibold text-gray-900 mb-2">
+                                            \${lesson.title}
+                                            \${lesson.is_free || lesson.is_free_preview ? '<span class="ml-2 px-2 py-1 bg-green-100 text-green-800 text-sm md:text-xs font-semibold rounded">무료</span>' : ''}
+                                        </h3>
+                                        <p class="text-gray-600 text-base md:text-sm mb-3">\${lesson.description || '차시 설명이 없습니다.'}</p>
+                                        <div class="flex items-center text-base md:text-sm text-gray-500 space-x-4">
+                                            <span>
+                                                <i class="fas fa-clock mr-1"></i>
+                                                \${lesson.video_duration_minutes || lesson.duration_minutes || 0}분
+                                            </span>
+                                            <span>
+                                                <i class="fas fa-video mr-1"></i>
+                                                \${lesson.video_provider === 'youtube' ? 'YouTube' : 'api.video'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="ml-4">
+                                <div class="mt-4 md:mt-0 md:ml-4 w-full md:w-auto">
                                     \${enrollment || lesson.is_free || lesson.is_free_preview ? \`
-                                        <button onclick="playLesson(\${lesson.id})" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
-                                            <i class="fas fa-play mr-2"></i>재생
+                                        <button onclick="playLesson(\${lesson.id})" class="w-full md:w-auto bg-purple-600 text-white px-6 py-3 md:px-4 md:py-2 rounded-lg hover:bg-purple-700 transition text-base md:text-sm font-semibold">
+                                            <i class="fas fa-play mr-2 text-lg md:text-base"></i>재생
                                         </button>
                                     \` : \`
-                                        <button disabled class="bg-gray-300 text-gray-600 px-4 py-2 rounded-lg cursor-not-allowed">
+                                        <button disabled class="w-full md:w-auto bg-gray-300 text-gray-600 px-6 py-3 md:px-4 md:py-2 rounded-lg cursor-not-allowed text-base md:text-sm">
                                             <i class="fas fa-lock mr-2"></i>잠김
                                         </button>
                                     \`}
