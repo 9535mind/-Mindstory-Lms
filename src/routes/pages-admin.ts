@@ -1640,6 +1640,31 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                             <!-- URL 업로드 탭 -->
                             <div id="urlUploadTabContent" class="video-tab-content hidden">
                                 <div>
+                                    <!-- 현재 영상 정보 -->
+                                    <div id="currentVideoInfo" class="mb-4 hidden">
+                                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <div class="flex items-center">
+                                                    <i class="fas fa-video text-blue-600 mr-2"></i>
+                                                    <span class="text-sm font-semibold text-blue-800">현재 영상</span>
+                                                </div>
+                                                <div class="flex items-center space-x-2">
+                                                    <button type="button" onclick="previewCurrentVideo()" 
+                                                        class="text-sm text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-100">
+                                                        <i class="fas fa-eye mr-1"></i>미리보기
+                                                    </button>
+                                                    <button type="button" onclick="removeCurrentVideo()" 
+                                                        class="text-sm text-red-600 hover:text-red-800 px-2 py-1 rounded hover:bg-red-100">
+                                                        <i class="fas fa-trash mr-1"></i>삭제
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="text-xs text-blue-700 bg-blue-100 px-3 py-2 rounded break-all" id="currentVideoUrl">
+                                                <!-- 현재 영상 URL -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
                                     <div class="mb-4 flex items-center justify-between">
                                         <label class="text-sm font-medium text-gray-700">
                                             <i class="fas fa-link mr-1 text-purple-600"></i>영상 URL <span class="text-red-500">*</span>
@@ -1940,10 +1965,33 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                   document.getElementById('lessonTitle').value = lesson.title || '';
                   document.getElementById('lessonOrder').value = lesson.lesson_number;
                   document.getElementById('lessonDuration').value = lesson.video_duration_minutes || 0;
-                  document.getElementById('lessonVideoUrl').value = lesson.video_url || '';
                   document.getElementById('lessonDescription').value = lesson.description || '';
                   document.getElementById('lessonIsFree').checked = lesson.is_free_preview === 1;
                   document.getElementById('lessonIsActive').checked = lesson.status === 'active';
+                  
+                  // 영상 데이터 설정
+                  if (lesson.video_url) {
+                    // 현재 영상 정보 표시
+                    const currentVideoInfo = document.getElementById('currentVideoInfo');
+                    const currentVideoUrl = document.getElementById('currentVideoUrl');
+                    currentVideoInfo.classList.remove('hidden');
+                    currentVideoUrl.textContent = lesson.video_url;
+                    
+                    // URL 업로드 탭으로 이동
+                    switchVideoTab('urlupload');
+                    
+                    // YouTube인지 api.video인지 확인
+                    if (lesson.video_provider === 'youtube' || lesson.video_url.includes('youtube.com') || lesson.video_url.includes('youtu.be')) {
+                      switchVideoTab('youtube');
+                      document.getElementById('lessonVideoUrl').value = lesson.video_url;
+                    } else {
+                      document.getElementById('videoUrlInput').value = lesson.video_url;
+                    }
+                  } else {
+                    document.getElementById('currentVideoInfo').classList.add('hidden');
+                    document.getElementById('lessonVideoUrl').value = '';
+                    document.getElementById('videoUrlInput').value = '';
+                  }
                   
                   document.getElementById('lessonModal').classList.remove('hidden');
                   document.getElementById('lessonModal').classList.add('flex');
@@ -2097,6 +2145,24 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
               }
             }
 
+            // 현재 영상 미리보기
+            function previewCurrentVideo() {
+              const videoUrl = document.getElementById('currentVideoUrl').textContent;
+              if (videoUrl) {
+                window.open(videoUrl, '_blank');
+              }
+            }
+            
+            // 현재 영상 삭제
+            function removeCurrentVideo() {
+              if (confirm('영상을 삭제하시겠습니까? 저장 후에 적용됩니다.')) {
+                document.getElementById('currentVideoInfo').classList.add('hidden');
+                document.getElementById('lessonVideoUrl').value = '';
+                document.getElementById('videoUrlInput').value = '';
+                alert('영상이 삭제된 상태로 표시되었습니다. 저장 버튼을 클릭하여 확정하세요.');
+              }
+            }
+            
             // 에러 메시지 표시
             function showError(message) {
               alert(message);
