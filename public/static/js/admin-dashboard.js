@@ -2,6 +2,9 @@
  * 관리자 대시보드 JavaScript
  */
 
+let revenueChart = null;
+let popularCoursesChart = null;
+
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', async () => {
   // 관리자 권한 확인
@@ -13,6 +16,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 대시보드 데이터 로드
   await loadDashboardData();
+  
+  // 차트 초기화
+  initCharts();
 });
 
 // 대시보드 데이터 로드
@@ -146,3 +152,174 @@ function formatDate(dateString) {
 function showError(message) {
   alert(message);
 }
+
+/**
+ * 차트 초기화
+ */
+function initCharts() {
+  // 월별 매출 차트
+  const revenueCtx = document.getElementById('revenueChart');
+  if (revenueCtx) {
+    // 샘플 데이터 (실제로는 API에서 가져와야 함)
+    const months = ['7월', '8월', '9월', '10월', '11월', '12월'];
+    const revenues = [1200000, 1500000, 1350000, 1800000, 2100000, 2400000];
+    
+    revenueChart = new Chart(revenueCtx, {
+      type: 'line',
+      data: {
+        labels: months,
+        datasets: [{
+          label: '매출 (원)',
+          data: revenues,
+          borderColor: '#10B981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 5,
+          pointBackgroundColor: '#10B981',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointHoverRadius: 7
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: 12,
+            titleFont: { size: 14, weight: 'bold' },
+            bodyFont: { size: 13 },
+            callbacks: {
+              label: function(context) {
+                return '매출: ' + context.parsed.y.toLocaleString() + '원';
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return (value / 1000000) + 'M';
+              }
+            },
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)'
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            }
+          }
+        }
+      }
+    });
+  }
+  
+  // 인기 강좌 차트
+  const popularCtx = document.getElementById('popularCoursesChart');
+  if (popularCtx) {
+    // 샘플 데이터 (실제로는 API에서 가져와야 함)
+    const courseNames = ['Python 기초', '웹 개발', '데이터 분석', 'AI/ML', '디자인'];
+    const enrollments = [85, 72, 65, 48, 35];
+    
+    popularCoursesChart = new Chart(popularCtx, {
+      type: 'doughnut',
+      data: {
+        labels: courseNames,
+        datasets: [{
+          data: enrollments,
+          backgroundColor: [
+            '#8B5CF6',
+            '#EC4899',
+            '#3B82F6',
+            '#10B981',
+            '#F59E0B'
+          ],
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              padding: 15,
+              font: {
+                size: 12
+              },
+              generateLabels: function(chart) {
+                const data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  return data.labels.map((label, i) => {
+                    const value = data.datasets[0].data[i];
+                    return {
+                      text: `${label} (${value}명)`,
+                      fillStyle: data.datasets[0].backgroundColor[i],
+                      hidden: false,
+                      index: i
+                    };
+                  });
+                }
+                return [];
+              }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: 12,
+            titleFont: { size: 14, weight: 'bold' },
+            bodyFont: { size: 13 },
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed || 0;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return `${label}: ${value}명 (${percentage}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+}
+
+/**
+ * 실제 차트 데이터 로드 및 업데이트 (API 연동)
+ */
+async function loadChartData() {
+  try {
+    // 월별 매출 데이터 로드
+    const revenueData = await apiRequest('GET', '/api/admin/dashboard/revenue-chart');
+    if (revenueData.success && revenueChart) {
+      revenueChart.data.labels = revenueData.data.months;
+      revenueChart.data.datasets[0].data = revenueData.data.revenues;
+      revenueChart.update();
+    }
+    
+    // 인기 강좌 데이터 로드
+    const popularData = await apiRequest('GET', '/api/admin/dashboard/popular-courses');
+    if (popularData.success && popularCoursesChart) {
+      popularCoursesChart.data.labels = popularData.data.courseNames;
+      popularCoursesChart.data.datasets[0].data = popularData.data.enrollments;
+      popularCoursesChart.update();
+    }
+  } catch (error) {
+    console.error('Chart data load error:', error);
+    // 에러 발생 시에도 샘플 데이터로 계속 표시
+  }
+}
+

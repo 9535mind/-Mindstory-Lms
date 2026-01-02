@@ -30,6 +30,7 @@ pagesAdmin.get('/dashboard', async (c) => {
         <title>관리자 대시보드 - 마인드스토리 LMS</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
         <link href="/static/style.css" rel="stylesheet">
     </head>
     <body class="bg-gray-100">
@@ -159,6 +160,31 @@ pagesAdmin.get('/dashboard', async (c) => {
                         <div class="bg-orange-100 rounded-full p-4">
                             <i class="fas fa-graduation-cap text-orange-700 text-2xl"></i>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 차트 섹션 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- 월별 매출 차트 -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">
+                        <i class="fas fa-chart-line mr-2 text-green-600"></i>
+                        월별 매출 추이 (최근 6개월)
+                    </h3>
+                    <div class="relative" style="height: 250px;">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 강좌별 수강생 차트 -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">
+                        <i class="fas fa-chart-pie mr-2 text-purple-600"></i>
+                        인기 강좌 TOP 5
+                    </h3>
+                    <div class="relative" style="height: 250px;">
+                        <canvas id="popularCoursesChart"></canvas>
                     </div>
                 </div>
             </div>
