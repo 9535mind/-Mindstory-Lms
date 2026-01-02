@@ -282,8 +282,8 @@ landing.get('/', (c) => {
         <section class="hero-gradient text-white py-32 md:py-40">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 <div class="grid md:grid-cols-2 gap-16 items-center">
-                    <!-- 좌측: 텍스트 -->
-                    <div class="text-center md:text-left">
+                    <!-- 좌측: 텍스트 (중앙 정렬) -->
+                    <div class="text-center">
                         <h1 class="text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-8 leading-tight">
                             마음을 이해하고<br>성장하는 여정
                         </h1>
@@ -294,7 +294,7 @@ landing.get('/', (c) => {
                             마인드 타임 코칭, 부모-자녀 대화법, 감정코칭까지<br>
                             전문가와 함께하는 온라인 평생교육
                         </p>
-                        <div class="flex flex-col sm:flex-row justify-center md:justify-start gap-6">
+                        <div class="flex flex-col sm:flex-row justify-center gap-6">
                             <button onclick="scrollToCourses()" class="cta-button text-xl px-10 py-4">
                                 <i class="fas fa-graduation-cap mr-3"></i>
                                 과정 둘러보기
@@ -305,11 +305,40 @@ landing.get('/', (c) => {
                         </div>
                     </div>
                     
-                    <!-- 우측: 고해상도 이미지 -->
-                    <div class="hidden md:block">
-                        <div class="relative">
-                            <img src="https://www.genspark.ai/api/files/s/Nx5k1tgA" alt="마인드스토리 교육" class="rounded-2xl shadow-2xl w-full" loading="lazy">
-                            <div class="absolute inset-0 bg-gradient-to-t from-purple-900/30 to-transparent rounded-2xl"></div>
+                    <!-- 우측: 이미지 + 오버레이 텍스트 -->
+                    <div class="hidden md:block relative">
+                        <div class="relative group">
+                            <img src="https://www.genspark.ai/api/files/s/Nx5k1tgA" alt="마인드스토리 교육" class="rounded-2xl shadow-2xl w-full transition-transform duration-300 group-hover:scale-105" loading="lazy">
+                            
+                            <!-- 그라데이션 오버레이 -->
+                            <div class="absolute inset-0 bg-gradient-to-t from-purple-900/80 via-purple-900/40 to-transparent rounded-2xl"></div>
+                            
+                            <!-- 텍스트 오버레이 -->
+                            <div class="absolute bottom-0 left-0 right-0 p-8 text-white">
+                                <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+                                    <h3 class="text-3xl font-bold mb-3">
+                                        <i class="fas fa-graduation-cap mr-2"></i>
+                                        마인드스토리 교육
+                                    </h3>
+                                    <p class="text-lg mb-4 opacity-90">
+                                        전문가와 함께하는 심리 상담 및 코칭 전문 교육
+                                    </p>
+                                    <div class="flex items-center gap-4 text-sm">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-users mr-2"></i>
+                                            <span>1,000+ 수강생</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <i class="fas fa-star mr-2 text-yellow-400"></i>
+                                            <span>4.9/5.0</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <i class="fas fa-certificate mr-2"></i>
+                                            <span>자격증 취득</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
