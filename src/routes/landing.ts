@@ -279,27 +279,27 @@ landing.get('/', (c) => {
         </header>
 
         <!-- 히어로 섹션 -->
-        <section class="hero-gradient text-white py-24 md:py-32">
+        <section class="hero-gradient text-white py-32 md:py-40">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div class="grid md:grid-cols-2 gap-16 items-center">
                     <!-- 좌측: 텍스트 -->
                     <div class="text-center md:text-left">
-                        <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+                        <h1 class="text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-8 leading-tight">
                             마음을 이해하고<br>성장하는 여정
                         </h1>
-                        <p class="text-xl md:text-2xl mb-4 font-semibold">
+                        <p class="text-2xl md:text-3xl lg:text-4xl mb-6 font-bold tracking-tight">
                             마인드스토리 원격평생교육원
                         </p>
-                        <p class="text-lg md:text-xl mb-8 opacity-90">
+                        <p class="text-xl md:text-2xl lg:text-3xl mb-10 opacity-95 leading-relaxed">
                             마인드 타임 코칭, 부모-자녀 대화법, 감정코칭까지<br>
                             전문가와 함께하는 온라인 평생교육
                         </p>
-                        <div class="flex flex-col sm:flex-row justify-center md:justify-start gap-4">
-                            <button onclick="scrollToCourses()" class="cta-button">
-                                <i class="fas fa-graduation-cap mr-2"></i>
+                        <div class="flex flex-col sm:flex-row justify-center md:justify-start gap-6">
+                            <button onclick="scrollToCourses()" class="cta-button text-xl px-10 py-4">
+                                <i class="fas fa-graduation-cap mr-3"></i>
                                 과정 둘러보기
                             </button>
-                            <a href="/register" class="bg-white/20 backdrop-blur-sm text-white px-8 py-3 rounded-lg font-semibold hover:bg-white/30 transition-all duration-300 text-center">
+                            <a href="/register" class="bg-white/20 backdrop-blur-sm text-white px-10 py-4 rounded-xl text-xl font-semibold hover:bg-white/30 transition-all duration-300 text-center">
                                 무료 회원가입
                             </a>
                         </div>
@@ -316,76 +316,98 @@ landing.get('/', (c) => {
             </div>
         </section>
 
-        <!-- 주요 특징 (Bento Grid) -->
-        <section class="py-20">
+        <!-- 주요 특징 (Bento Grid - 8개 카드) -->
+        <section class="py-24">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 class="text-4xl md:text-5xl font-bold text-center mb-4">왜 마인드스토리인가요?</h2>
-                <p class="text-center text-gray-600 text-lg mb-16">전문가와 함께하는 특별한 학습 경험</p>
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold text-center mb-6">왜 마인드스토리인가요?</h2>
+                <p class="text-center text-gray-600 text-xl md:text-2xl mb-20">전문가와 함께하는 특별한 학습 경험</p>
                 
                 <div class="bento-grid">
-                    <div class="glass-card rounded-2xl p-8 text-center">
-                        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center mx-auto mb-6">
-                            <i class="fas fa-video text-3xl text-white"></i>
+                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                        <div class="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-video text-4xl text-white"></i>
                         </div>
                         <h3 class="text-2xl font-bold mb-4">언제 어디서나</h3>
-                        <p class="text-gray-600 leading-relaxed">
+                        <p class="text-gray-600 leading-relaxed text-lg">
                             PC, 모바일, 태블릿<br>
                             어디서든 학습 가능
                         </p>
                     </div>
                     
-                    <div class="glass-card rounded-2xl p-8 text-center">
-                        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center mx-auto mb-6">
-                            <i class="fas fa-award text-3xl text-white"></i>
+                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                        <div class="w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-award text-4xl text-white"></i>
                         </div>
                         <h3 class="text-2xl font-bold mb-4">민간자격증</h3>
-                        <p class="text-gray-600 leading-relaxed">
+                        <p class="text-gray-600 leading-relaxed text-lg">
                             수료 후 자격증<br>
                             취득 가능 (별도 신청)
                         </p>
                     </div>
                     
-                    <div class="glass-card rounded-2xl p-8 text-center">
-                        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center mx-auto mb-6">
-                            <i class="fas fa-chalkboard-teacher text-3xl text-white"></i>
+                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                        <div class="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-chalkboard-teacher text-4xl text-white"></i>
                         </div>
                         <h3 class="text-2xl font-bold mb-4">박종석 대표 직강</h3>
-                        <p class="text-gray-600 leading-relaxed">
+                        <p class="text-gray-600 leading-relaxed text-lg">
                             20년 현장 경험<br>
                             실전 노하우 전수
                         </p>
                     </div>
                     
-                    <div class="glass-card rounded-2xl p-8 text-center">
-                        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center mx-auto mb-6">
-                            <i class="fas fa-redo text-3xl text-white"></i>
+                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                        <div class="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-redo text-4xl text-white"></i>
                         </div>
                         <h3 class="text-2xl font-bold mb-4">반복 학습</h3>
-                        <p class="text-gray-600 leading-relaxed">
+                        <p class="text-gray-600 leading-relaxed text-lg">
                             수강 기간 내<br>
                             무제한 복습 가능
                         </p>
                     </div>
                     
-                    <div class="glass-card rounded-2xl p-8 text-center">
-                        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center mx-auto mb-6">
-                            <i class="fas fa-certificate text-3xl text-white"></i>
+                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                        <div class="w-24 h-24 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-certificate text-4xl text-white"></i>
                         </div>
                         <h3 class="text-2xl font-bold mb-4">수료증 발급</h3>
-                        <p class="text-gray-600 leading-relaxed">
+                        <p class="text-gray-600 leading-relaxed text-lg">
                             80% 이상 수강 시<br>
                             자동 발급
                         </p>
                     </div>
                     
-                    <div class="glass-card rounded-2xl p-8 text-center">
-                        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center mx-auto mb-6">
-                            <i class="fas fa-comments text-3xl text-white"></i>
+                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                        <div class="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-comments text-4xl text-white"></i>
                         </div>
                         <h3 class="text-2xl font-bold mb-4">커뮤니티</h3>
-                        <p class="text-gray-600 leading-relaxed">
+                        <p class="text-gray-600 leading-relaxed text-lg">
                             수강생 간<br>
                             경험 공유 및 소통
+                        </p>
+                    </div>
+                    
+                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                        <div class="w-24 h-24 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-headset text-4xl text-white"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-4">학습 지원</h3>
+                        <p class="text-gray-600 leading-relaxed text-lg">
+                            1:1 질문 답변<br>
+                            전문가 멘토링
+                        </p>
+                    </div>
+                    
+                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                        <div class="w-24 h-24 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-clock text-4xl text-white"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-4">유연한 학습</h3>
+                        <p class="text-gray-600 leading-relaxed text-lg">
+                            24시간 언제든지<br>
+                            내 속도로 학습
                         </p>
                     </div>
                 </div>
