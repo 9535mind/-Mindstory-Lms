@@ -203,6 +203,7 @@ app.get('/about', (c) => {
             // 헤더 업데이트
             updateHeader();
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)

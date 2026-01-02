@@ -183,6 +183,7 @@ pagesMy.get('/my-courses', (c) => {
             // 페이지 로드 시 수강 중 과정 로드
             loadCourses('active')
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)
@@ -521,6 +522,7 @@ pagesMy.get('/my-profile', (c) => {
             // 페이지 로드
             loadUserProfile();
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)

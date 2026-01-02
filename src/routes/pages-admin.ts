@@ -198,6 +198,7 @@ pagesAdmin.get('/dashboard', async (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/js/auth.js"></script>
         <script src="/static/js/admin-dashboard.js"></script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)
@@ -650,6 +651,7 @@ pagesAdmin.get('/courses', async (c) => {
         <script src="/static/js/auth.js"></script>
         <script src="/static/js/admin-courses.js"></script>
         <script src="/static/js/admin-courses-drag.js"></script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)
@@ -988,6 +990,7 @@ pagesAdmin.get('/users', async (c) => {
                 }
             }
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)
@@ -1289,6 +1292,7 @@ pagesAdmin.get('/payments', async (c) => {
                 alert('결제 상세 페이지는 준비 중입니다.');
             }
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)
@@ -1665,19 +1669,17 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                                         </div>
                                     </div>
                                     
-                                    <div class="mb-4 flex items-center justify-between">
+                                    <div class="mb-4">
                                         <label class="text-sm font-medium text-gray-700">
                                             <i class="fas fa-link mr-1 text-purple-600"></i>영상 URL <span class="text-red-500">*</span>
                                         </label>
-                                        <a href="https://dashboard.api.video/videos" 
-                                           target="_blank" 
-                                           class="inline-flex items-center px-3 py-1.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors">
-                                            <i class="fas fa-video mr-2"></i>api.video 업로드
-                                            <i class="fas fa-external-link-alt ml-2 text-xs"></i>
-                                        </a>
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            <i class="fas fa-info-circle mr-1"></i>
+                                            <strong>FTP 업로드 후 URL 입력:</strong> FileZilla 등으로 서버에 영상을 업로드한 후, 해당 영상의 전체 URL을 입력하세요.
+                                        </p>
                                     </div>
                                     <input type="url" id="videoUrlInput" 
-                                        placeholder="https://embed.api.video/vod/vi... 또는 https://example.com/video.mp4"
+                                        placeholder="https://yourdomain.com/videos/video.mp4 또는 https://example.com/video.mp4"
                                         class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                         onchange="handleVideoUrlUpload()">
                                     <p class="text-sm text-gray-500 mt-2">
@@ -2221,6 +2223,7 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/js/auth.js"></script>
         <script src="/static/js/admin-lessons.js"></script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)
@@ -2523,6 +2526,7 @@ pagesAdmin.get('/enrollments', async (c) => {
                 alert('수강 상세 페이지는 준비 중입니다.');
             }
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)
@@ -2806,6 +2810,7 @@ pagesAdmin.get('/videos', async (c) => {
                 alert(message);
             }
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)
@@ -3075,6 +3080,7 @@ pagesAdmin.get('/users/:userId/classroom', async (c) => {
                 return date.toLocaleDateString('ko-KR');
             }
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)
@@ -3402,6 +3408,7 @@ pagesAdmin.get('/users/:userId', async (c) => {
                 document.getElementById('passwordModal').remove();
             }
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)
@@ -3638,6 +3645,7 @@ pagesAdmin.get('/videos', async (c) => {
                 }
             });
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)

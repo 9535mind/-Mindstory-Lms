@@ -1,0 +1,297 @@
+/**
+ * 마인드스토리 LMS 보안 모듈
+ * 저작권 보호를 위한 클라이언트 측 보안 기능
+ */
+
+// ========================================
+// 1. 우클릭 방지
+// ========================================
+document.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  showSecurityAlert('이 콘텐츠는 저작권법으로 보호됩니다.');
+  return false;
+});
+
+// ========================================
+// 2. 드래그 방지
+// ========================================
+document.addEventListener('dragstart', (e) => {
+  e.preventDefault();
+  return false;
+});
+
+// ========================================
+// 3. 선택 방지 (텍스트/이미지)
+// ========================================
+document.addEventListener('selectstart', (e) => {
+  // 입력 필드는 선택 허용
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    return true;
+  }
+  e.preventDefault();
+  return false;
+});
+
+// CSS로도 선택 방지 적용
+const style = document.createElement('style');
+style.innerHTML = `
+  body {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+`;
+document.head.appendChild(style);
+
+// ========================================
+// 4. 키보드 단축키 차단
+// ========================================
+document.addEventListener('keydown', (e) => {
+  // F12 차단
+  if (e.key === 'F12') {
+    e.preventDefault();
+    showSecurityAlert('개발자 도구는 사용할 수 없습니다.');
+    return false;
+  }
+  
+  // Ctrl+Shift+I (개발자 도구)
+  if (e.ctrlKey && e.shiftKey && e.key === 'I') {
+    e.preventDefault();
+    showSecurityAlert('개발자 도구는 사용할 수 없습니다.');
+    return false;
+  }
+  
+  // Ctrl+Shift+J (콘솔)
+  if (e.ctrlKey && e.shiftKey && e.key === 'J') {
+    e.preventDefault();
+    showSecurityAlert('개발자 도구는 사용할 수 없습니다.');
+    return false;
+  }
+  
+  // Ctrl+Shift+C (요소 검사)
+  if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+    e.preventDefault();
+    showSecurityAlert('개발자 도구는 사용할 수 없습니다.');
+    return false;
+  }
+  
+  // Ctrl+U (소스 보기)
+  if (e.ctrlKey && e.key === 'u') {
+    e.preventDefault();
+    showSecurityAlert('소스 보기는 사용할 수 없습니다.');
+    return false;
+  }
+  
+  // Ctrl+S (저장)
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault();
+    showSecurityAlert('페이지 저장은 허용되지 않습니다.');
+    return false;
+  }
+  
+  // Ctrl+P (인쇄) - 강의 자료는 허용, 영상 페이지만 차단
+  if (e.ctrlKey && e.key === 'p' && window.location.pathname.includes('/learn')) {
+    e.preventDefault();
+    showSecurityAlert('영상 페이지는 인쇄할 수 없습니다.');
+    return false;
+  }
+});
+
+// ========================================
+// 5. 개발자 도구 감지
+// ========================================
+let devToolsOpen = false;
+let devToolsCheckInterval;
+
+function detectDevTools() {
+  const threshold = 160;
+  const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+  const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+  
+  if (widthThreshold || heightThreshold) {
+    if (!devToolsOpen) {
+      devToolsOpen = true;
+      handleDevToolsDetected();
+    }
+  } else {
+    devToolsOpen = false;
+  }
+}
+
+function handleDevToolsDetected() {
+  // 경고만 표시 (강제 종료는 사용자 경험에 좋지 않음)
+  showSecurityAlert(
+    '⚠️ 개발자 도구가 감지되었습니다.\n\n' +
+    '저작권 보호를 위해 개발자 도구 사용은 제한됩니다.\n' +
+    '지속적인 시도 시 수강 자격이 제한될 수 있습니다.'
+  );
+  
+  // 로그 기록 (서버로 전송 - 선택사항)
+  logSecurityEvent('devtools_detected');
+}
+
+// 1초마다 체크
+devToolsCheckInterval = setInterval(detectDevTools, 1000);
+
+// ========================================
+// 6. 탭 전환 감지
+// ========================================
+let isPageVisible = true;
+let tabSwitchCount = 0;
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    isPageVisible = false;
+    tabSwitchCount++;
+    
+    // 영상 재생 중이면 일시정지 (선택사항)
+    const video = document.querySelector('video');
+    if (video && !video.paused) {
+      // 탭 전환 시 자동 일시정지는 UX에 나쁠 수 있으므로 로그만 기록
+      logSecurityEvent('tab_switch_during_video');
+    }
+  } else {
+    isPageVisible = true;
+  }
+});
+
+// ========================================
+// 7. 콘솔 경고 메시지
+// ========================================
+console.log(
+  '%c⚠️ 경고!',
+  'color: red; font-size: 40px; font-weight: bold;'
+);
+console.log(
+  '%c이 브라우저 기능은 개발자를 위한 것입니다.',
+  'color: orange; font-size: 16px;'
+);
+console.log(
+  '%c누군가 여기에 코드를 붙여넣으라고 했다면, 그것은 사기이며 귀하의 계정에 접근할 수 있습니다.',
+  'color: black; font-size: 14px;'
+);
+console.log(
+  '%c저작권법 위반: 무단 복제, 배포 시 법적 조치를 받을 수 있습니다.',
+  'color: red; font-size: 14px; font-weight: bold;'
+);
+
+// ========================================
+// 8. 화면 녹화 경고 (브라우저 API 제한적)
+// ========================================
+// Screen Capture API 감지 시도
+if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+  const originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia;
+  
+  navigator.mediaDevices.getDisplayMedia = function(...args) {
+    logSecurityEvent('screen_capture_attempt');
+    showSecurityAlert(
+      '⚠️ 화면 녹화 시도가 감지되었습니다.\n\n' +
+      '본 콘텐츠는 저작권법으로 보호되며,\n' +
+      '무단 녹화 및 배포 시 법적 조치를 받을 수 있습니다.'
+    );
+    return originalGetDisplayMedia.apply(this, args);
+  };
+}
+
+// ========================================
+// 유틸리티 함수
+// ========================================
+
+/**
+ * 보안 경고 표시
+ */
+function showSecurityAlert(message) {
+  // 너무 자주 표시되지 않도록 제한
+  const lastAlert = localStorage.getItem('lastSecurityAlert');
+  const now = Date.now();
+  
+  if (!lastAlert || now - parseInt(lastAlert) > 5000) { // 5초에 한 번만
+    alert(message);
+    localStorage.setItem('lastSecurityAlert', now.toString());
+  }
+}
+
+/**
+ * 보안 이벤트 로깅
+ */
+function logSecurityEvent(eventType) {
+  try {
+    const token = localStorage.getItem('session_token');
+    if (!token) return;
+    
+    // 서버로 로그 전송 (선택사항)
+    fetch('/api/security/log', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        event_type: eventType,
+        timestamp: new Date().toISOString(),
+        page: window.location.pathname,
+        user_agent: navigator.userAgent
+      })
+    }).catch(err => {
+      // 로그 전송 실패는 무시 (사용자 경험에 영향 없음)
+      console.debug('Security log failed:', err);
+    });
+  } catch (err) {
+    // 에러 무시
+  }
+}
+
+// ========================================
+// 9. 저작권 워터마크 (선택사항)
+// ========================================
+function addWatermark() {
+  // 영상 재생 페이지에만 적용
+  if (!window.location.pathname.includes('/learn')) return;
+  
+  const userName = localStorage.getItem('user_name');
+  const userEmail = localStorage.getItem('user_email');
+  
+  if (userName || userEmail) {
+    const watermark = document.createElement('div');
+    watermark.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      color: rgba(255, 255, 255, 0.6);
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      pointer-events: none;
+      z-index: 9998;
+      font-family: monospace;
+    `;
+    watermark.textContent = userName || userEmail;
+    document.body.appendChild(watermark);
+  }
+}
+
+// 페이지 로드 후 워터마크 추가
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', addWatermark);
+} else {
+  addWatermark();
+}
+
+// ========================================
+// 10. 정리 (페이지 이탈 시)
+// ========================================
+window.addEventListener('beforeunload', () => {
+  if (devToolsCheckInterval) {
+    clearInterval(devToolsCheckInterval);
+  }
+});
+
+console.log('✅ 보안 모듈 로드 완료');

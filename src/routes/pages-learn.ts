@@ -744,6 +744,9 @@ app.get('/courses/:courseId/learn', async (c) => {
             }
         });
         </script>
+        
+        <!-- 보안 시스템 -->
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)

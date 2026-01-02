@@ -800,6 +800,7 @@ landing.get('/', (c) => {
                 setInterval(nextSlide, 5000)
             }
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)

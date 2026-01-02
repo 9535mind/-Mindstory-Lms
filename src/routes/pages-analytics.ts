@@ -395,6 +395,7 @@ app.get('/admin/analytics', (c) => {
             loadCourseList();
         });
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)

@@ -180,6 +180,7 @@ app.get('/payment/checkout/:courseId', (c) => {
             // 페이지 로드
             init()
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)
@@ -253,6 +254,7 @@ app.get('/payment/success', (c) => {
             // 페이지 로드 시 실행
             confirmPayment()
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)
@@ -305,6 +307,7 @@ app.get('/payment/fail', (c) => {
                 document.getElementById('errorMessage').textContent = decodeURIComponent(errorMessage)
             }
         </script>
+        <script src="/static/js/security.js"></script>
     </body>
     </html>
   `)
