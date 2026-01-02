@@ -54,26 +54,29 @@ pagesAdmin.get('/dashboard', async (c) => {
             </div>
         </nav>
 
-        <!-- 관리자 메뉴 -->
+        <!-- 관리자 메뉴 (산뜻하고 단정한 톤) -->
         <div class="bg-white shadow-md">
             <div class="max-w-7xl mx-auto px-4">
                 <div class="flex flex-wrap gap-1 admin-menu-mobile">
-                    <a href="/admin/dashboard" class="admin-menu-item px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
+                    <a href="/admin/dashboard" class="admin-menu-item px-4 py-3 bg-blue-50 text-blue-700 font-semibold border-b-2 border-blue-600">
                         <i class="fas fa-home mr-1"></i><span class="menu-text">대시보드</span>
                     </a>
-                    <a href="/admin/courses" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                    <a href="/admin/courses" class="admin-menu-item px-4 py-3 text-gray-700 hover:bg-green-50 hover:text-green-700">
                         <i class="fas fa-book mr-1"></i><span class="menu-text">강좌 관리</span>
                     </a>
-                    <a href="/admin/users" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                    <a href="/admin/users" class="admin-menu-item px-4 py-3 text-gray-700 hover:bg-purple-50 hover:text-purple-700">
                         <i class="fas fa-users mr-1"></i><span class="menu-text">회원 관리</span>
                     </a>
-                    <a href="/admin/payments" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                    <a href="/admin/payments" class="admin-menu-item px-4 py-3 text-gray-700 hover:bg-amber-50 hover:text-amber-700">
                         <i class="fas fa-credit-card mr-1"></i><span class="menu-text">결제 관리</span>
                     </a>
-                    <a href="/admin/popups" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                    <a href="/admin/videos" class="admin-menu-item px-4 py-3 text-gray-700 hover:bg-rose-50 hover:text-rose-700">
+                        <i class="fas fa-video mr-1"></i><span class="menu-text">영상 관리</span>
+                    </a>
+                    <a href="/admin/popups" class="admin-menu-item px-4 py-3 text-gray-700 hover:bg-cyan-50 hover:text-cyan-700">
                         <i class="fas fa-bell mr-1"></i><span class="menu-text">팝업 관리</span>
                     </a>
-                    <a href="/admin/settings" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                    <a href="/admin/settings" class="admin-menu-item px-4 py-3 text-gray-700 hover:bg-slate-50 hover:text-slate-700">
                         <i class="fas fa-cog mr-1"></i><span class="menu-text">설정</span>
                     </a>
                 </div>
@@ -3259,6 +3262,242 @@ pagesAdmin.get('/users/:userId', async (c) => {
             function closePasswordModal() {
                 document.getElementById('passwordModal').remove();
             }
+        </script>
+    </body>
+    </html>
+  `)
+})
+
+/**
+ * GET /admin/videos
+ * 영상 관리 페이지 - YouTube 및 api.video 관리
+ */
+pagesAdmin.get('/videos', async (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>영상 관리 - 마인드스토리 LMS</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-gray-100">
+        <!-- 관리자 헤더 -->
+        <nav class="bg-purple-700 text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold">
+                        <i class="fas fa-video mr-2"></i>
+                        영상 관리
+                    </h1>
+                    <div class="flex items-center space-x-4">
+                        <a href="/" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors">
+                            <i class="fas fa-users mr-1"></i>수강생 모드
+                        </a>
+                        <button onclick="logout()" class="bg-white text-purple-700 px-4 py-2 rounded hover:bg-gray-100">
+                            <i class="fas fa-sign-out-alt mr-1"></i>로그아웃
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 관리자 메뉴 (산뜻하고 단정한 톤) -->
+        <div class="bg-white shadow-md">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex flex-wrap gap-1 admin-menu-mobile">
+                    <a href="/admin/dashboard" class="admin-menu-item px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700">
+                        <i class="fas fa-home mr-1"></i><span class="menu-text">대시보드</span>
+                    </a>
+                    <a href="/admin/courses" class="admin-menu-item px-4 py-3 text-gray-700 hover:bg-green-50 hover:text-green-700">
+                        <i class="fas fa-book mr-1"></i><span class="menu-text">강좌 관리</span>
+                    </a>
+                    <a href="/admin/users" class="admin-menu-item px-4 py-3 text-gray-700 hover:bg-purple-50 hover:text-purple-700">
+                        <i class="fas fa-users mr-1"></i><span class="menu-text">회원 관리</span>
+                    </a>
+                    <a href="/admin/payments" class="admin-menu-item px-4 py-3 text-gray-700 hover:bg-amber-50 hover:text-amber-700">
+                        <i class="fas fa-credit-card mr-1"></i><span class="menu-text">결제 관리</span>
+                    </a>
+                    <a href="/admin/videos" class="admin-menu-item px-4 py-3 bg-rose-50 text-rose-700 font-semibold border-b-2 border-rose-600">
+                        <i class="fas fa-video mr-1"></i><span class="menu-text">영상 관리</span>
+                    </a>
+                    <a href="/admin/popups" class="admin-menu-item px-4 py-3 text-gray-700 hover:bg-cyan-50 hover:text-cyan-700">
+                        <i class="fas fa-bell mr-1"></i><span class="menu-text">팝업 관리</span>
+                    </a>
+                    <a href="/admin/settings" class="admin-menu-item px-4 py-3 text-gray-700 hover:bg-slate-50 hover:text-slate-700">
+                        <i class="fas fa-cog mr-1"></i><span class="menu-text">설정</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <style>
+            /* 모바일 관리자 메뉴 최적화 */
+            @media (max-width: 768px) {
+                .admin-menu-mobile {
+                    gap: 0.25rem;
+                }
+                
+                .admin-menu-item {
+                    padding: 0.5rem 0.75rem !important;
+                    font-size: 0.9rem !important;
+                    line-height: 1.2 !important;
+                    display: inline-flex;
+                    align-items: center;
+                    white-space: nowrap;
+                }
+                
+                .admin-menu-item i {
+                    margin-right: 0.25rem !important;
+                    font-size: 0.9em;
+                }
+                
+                .menu-text {
+                    line-height: 1 !important;
+                }
+            }
+        </style>
+
+        <!-- 메인 콘텐츠 -->
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <!-- 영상 플랫폼 카드 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <!-- YouTube 관리 카드 -->
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div class="bg-gradient-to-r from-red-600 to-red-700 p-6 text-white">
+                        <div class="flex items-center mb-4">
+                            <i class="fab fa-youtube text-5xl mr-4"></i>
+                            <div>
+                                <h2 class="text-2xl font-bold">YouTube</h2>
+                                <p class="text-red-100">동영상 플랫폼</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-gray-700 mb-6">
+                            YouTube Studio에서 영상을 관리하고, 동영상 ID를 확인하여 강의에 적용할 수 있습니다.
+                        </p>
+                        <div class="space-y-3">
+                            <a href="https://studio.youtube.com" target="_blank" 
+                               class="block w-full bg-red-600 text-white text-center px-6 py-3 rounded-lg hover:bg-red-700 transition-all">
+                                <i class="fab fa-youtube mr-2"></i>
+                                YouTube Studio 열기
+                            </a>
+                            <a href="https://www.youtube.com/my_videos" target="_blank" 
+                               class="block w-full bg-white text-red-600 border-2 border-red-600 text-center px-6 py-3 rounded-lg hover:bg-red-50 transition-all">
+                                <i class="fas fa-video mr-2"></i>
+                                내 동영상 보기
+                            </a>
+                        </div>
+                        
+                        <div class="mt-6 p-4 bg-red-50 rounded-lg">
+                            <h3 class="font-semibold text-red-900 mb-2">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                사용 방법
+                            </h3>
+                            <ol class="text-sm text-red-800 space-y-1 list-decimal list-inside">
+                                <li>YouTube에 영상 업로드</li>
+                                <li>영상 ID 복사 (URL의 v= 뒤 부분)</li>
+                                <li>강좌 관리에서 차시에 ID 입력</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- api.video 관리 카드 -->
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-cloud-upload-alt text-5xl mr-4"></i>
+                            <div>
+                                <h2 class="text-2xl font-bold">api.video</h2>
+                                <p class="text-blue-100">VOD 플랫폼</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-gray-700 mb-6">
+                            api.video 대시보드에서 영상을 업로드하고 관리하며, Video ID를 확인할 수 있습니다.
+                        </p>
+                        <div class="space-y-3">
+                            <a href="https://dashboard.api.video" target="_blank" 
+                               class="block w-full bg-blue-600 text-white text-center px-6 py-3 rounded-lg hover:bg-blue-700 transition-all">
+                                <i class="fas fa-tachometer-alt mr-2"></i>
+                                api.video 대시보드 열기
+                            </a>
+                            <a href="https://dashboard.api.video/videos" target="_blank" 
+                               class="block w-full bg-white text-blue-600 border-2 border-blue-600 text-center px-6 py-3 rounded-lg hover:bg-blue-50 transition-all">
+                                <i class="fas fa-film mr-2"></i>
+                                영상 목록 보기
+                            </a>
+                        </div>
+                        
+                        <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                            <h3 class="font-semibold text-blue-900 mb-2">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                사용 방법
+                            </h3>
+                            <ol class="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                                <li>api.video에 영상 업로드</li>
+                                <li>Video ID 복사 (vi로 시작)</li>
+                                <li>강좌 관리에서 차시에 ID 입력</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 도움말 섹션 -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-question-circle mr-2"></i>
+                    자주 묻는 질문
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="border-l-4 border-blue-500 pl-4 py-2">
+                        <h3 class="font-semibold text-gray-800 mb-1">Q. 어느 플랫폼을 사용해야 하나요?</h3>
+                        <p class="text-gray-600 text-sm">
+                            YouTube는 공개 영상에 적합하고, api.video는 비공개/프리미엄 콘텐츠에 적합합니다.
+                        </p>
+                    </div>
+                    
+                    <div class="border-l-4 border-green-500 pl-4 py-2">
+                        <h3 class="font-semibold text-gray-800 mb-1">Q. 영상 ID는 어떻게 확인하나요?</h3>
+                        <p class="text-gray-600 text-sm">
+                            <strong>YouTube:</strong> 영상 URL의 <code class="bg-gray-100 px-1">v=</code> 뒤 문자열<br>
+                            <strong>api.video:</strong> <code class="bg-gray-100 px-1">vi</code>로 시작하는 영상 ID
+                        </p>
+                    </div>
+                    
+                    <div class="border-l-4 border-purple-500 pl-4 py-2">
+                        <h3 class="font-semibold text-gray-800 mb-1">Q. 강좌에 영상을 추가하려면?</h3>
+                        <p class="text-gray-600 text-sm">
+                            <strong>강좌 관리</strong> → 강좌 선택 → <strong>차시 관리</strong> → 차시 추가/수정에서 영상 ID 입력
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="/static/js/auth.js"></script>
+        <script>
+            function logout() {
+                if (confirm('로그아웃 하시겠습니까?')) {
+                    AuthManager.clearSession();
+                    window.location.href = '/login';
+                }
+            }
+
+            // 관리자 권한 체크
+            window.addEventListener('DOMContentLoaded', () => {
+                if (!AuthManager.isAdmin()) {
+                    alert('관리자 권한이 필요합니다.');
+                    window.location.href = '/';
+                }
+            });
         </script>
     </body>
     </html>

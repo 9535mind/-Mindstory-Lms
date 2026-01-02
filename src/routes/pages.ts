@@ -13,10 +13,9 @@ const getHeader = () => `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center py-4">
             <div class="flex items-center">
-                <a href="/" class="text-xl md:text-2xl font-bold text-indigo-600" style="line-height: 1.2;">
-                <span class="block md:inline">마인드스토리</span>
-                <span class="block md:inline">원격 평생교육원</span>
-            </a>
+                <a href="/" class="text-xl md:text-2xl font-bold text-indigo-600">
+                    마인드스토리 원격 평생교육원
+                </a>
             </div>
             <nav class="hidden md:flex space-x-8 items-center">
                 <a href="/" class="text-gray-700 hover:text-indigo-600">홈</a>
@@ -186,12 +185,6 @@ pages.get('/login', (c) => {
                 <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
                     로그인
                 </h2>
-                <p class="mt-2 text-center text-sm text-gray-600">
-                    또는
-                    <a href="/register" class="font-medium text-indigo-600 hover:text-indigo-500">
-                        회원가입하기
-                    </a>
-                </p>
             </div>
             <form id="loginForm" class="mt-8 space-y-6">
                 <div class="rounded-md shadow-sm space-y-4">
