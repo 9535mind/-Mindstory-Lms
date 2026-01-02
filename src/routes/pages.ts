@@ -975,101 +975,132 @@ pages.get('/courses/:id', async (c) => {
                 console.log('[DEBUG] Starting HTML render...')
                 
                 const detailHtml = \`
-                    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-                        <!-- 과정 헤더 -->
-                        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-8">
-                            <div class="max-w-4xl mx-auto">
-                                <h1 class="text-4xl font-bold mb-4">\${course.title}</h1>
-                                <p class="text-xl text-indigo-100">\${course.description || ''}</p>
-                            </div>
-                        </div>
-                        
-                        <!-- 과정 정보 -->
-                        <div class="p-8">
-                            <div class="max-w-4xl mx-auto">
-                                <!-- 기본 정보 -->
-                                <div class="grid md:grid-cols-3 gap-6 mb-8">
-                                    <div class="bg-gray-50 p-4 rounded-lg text-center">
-                                        <i class="fas fa-calendar text-3xl text-indigo-600 mb-2"></i>
-                                        <p class="text-sm text-gray-600">수강 기간</p>
-                                        <p class="text-xl font-bold text-gray-900">\${course.duration_days}일</p>
+                    <!-- 과정 헤더 섹션 -->
+                    <div class="bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 text-white rounded-2xl shadow-2xl overflow-hidden mb-8">
+                        <div class="p-8 md:p-12">
+                            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-4">
+                                        <span class="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-semibold">
+                                            <i class="fas fa-graduation-cap mr-2"></i>온라인 과정
+                                        </span>
+                                        \${course.is_featured ? '<span class="bg-yellow-400 text-yellow-900 px-4 py-2 rounded-full text-sm font-bold"><i class="fas fa-star mr-1"></i>인기</span>' : ''}
                                     </div>
-                                    <div class="bg-gray-50 p-4 rounded-lg text-center">
-                                        <i class="fas fa-book text-3xl text-indigo-600 mb-2"></i>
-                                        <p class="text-sm text-gray-600">총 차시</p>
-                                        <p class="text-xl font-bold text-gray-900">\${course.total_lessons}강</p>
-                                    </div>
-                                    <div class="bg-gray-50 p-4 rounded-lg text-center">
-                                        <i class="fas fa-clock text-3xl text-indigo-600 mb-2"></i>
-                                        <p class="text-sm text-gray-600">학습 시간</p>
-                                        <p class="text-xl font-bold text-gray-900">\${Math.floor(course.total_duration_minutes / 60)}시간</p>
+                                    <h1 class="text-4xl md:text-5xl font-bold mb-4 leading-tight">\${course.title}</h1>
+                                    <p class="text-xl text-white/90 leading-relaxed mb-6">\${course.description || ''}</p>
+                                    <div class="flex flex-wrap items-center gap-6 text-white/80">
+                                        <span><i class="fas fa-users mr-2"></i>\${course.enrolled_count || 0}명 수강 중</span>
+                                        <span><i class="fas fa-calendar mr-2"></i>수강 기간 \${course.duration_days}일</span>
+                                        <span><i class="fas fa-book mr-2"></i>총 \${course.total_lessons}강</span>
                                     </div>
                                 </div>
                                 
-                                <!-- 가격 정보 -->
-                                <div class="bg-indigo-50 p-6 rounded-lg mb-8">
-                                    <div class="flex justify-between items-center">
-                                        <div>
-                                            <p class="text-gray-600 mb-2">수강료</p>
-                                            \${course.is_free ? 
-                                                '<p class="text-3xl font-bold text-green-600">무료</p>' :
-                                                \`<div>
-                                                    \${course.discount_price ? 
-                                                        \`<p class="text-gray-400 line-through text-lg">\${course.price.toLocaleString()}원</p>
-                                                        <p class="text-3xl font-bold text-indigo-600">\${course.discount_price.toLocaleString()}원</p>\` :
-                                                        \`<p class="text-3xl font-bold text-indigo-600">\${course.price.toLocaleString()}원</p>\`
-                                                    }
-                                                </div>\`
-                                            }
-                                        </div>
-                                        \${isAdmin ? 
-                                            \`<button onclick="goToLesson(\${course.id}, \${lessons[0]?.id || 0}, true, true)" 
-                                                     class="bg-purple-600 text-white px-8 py-3 rounded-lg font-bold text-lg hover:bg-purple-700 transition">
-                                                <i class="fas fa-user-shield mr-2"></i>관리자 모드로 학습하기
-                                            </button>\` :
-                                            \`<button onclick="enrollCourse(\${course.id})" 
-                                                     class="bg-indigo-600 text-white px-8 py-3 rounded-lg font-bold text-lg hover:bg-indigo-700 transition">
-                                                \${enrollment ? '학습하기' : '수강 신청'}
-                                            </button>\`
+                                <!-- 가격 & 신청 카드 -->
+                                <div class="bg-white rounded-2xl shadow-xl p-6 min-w-[280px] md:min-w-[320px]">
+                                    <div class="text-center mb-6">
+                                        \${course.is_free ? 
+                                            '<div><p class="text-sm text-gray-500 mb-2">수강료</p><p class="text-4xl font-bold text-green-600">무료</p></div>' :
+                                            \`<div>
+                                                <p class="text-sm text-gray-500 mb-2">수강료</p>
+                                                \${course.discount_price ? 
+                                                    \`<p class="text-gray-400 line-through text-lg mb-1">\${course.price.toLocaleString()}원</p>
+                                                    <div class="flex items-center justify-center gap-2">
+                                                        <p class="text-4xl font-bold text-purple-600">\${course.discount_price.toLocaleString()}원</p>
+                                                        <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-bold">
+                                                            \${Math.round((1 - course.discount_price / course.price) * 100)}% OFF
+                                                        </span>
+                                                    </div>\` :
+                                                    \`<p class="text-4xl font-bold text-purple-600">\${course.price.toLocaleString()}원</p>\`
+                                                }
+                                            </div>\`
                                         }
                                     </div>
-                                </div>
-                                
-                                <!-- 커리큘럼 -->
-                                <div class="mb-8">
-                                    <h2 class="text-2xl font-bold text-gray-900 mb-4">
-                                        <i class="fas fa-list mr-2"></i>커리큘럼
-                                    </h2>
-                                    <div class="space-y-3">
-                                        \${lessons.map((lesson, index) => \`
-                                            <div onclick="goToLesson(\${course.id}, \${lesson.id}, \${lesson.is_free_preview}, \${enrollment ? true : false})" 
-                                                 class="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-indigo-500 hover:shadow-lg transition-all cursor-pointer group">
-                                                <div class="flex justify-between items-center">
-                                                    <div class="flex items-center flex-1">
-                                                        <span class="bg-indigo-100 text-indigo-600 font-bold w-12 h-12 rounded-full flex items-center justify-center mr-4 text-lg group-hover:bg-indigo-600 group-hover:text-white transition">
-                                                            \${index + 1}
-                                                        </span>
-                                                        <div class="flex-1">
-                                                            <div class="flex items-center">
-                                                                <span class="font-bold text-gray-900 text-lg">\${lesson.title}</span>
-                                                                \${lesson.is_free_preview ? '<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold ml-3">무료 미리보기</span>' : ''}
-                                                            </div>
-                                                            <span class="text-gray-500 text-sm mt-1 inline-block">
-                                                                <i class="fas fa-clock mr-1"></i>\${lesson.video_duration_minutes || 0}분
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="flex items-center ml-4">
-                                                        <button class="bg-indigo-600 hover:bg-indigo-700 text-white \${isAdmin ? 'px-7 py-4 text-lg' : 'px-4 py-2 text-sm'} rounded-lg font-bold transition group-hover:scale-110">
-                                                            <i class="fas fa-play \${isAdmin ? 'mr-3 text-xl' : 'mr-2'}"></i>재생
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        \`).join('')}
-                                    </div>
+                                    \${isAdmin ? 
+                                        \`<button onclick="goToLesson(\${course.id}, \${lessons[0]?.id || 0}, true, true)" 
+                                                 class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-4 rounded-xl font-bold text-lg hover:from-purple-700 hover:to-indigo-700 transition-all transform hover:scale-105 shadow-lg">
+                                            <i class="fas fa-user-shield mr-2"></i>관리자 모드로 학습하기
+                                        </button>\` :
+                                        \`<button onclick="enrollCourse(\${course.id})" 
+                                                 class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-4 rounded-xl font-bold text-lg hover:from-purple-700 hover:to-indigo-700 transition-all transform hover:scale-105 shadow-lg">
+                                            <i class="fas fa-\${enrollment ? 'play' : 'shopping-cart'} mr-2"></i>\${enrollment ? '학습 시작하기' : '지금 수강 신청'}
+                                        </button>\`
+                                    }
+                                    <p class="text-sm text-gray-500 text-center mt-4">
+                                        <i class="fas fa-info-circle mr-1"></i>언제든 학습 가능
+                                    </p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 과정 통계 카드 -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        <div class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition">
+                            <div class="bg-purple-100 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-calendar text-purple-600 text-2xl"></i>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-1">수강 기간</p>
+                            <p class="text-2xl font-bold text-gray-900">\${course.duration_days}<span class="text-sm">일</span></p>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition">
+                            <div class="bg-blue-100 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-book text-blue-600 text-2xl"></i>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-1">총 차시</p>
+                            <p class="text-2xl font-bold text-gray-900">\${course.total_lessons}<span class="text-sm">강</span></p>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition">
+                            <div class="bg-green-100 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-clock text-green-600 text-2xl"></i>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-1">학습 시간</p>
+                            <p class="text-2xl font-bold text-gray-900">\${Math.floor(course.total_duration_minutes / 60)}<span class="text-sm">시간</span></p>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition">
+                            <div class="bg-orange-100 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-users text-orange-600 text-2xl"></i>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-1">수강생</p>
+                            <p class="text-2xl font-bold text-gray-900">\${course.enrolled_count || 0}<span class="text-sm">명</span></p>
+                        </div>
+                    </div>
+                    
+                    <!-- 커리큘럼 섹션 -->
+                    <div class="bg-white rounded-2xl shadow-lg p-8">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-3xl font-bold text-gray-900">
+                                <i class="fas fa-list-ul mr-3 text-purple-600"></i>커리큘럼
+                            </h2>
+                            <span class="bg-purple-100 text-purple-700 px-4 py-2 rounded-full font-semibold">
+                                총 \${lessons.length}개 강의
+                            </span>
+                        </div>
+                        <div class="space-y-3">
+                            \${lessons.map((lesson, index) => \`
+                                <div onclick="goToLesson(\${course.id}, \${lesson.id}, \${lesson.is_free_preview}, \${enrollment ? true : false})" 
+                                     class="group bg-gray-50 hover:bg-purple-50 border-2 border-gray-200 hover:border-purple-400 rounded-xl p-5 transition-all cursor-pointer transform hover:scale-[1.02]">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center flex-1 gap-4">
+                                            <div class="bg-gradient-to-br from-purple-600 to-indigo-600 group-hover:from-purple-700 group-hover:to-indigo-700 text-white font-bold w-14 h-14 rounded-xl flex items-center justify-center text-xl shadow-md transition">
+                                                \${index + 1}
+                                            </div>
+                                            <div class="flex-1">
+                                                <div class="flex items-center flex-wrap gap-2 mb-1">
+                                                    <span class="font-bold text-gray-900 text-lg group-hover:text-purple-700 transition">\${lesson.title}</span>
+                                                    \${lesson.is_free_preview ? '<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold"><i class="fas fa-unlock mr-1"></i>무료</span>' : ''}
+                                                </div>
+                                                <div class="flex items-center gap-4 text-sm text-gray-600">
+                                                    <span><i class="fas fa-clock mr-1 text-purple-600"></i>\${lesson.video_duration_minutes || 0}분</span>
+                                                    \${lesson.video_url ? '<span class="text-green-600"><i class="fas fa-video mr-1"></i>영상 있음</span>' : '<span class="text-gray-400"><i class="fas fa-video-slash mr-1"></i>영상 준비 중</span>'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button class="bg-gradient-to-r from-purple-600 to-indigo-600 group-hover:from-purple-700 group-hover:to-indigo-700 text-white px-6 py-3 rounded-lg font-bold transition-all transform group-hover:scale-110 shadow-md">
+                                            <i class="fas fa-play mr-2"></i>재생
+                                        </button>
+                                    </div>
+                                </div>
+                            \`).join('')}
                         </div>
                     </div>
                 \`
