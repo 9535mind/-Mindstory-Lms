@@ -57,28 +57,55 @@ pagesAdmin.get('/dashboard', async (c) => {
         <!-- 관리자 메뉴 -->
         <div class="bg-white shadow-md">
             <div class="max-w-7xl mx-auto px-4">
-                <div class="flex space-x-1">
-                    <a href="/admin/dashboard" class="px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
-                        <i class="fas fa-home mr-1"></i>대시보드
+                <div class="flex flex-wrap gap-1 admin-menu-mobile">
+                    <a href="/admin/dashboard" class="admin-menu-item px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
+                        <i class="fas fa-home mr-1"></i><span class="menu-text">대시보드</span>
                     </a>
-                    <a href="/admin/courses" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-book mr-1"></i>강좌 관리
+                    <a href="/admin/courses" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-book mr-1"></i><span class="menu-text">강좌 관리</span>
                     </a>
-                    <a href="/admin/users" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-users mr-1"></i>회원 관리
+                    <a href="/admin/users" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-users mr-1"></i><span class="menu-text">회원 관리</span>
                     </a>
-                    <a href="/admin/payments" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-credit-card mr-1"></i>결제 관리
+                    <a href="/admin/payments" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-credit-card mr-1"></i><span class="menu-text">결제 관리</span>
                     </a>
-                    <a href="/admin/popups" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-bell mr-1"></i>팝업 관리
+                    <a href="/admin/popups" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-bell mr-1"></i><span class="menu-text">팝업 관리</span>
                     </a>
-                    <a href="/admin/settings" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-cog mr-1"></i>설정
+                    <a href="/admin/settings" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-cog mr-1"></i><span class="menu-text">설정</span>
                     </a>
                 </div>
             </div>
         </div>
+        
+        <style>
+            /* 모바일 관리자 메뉴 최적화 */
+            @media (max-width: 768px) {
+                .admin-menu-mobile {
+                    gap: 0.25rem; /* 간격 최소화 */
+                }
+                
+                .admin-menu-item {
+                    padding: 0.5rem 0.75rem !important; /* py-3 px-4를 더 작게 */
+                    font-size: 0.9rem !important;
+                    line-height: 1.2 !important; /* 줄간격 좁게 */
+                    display: inline-flex;
+                    align-items: center;
+                    white-space: nowrap;
+                }
+                
+                .admin-menu-item i {
+                    margin-right: 0.25rem !important; /* 아이콘-텍스트 간격 좁게 */
+                    font-size: 0.9em;
+                }
+                
+                .menu-text {
+                    line-height: 1 !important;
+                }
+            }
+        </style>
 
         <!-- 메인 콘텐츠 -->
         <div class="max-w-7xl mx-auto px-4 py-8">
@@ -214,24 +241,24 @@ pagesAdmin.get('/courses', async (c) => {
         <!-- 관리자 메뉴 -->
         <div class="bg-white shadow-md">
             <div class="max-w-7xl mx-auto px-4">
-                <div class="flex space-x-1">
-                    <a href="/admin/dashboard" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-home mr-1"></i>대시보드
+                <div class="flex flex-wrap gap-1 admin-menu-mobile">
+                    <a href="/admin/dashboard" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-home mr-1"></i><span class="menu-text">대시보드</span>
                     </a>
-                    <a href="/admin/courses" class="px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
-                        <i class="fas fa-book mr-1"></i>강좌 관리
+                    <a href="/admin/courses" class="admin-menu-item px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
+                        <i class="fas fa-book mr-1"></i><span class="menu-text">강좌 관리</span>
                     </a>
-                    <a href="/admin/users" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-users mr-1"></i>회원 관리
+                    <a href="/admin/users" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-users mr-1"></i><span class="menu-text">회원 관리</span>
                     </a>
-                    <a href="/admin/payments" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-credit-card mr-1"></i>결제 관리
+                    <a href="/admin/payments" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-credit-card mr-1"></i><span class="menu-text">결제 관리</span>
                     </a>
-                    <a href="/admin/popups" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-bell mr-1"></i>팝업 관리
+                    <a href="/admin/popups" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-bell mr-1"></i><span class="menu-text">팝업 관리</span>
                     </a>
-                    <a href="/admin/settings" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-cog mr-1"></i>설정
+                    <a href="/admin/settings" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-cog mr-1"></i><span class="menu-text">설정</span>
                     </a>
                 </div>
             </div>
@@ -662,20 +689,20 @@ pagesAdmin.get('/users', async (c) => {
         <!-- 관리자 메뉴 -->
         <div class="bg-white shadow-md">
             <div class="max-w-7xl mx-auto px-4">
-                <div class="flex space-x-1">
-                    <a href="/admin/dashboard" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-home mr-1"></i>대시보드
+                <div class="flex flex-wrap gap-1 admin-menu-mobile">
+                    <a href="/admin/dashboard" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-home mr-1"></i><span class="menu-text">대시보드</span>
                     </a>
-                    <a href="/admin/courses" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-book mr-1"></i>강좌 관리
+                    <a href="/admin/courses" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-book mr-1"></i><span class="menu-text">강좌 관리</span>
                     </a>
-                    <a href="/admin/users" class="px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
-                        <i class="fas fa-users mr-1"></i>회원 관리
+                    <a href="/admin/users" class="admin-menu-item px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
+                        <i class="fas fa-users mr-1"></i><span class="menu-text">회원 관리</span>
                     </a>
-                    <a href="/admin/payments" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-credit-card mr-1"></i>결제 관리
+                    <a href="/admin/payments" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-credit-card mr-1"></i><span class="menu-text">결제 관리</span>
                     </a>
-                    <a href="/admin/enrollments" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
+                    <a href="/admin/enrollments" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
                         <i class="fas fa-graduation-cap mr-1"></i>수강 관리
                     </a>
                 </div>
@@ -1001,19 +1028,19 @@ pagesAdmin.get('/payments', async (c) => {
         <div class="bg-white shadow-md">
             <div class="max-w-7xl mx-auto px-4">
                 <div class="flex space-x-1">
-                    <a href="/admin/dashboard" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-home mr-1"></i>대시보드
+                    <a href="/admin/dashboard" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-home mr-1"></i><span class="menu-text">대시보드</span>
                     </a>
-                    <a href="/admin/courses" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-book mr-1"></i>강좌 관리
+                    <a href="/admin/courses" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-book mr-1"></i><span class="menu-text">강좌 관리</span>
                     </a>
-                    <a href="/admin/users" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-users mr-1"></i>회원 관리
+                    <a href="/admin/users" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-users mr-1"></i><span class="menu-text">회원 관리</span>
                     </a>
-                    <a href="/admin/payments" class="px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
-                        <i class="fas fa-credit-card mr-1"></i>결제 관리
+                    <a href="/admin/payments" class="admin-menu-item px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
+                        <i class="fas fa-credit-card mr-1"></i><span class="menu-text">결제 관리</span>
                     </a>
-                    <a href="/admin/enrollments" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
+                    <a href="/admin/enrollments" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
                         <i class="fas fa-graduation-cap mr-1"></i>수강 관리
                     </a>
                 </div>
@@ -1307,24 +1334,24 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
         <!-- 관리자 메뉴 -->
         <div class="bg-white shadow-md">
             <div class="max-w-7xl mx-auto px-4">
-                <div class="flex space-x-1">
-                    <a href="/admin/dashboard" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-home mr-1"></i>대시보드
+                <div class="flex flex-wrap gap-1 admin-menu-mobile">
+                    <a href="/admin/dashboard" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-home mr-1"></i><span class="menu-text">대시보드</span>
                     </a>
-                    <a href="/admin/courses" class="px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
-                        <i class="fas fa-book mr-1"></i>강좌 관리
+                    <a href="/admin/courses" class="admin-menu-item px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
+                        <i class="fas fa-book mr-1"></i><span class="menu-text">강좌 관리</span>
                     </a>
-                    <a href="/admin/users" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-users mr-1"></i>회원 관리
+                    <a href="/admin/users" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-users mr-1"></i><span class="menu-text">회원 관리</span>
                     </a>
-                    <a href="/admin/payments" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-credit-card mr-1"></i>결제 관리
+                    <a href="/admin/payments" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-credit-card mr-1"></i><span class="menu-text">결제 관리</span>
                     </a>
-                    <a href="/admin/popups" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-bell mr-1"></i>팝업 관리
+                    <a href="/admin/popups" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-bell mr-1"></i><span class="menu-text">팝업 관리</span>
                     </a>
-                    <a href="/admin/settings" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-cog mr-1"></i>설정
+                    <a href="/admin/settings" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-cog mr-1"></i><span class="menu-text">설정</span>
                     </a>
                 </div>
             </div>
@@ -2095,19 +2122,19 @@ pagesAdmin.get('/enrollments', async (c) => {
         <div class="bg-white shadow-md">
             <div class="max-w-7xl mx-auto px-4">
                 <div class="flex space-x-1">
-                    <a href="/admin/dashboard" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-home mr-1"></i>대시보드
+                    <a href="/admin/dashboard" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-home mr-1"></i><span class="menu-text">대시보드</span>
                     </a>
-                    <a href="/admin/courses" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-book mr-1"></i>강좌 관리
+                    <a href="/admin/courses" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-book mr-1"></i><span class="menu-text">강좌 관리</span>
                     </a>
-                    <a href="/admin/users" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-users mr-1"></i>회원 관리
+                    <a href="/admin/users" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-users mr-1"></i><span class="menu-text">회원 관리</span>
                     </a>
-                    <a href="/admin/payments" class="px-4 py-3 text-gray-600 hover:bg-gray-100">
-                        <i class="fas fa-credit-card mr-1"></i>결제 관리
+                    <a href="/admin/payments" class="admin-menu-item px-4 py-3 text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-credit-card mr-1"></i><span class="menu-text">결제 관리</span>
                     </a>
-                    <a href="/admin/enrollments" class="px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
+                    <a href="/admin/enrollments" class="admin-menu-item px-4 py-3 bg-purple-100 text-purple-700 font-semibold border-b-2 border-purple-700">
                         <i class="fas fa-graduation-cap mr-1"></i>수강 관리
                     </a>
                 </div>
