@@ -97,8 +97,8 @@ upload.post('/image', requireAdmin, async (c) => {
       },
     })
 
-    // 공개 URL 생성 (R2 커스텀 도메인 또는 Cloudflare 도메인)
-    const publicUrl = `https://pub-e65cd92cfb3a4f1ba4d6b67d8c88e689.r2.dev/${filename}`
+    // 공개 URL 생성 (R2 공개 도메인)
+    const publicUrl = `https://pub-baceedca01874770be7f326265d34480.r2.dev/${filename}`
 
     console.log(`[Upload] 이미지 R2 업로드 성공: ${publicUrl}`)
 
