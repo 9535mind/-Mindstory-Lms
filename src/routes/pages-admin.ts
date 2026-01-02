@@ -1635,7 +1635,7 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                                 </div>
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                                     <!-- YouTube 바로가기 -->
-                                    <a href="https://studio.youtube.com" 
+                                    <a href="https://studio.youtube.com/channel/UCXF55ON7qD6Z_iVYhkcOffg/videos" 
                                        target="_blank"
                                        class="flex items-center justify-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-all transform hover:scale-105">
                                         <i class="fab fa-youtube mr-2"></i>YouTube
@@ -1694,10 +1694,10 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                                     <label class="text-sm font-medium text-gray-700">
                                         <i class="fab fa-youtube mr-1 text-red-600"></i>YouTube 영상 URL
                                     </label>
-                                    <a href="https://studio.youtube.com" 
+                                    <a href="https://studio.youtube.com/channel/UCXF55ON7qD6Z_iVYhkcOffg/videos" 
                                        target="_blank" 
                                        class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
-                                        <i class="fab fa-youtube mr-2"></i>YouTube Studio
+                                        <i class="fab fa-youtube mr-2"></i>내 YouTube 동영상
                                         <i class="fas fa-external-link-alt ml-2 text-xs"></i>
                                     </a>
                                 </div>
