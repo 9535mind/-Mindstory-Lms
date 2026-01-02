@@ -1588,6 +1588,17 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
 
                             <!-- YouTube 탭 -->
                             <div id="youtubeTabContent" class="video-tab-content">
+                                <div class="mb-4 flex items-center justify-between">
+                                    <label class="text-sm font-medium text-gray-700">
+                                        <i class="fab fa-youtube mr-1 text-red-600"></i>YouTube 영상 URL
+                                    </label>
+                                    <a href="https://studio.youtube.com/channel/UCXF55ON7qD6Z_iVYhkcOffg" 
+                                       target="_blank" 
+                                       class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+                                        <i class="fab fa-youtube mr-2"></i>내 YouTube Studio
+                                        <i class="fas fa-external-link-alt ml-2 text-xs"></i>
+                                    </a>
+                                </div>
                                 <input type="url" id="lessonVideoUrl" placeholder="https://youtube.com/watch?v=..."
                                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
                                 <p class="text-sm text-gray-500 mt-2">
@@ -1629,9 +1640,17 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                             <!-- URL 업로드 탭 -->
                             <div id="urlUploadTabContent" class="video-tab-content hidden">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        영상 URL <span class="text-red-500">*</span>
-                                    </label>
+                                    <div class="mb-4 flex items-center justify-between">
+                                        <label class="text-sm font-medium text-gray-700">
+                                            <i class="fas fa-link mr-1 text-purple-600"></i>영상 URL <span class="text-red-500">*</span>
+                                        </label>
+                                        <a href="https://dashboard.api.video/videos" 
+                                           target="_blank" 
+                                           class="inline-flex items-center px-3 py-1.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors">
+                                            <i class="fas fa-video mr-2"></i>api.video 업로드
+                                            <i class="fas fa-external-link-alt ml-2 text-xs"></i>
+                                        </a>
+                                    </div>
                                     <input type="url" id="videoUrlInput" 
                                         placeholder="https://embed.api.video/vod/vi... 또는 https://example.com/video.mp4"
                                         class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
