@@ -20,7 +20,7 @@ app.get('/courses/:courseId/learn', async (c) => {
     <html lang="ko">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=0.75, maximum-scale=1.0, user-scalable=yes">
+        <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=1.0, user-scalable=yes">
         <title>강좌 학습 - 마인드스토리 LMS</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
@@ -43,43 +43,45 @@ app.get('/courses/:courseId/learn', async (c) => {
                 height: 600px;
             }
             
-            /* 모바일 최적화 - 폰트 크기 40% 감소 */
+            /* 모바일 최적화 - 폰트 크기 조정 */
             @media (max-width: 768px) {
                 html {
-                    font-size: 12px; /* 기본 16px에서 12px로 감소 */
+                    font-size: 14.4px; /* 12px * 1.2 = 14.4px */
                 }
                 
                 body {
-                    line-height: 1.4;
+                    line-height: 1.6;
                 }
                 
                 h1 {
-                    font-size: 1.4rem !important;
+                    font-size: 1.68rem !important; /* 1.4 * 1.2 */
                 }
                 
                 h2 {
-                    font-size: 1.15rem !important;
+                    font-size: 1.38rem !important; /* 1.15 * 1.2 */
                 }
                 
                 h3 {
-                    font-size: 1rem !important;
+                    font-size: 1.2rem !important; /* 1.0 * 1.2 */
                 }
                 
                 p, div {
-                    font-size: 0.85rem !important;
+                    font-size: 1.02rem !important; /* 0.85 * 1.2 */
                 }
                 
                 #videoPlayer {
-                    height: 220px !important; /* 모바일에서 높이 더 감소 */
+                    height: 264px !important; /* 220 * 1.2 */
                 }
                 
                 .lesson-item {
-                    padding: 0.5rem !important;
+                    padding: 0.75rem !important; /* 터치 영역 증가 */
+                    min-height: 60px; /* 터치하기 쉽게 */
                 }
                 
                 button {
-                    padding: 0.4rem 0.8rem !important;
-                    font-size: 0.8rem !important;
+                    padding: 0.6rem 1.2rem !important; /* 터치 영역 증가 */
+                    font-size: 1rem !important; /* 0.8 * 1.25 */
+                    min-height: 44px; /* iOS 권장 터치 크기 */
                 }
             }
         </style>

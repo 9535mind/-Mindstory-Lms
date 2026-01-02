@@ -25,7 +25,7 @@ landing.get('/', (c) => {
     <html lang="ko">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=0.75, maximum-scale=1.0, user-scalable=yes">
+        <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=1.0, user-scalable=yes">
         <title>마인드스토리 원격평생교육원 - 마음을 이해하고 성장하는 여정</title>
         
         <!-- Pretendard 폰트 -->
@@ -86,43 +86,43 @@ landing.get('/', (c) => {
                 line-height: 1.7;
             }
             
-            /* 모바일 최적화 - 폰트 크기 40% 감소 */
+            /* 모바일 최적화 - 폰트 크기 조정 */
             @media (max-width: 768px) {
                 html {
-                    font-size: 12px; /* 기본 16px에서 12px로 감소 (25% 감소) */
+                    font-size: 14.4px; /* 12px * 1.2 = 14.4px (20% 증가) */
                 }
                 
                 body {
-                    line-height: 1.4;
+                    line-height: 1.6;
                 }
                 
                 h1 {
-                    font-size: 1.75rem !important; /* 원래 3rem */
+                    font-size: 2.1rem !important; /* 1.75 * 1.2 */
                 }
                 
                 h2 {
-                    font-size: 1.5rem !important; /* 원래 2.5rem */
+                    font-size: 1.8rem !important; /* 1.5 * 1.2 */
                 }
                 
                 h3 {
-                    font-size: 1.15rem !important; /* 원래 1.75rem */
+                    font-size: 1.38rem !important; /* 1.15 * 1.2 */
                 }
                 
                 p {
-                    font-size: 0.9rem !important;
+                    font-size: 1.08rem !important; /* 0.9 * 1.2 */
                 }
                 
                 .hero-gradient {
-                    padding: 2.5rem 0 !important; /* py-24를 py-10으로 */
+                    padding: 3rem 0 !important;
                 }
                 
                 .glass-card {
-                    padding: 1rem !important; /* p-8을 p-4로 */
+                    padding: 1.5rem !important; /* 1rem * 1.5 */
                 }
                 
                 .cta-button {
-                    padding: 0.6rem 1.25rem !important;
-                    font-size: 0.85rem !important;
+                    padding: 0.8rem 1.6rem !important;
+                    font-size: 1.02rem !important; /* 0.85 * 1.2 */
                 }
             }
             
@@ -167,9 +167,16 @@ landing.get('/', (c) => {
                 gap: 1.5rem;
             }
             
-            @media (min-width: 768px) {
+            @media (max-width: 768px) {
                 .bento-grid {
-                    grid-template-columns: repeat(3, 1fr);
+                    grid-template-columns: repeat(2, 1fr); /* 모바일에서 2열 */
+                    gap: 1rem;
+                }
+            }
+            
+            @media (min-width: 769px) {
+                .bento-grid {
+                    grid-template-columns: repeat(4, 1fr); /* 데스크톱에서 4열 */
                 }
             }
             

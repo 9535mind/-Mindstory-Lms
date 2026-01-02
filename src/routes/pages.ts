@@ -81,7 +81,7 @@ const getCommonHead = (title: string) => `
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=0.75, maximum-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=1.0, user-scalable=yes">
     <title>${title} - 마인드스토리 원격평생교육원</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
@@ -89,40 +89,67 @@ const getCommonHead = (title: string) => `
     <script src="/static/js/auth.js?v=2025122914"></script>
     <script src="/static/js/utils.js?v=2025122914"></script>
     <style>
-        /* 모바일 최적화 - 폰트 크기 40% 감소 */
+        /* 모바일 최적화 - 폰트 크기 및 터치 영역 개선 */
         @media (max-width: 768px) {
             html {
-                font-size: 12px; /* 기본 16px에서 12px로 감소 */
+                font-size: 18px; /* 12px * 1.5 = 18px (50% 증가) */
             }
             
             body {
-                line-height: 1.4;
+                line-height: 1.6;
             }
             
             h1 {
-                font-size: 1.5rem !important;
+                font-size: 2.25rem !important; /* 1.5 * 1.5 */
             }
             
             h2 {
-                font-size: 1.3rem !important;
+                font-size: 1.95rem !important; /* 1.3 * 1.5 */
             }
             
             h3 {
-                font-size: 1.1rem !important;
+                font-size: 1.65rem !important; /* 1.1 * 1.5 */
             }
             
             p, div, span {
-                font-size: 0.85rem !important;
+                font-size: 1.28rem !important; /* 0.85 * 1.5 */
             }
             
-            button {
-                padding: 0.4rem 0.8rem !important;
-                font-size: 0.8rem !important;
+            /* 터치 영역 크게 */
+            button, a {
+                padding: 0.8rem 1.5rem !important;
+                font-size: 1.2rem !important; /* 0.8 * 1.5 */
+                min-height: 48px !important; /* 터치하기 쉽게 */
+                min-width: 48px !important;
             }
             
             input, textarea, select {
-                font-size: 0.85rem !important;
-                padding: 0.4rem !important;
+                font-size: 1.28rem !important; /* 0.85 * 1.5 */
+                padding: 0.8rem !important;
+                min-height: 48px !important;
+            }
+            
+            /* 테이블 글씨 크게 */
+            table {
+                font-size: 1.1rem !important;
+            }
+            
+            th, td {
+                padding: 1rem !important;
+                font-size: 1.1rem !important;
+            }
+            
+            /* 아이콘 크기 증가 */
+            i.fas, i.far, i.fab {
+                font-size: 1.5em !important;
+            }
+            
+            /* 햄버거 메뉴 (삼선) 크게 */
+            .menu-icon, .hamburger, [class*="menu"] i {
+                font-size: 2rem !important;
+                padding: 1rem !important;
+                min-width: 60px !important;
+                min-height: 60px !important;
             }
         }
     </style>
