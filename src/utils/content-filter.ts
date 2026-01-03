@@ -98,6 +98,14 @@ export function validateVideoUrl(url: string): {
     return { isAllowed: true }
   }
 
+  // YouTube ID만 전달된 경우 (11자리 영문+숫자+특수문자)
+  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
+    return {
+      isAllowed: true,
+      platform: 'youtube'
+    }
+  }
+
   try {
     const urlObj = new URL(url)
     const hostname = urlObj.hostname.toLowerCase()

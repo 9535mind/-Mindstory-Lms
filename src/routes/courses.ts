@@ -403,30 +403,19 @@ courses.post('/:id/lessons', requireAdmin, async (c) => {
     // 차시 생성
     const result = await DB.prepare(`
       INSERT INTO lessons (
-        course_id, lesson_number, title, description, content_type,
-        video_provider, video_id, video_url, video_duration_minutes, is_free_preview
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        course_id, lesson_number, title, description,
+        video_url, video_type, duration_minutes, is_free
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       courseId,
       lesson_number,
       title,
       description || null,
-      content_type || 'video',
-      normalizedProvider,  // ✅ 정규화된 provider 사용
-      video_id || null,
       video_url || null,
-      video_duration_minutes || null,
+      'youtube',  // 고정값: YouTube만 사용
+      video_duration_minutes || 0,
       is_free_preview ? 1 : 0
     ).run()
-
-    // 과정의 총 차시 수와 총 학습 시간 업데이트
-    await DB.prepare(`
-      UPDATE courses 
-      SET total_lessons = (SELECT COUNT(*) FROM lessons WHERE course_id = ?),
-          total_duration_minutes = (SELECT COALESCE(SUM(video_duration_minutes), 0) FROM lessons WHERE course_id = ?),
-          updated_at = datetime('now')
-      WHERE id = ?
-    `).bind(courseId, courseId, courseId).run()
 
     return c.json(successResponse({
       id: result.meta.last_row_id,
