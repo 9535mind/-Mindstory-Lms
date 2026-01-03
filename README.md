@@ -1,15 +1,100 @@
 # 🎓 마인드스토리 원격평생교육원 LMS 플랫폼
 
-**Ver.4.5 - 🛡️ 영상 다운로드 완전 차단! (2026.01.03)** ✨🎉🔒
+**Ver.4.6 - 🛡️ YouTube 지적재산권 완전 보호! (2026.01.03)** ✨🎉🔒
 
-> **완벽한 영상 보호!** 우클릭 다운로드 차단 + 네트워크 요청 차단 + 미디어 컨트롤 숨김!
+> **YouTube 로고/제목 클릭 완전 차단!** 투명 보호막 + Player Vars 최적화 + 도메인 제한!
 
 > **"스스로 배우는 힘을 키우는 교육"**  
 > 박종석 대표의 20년 현장 경험을 담은 **완전한 프로덕션급 LMS 플랫폼**
 
 ---
 
-## 🆕 Ver.4.5 - 영상 다운로드 완전 차단! (2026.01.03)
+## 🆕 Ver.4.6 - YouTube 지적재산권 완전 보호! (2026.01.03)
+
+### 🎯 **YouTube 3단계 보호 전략**
+
+#### **1단계: 투명 보호막 (Invisible Overlay)** ✅
+```javascript
+// YouTube 플레이어 위에 투명한 레이어를 덮어 모든 클릭 차단
+<div id="youtubeWrapper" style="position: relative; width: 100%; height: 600px;">
+    <div id="youtubePlayer"></div>
+    <div id="youtubeProtectionLayer" 
+         style="position: absolute; top: 0; left: 0; 
+                width: 100%; height: 100%; 
+                pointer-events: auto; 
+                z-index: 999; 
+                background: transparent;">
+    </div>
+</div>
+```
+
+**차단되는 행동:**
+- ✅ YouTube 로고 클릭 차단 (새 창으로 이동 불가)
+- ✅ 영상 제목 클릭 차단 (YouTube 페이지 이동 불가)
+- ✅ 우클릭 URL 복사 차단
+- ✅ 영상 위 모든 마우스 이벤트 차단
+
+#### **2단계: Player Vars 최적화** ✅
+```javascript
+playerVars: {
+    autoplay: 1,           // 자동재생
+    controls: 1,           // 컨트롤 표시 (재생/일시정지만)
+    disablekb: 1,          // 키보드 단축키 비활성화
+    modestbranding: 1,     // YouTube 로고 최소화
+    rel: 0,                // 관련 영상 숨김
+    fs: 0,                 // 전체화면 버튼 숨김
+    iv_load_policy: 3,     // 주석 숨김
+    cc_load_policy: 0,     // 자막 숨김
+    showinfo: 0            // 제목 숨김
+}
+```
+
+#### **3단계: 도메인 제한 (YouTube Studio 설정 필요)** 📋
+```
+1. YouTube Studio → 영상 관리
+2. 공유 상태: "일부 공개 (Unlisted)"로 변경
+3. 고급 설정 → 퍼가기 허용 도메인:
+   - mindstory-lms.pages.dev
+   - 교육원 커스텀 도메인
+```
+
+### 🛡️ **보호 레이어 이벤트 차단**
+```javascript
+// 투명 보호막에 모든 마우스 이벤트 차단 적용
+const protectionLayer = document.getElementById('youtubeProtectionLayer');
+
+// 우클릭 완전 차단 (캡처 단계)
+protectionLayer.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    return false;
+}, true);
+
+// 모든 클릭 이벤트 차단 (YouTube 로고/제목 클릭 차단)
+['click', 'mousedown', 'mouseup', 'dblclick'].forEach(eventType => {
+    protectionLayer.addEventListener(eventType, function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return false;
+    }, true);
+});
+```
+
+### 📊 **차단 효과 비교**
+
+| 행동 | Ver.4.5 | Ver.4.6 |
+|------|---------|---------|
+| **YouTube 로고 클릭** | ⚠️ 가능 | ✅ 차단 |
+| **영상 제목 클릭** | ⚠️ 가능 | ✅ 차단 |
+| **우클릭 URL 복사** | ✅ 차단 | ✅ 차단 |
+| **다운로드** | ✅ 차단 | ✅ 차단 |
+| **F12 개발자 도구** | ✅ 차단 | ✅ 차단 |
+
+---
+
+## 🔒 Ver.4.5 - 영상 다운로드 완전 차단! (2026.01.03)
 
 ### 🛡️ **영상 다운로드 5중 방어 시스템**
 
