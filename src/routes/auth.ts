@@ -153,6 +153,9 @@ auth.post('/login', async (c) => {
     // 비밀번호 제외한 사용자 정보 반환
     const { password_hash: _, ...userWithoutPassword } = user
 
+    // 🍪 Cookie 설정 (HttpOnly로 보안 강화)
+    c.header('Set-Cookie', `session_token=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}`)
+
     return c.json(successResponse({
       user: userWithoutPassword,
       session_token: sessionToken,

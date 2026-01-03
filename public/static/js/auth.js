@@ -2,6 +2,9 @@
  * 인증 관련 공통 함수
  */
 
+// Axios 전역 설정: Cookie 자동 전송 활성화
+axios.defaults.withCredentials = true;
+
 // AuthManager 클래스
 class AuthManager {
   static saveSession(token, user) {
