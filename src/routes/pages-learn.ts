@@ -25,7 +25,9 @@ app.get('/courses/:courseId/learn', async (c) => {
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script src="https://embed.cloudflarestream.com/embed/sdk.latest.js"></script>
         <script src="/static/js/auth.js"></script>
+        <script src="/static/js/content-protection.js"></script>
         <style>
             .lesson-item.active {
                 background-color: #EBF8FF;
@@ -439,6 +441,9 @@ app.get('/courses/:courseId/learn', async (c) => {
                 } else if (provider === 'apivideo' || provider === 'api.video') {
                     console.log('▶️ Loading api.video player');
                     await loadApiVideoPlayer(lesson);
+                } else if (provider === 'cloudflare' || provider === 'stream') {
+                    console.log('▶️ Loading Cloudflare Stream player');
+                    await loadStreamPlayer(lesson);
                 } else {
                     console.error('❌ Unsupported video provider:', provider);
                     container.innerHTML = \`
@@ -618,6 +623,67 @@ app.get('/courses/:courseId/learn', async (c) => {
                     name: error?.name,
                     event: event
                 });
+            }
+        }
+
+        // Cloudflare Stream Player
+        async function loadStreamPlayer(lesson) {
+            console.log('☁️ Loading Cloudflare Stream player:', lesson);
+            const container = document.getElementById('videoPlayer');
+            
+            const videoId = lesson.video_id;
+            console.log('📹 Stream Video ID:', videoId);
+            
+            if (!videoId) {
+                console.error('❌ No video ID found');
+                container.innerHTML = '<p class="text-white p-12 text-center">영상 ID를 찾을 수 없습니다.</p>';
+                return;
+            }
+
+            // Load Stream Player SDK
+            if (!document.getElementById('stream-player-sdk')) {
+                const script = document.createElement('script');
+                script.id = 'stream-player-sdk';
+                script.src = '/static/js/stream-player.js';
+                document.head.appendChild(script);
+                
+                await new Promise((resolve) => {
+                    script.onload = resolve;
+                });
+            }
+
+            // Create Stream Player instance
+            try {
+                const streamPlayer = new CloudflareStreamPlayer('videoPlayer', {
+                    videoId: videoId,
+                    userId: currentUserId,
+                    userName: currentUserName,
+                    courseId: currentCourse.id,
+                    lessonId: currentLesson.id,
+                    onProgress: async (progress, currentTime, duration) => {
+                        console.log(\`📊 진도율: \${progress}% (\${Math.floor(currentTime)}s / \${Math.floor(duration)}s)\`);
+                        
+                        // 서버에 진도율 전송
+                        await updateProgress();
+                    },
+                    onComplete: async () => {
+                        console.log('🏁 영상 재생 완료');
+                        await markLessonCompleted();
+                    }
+                });
+
+                window.currentStreamPlayer = streamPlayer;
+                console.log('✅ Cloudflare Stream player initialized');
+
+            } catch (error) {
+                console.error('❌ Failed to create Stream player:', error);
+                container.innerHTML = \`
+                    <div class="text-center p-12">
+                        <i class="fas fa-exclamation-circle text-6xl text-red-500 mb-4"></i>
+                        <p class="text-xl text-red-600">Stream 플레이어를 불러오는 중 오류가 발생했습니다</p>
+                        <p class="text-sm text-gray-600 mt-2">\${error?.message || '알 수 없는 오류'}</p>
+                    </div>
+                \`;
             }
         }
 

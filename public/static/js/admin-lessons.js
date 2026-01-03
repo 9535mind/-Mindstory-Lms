@@ -8,7 +8,7 @@ let bulkUploadMode = false;
 let uploadedVideos = []; // 일괄 업로드된 영상 목록
 
 /**
- * 영상 탭 전환 (3개 탭)
+ * 영상 탭 전환 (4개 탭: YouTube, Stream, 파일 업로드, URL 업로드)
  */
 function switchVideoTab(tab) {
   currentVideoTab = tab;
@@ -18,6 +18,10 @@ function switchVideoTab(tab) {
     youtube: {
       btn: document.getElementById('youtubeTab'),
       content: document.getElementById('youtubeTabContent')
+    },
+    stream: {
+      btn: document.getElementById('streamTab'),
+      content: document.getElementById('streamTabContent')
     },
     fileupload: {
       btn: document.getElementById('fileUploadTab'),
@@ -32,7 +36,7 @@ function switchVideoTab(tab) {
   // 모든 탭 비활성화
   Object.values(tabs).forEach(({ btn, content }) => {
     if (btn && content) {
-      btn.classList.remove('border-purple-600', 'text-purple-600');
+      btn.classList.remove('border-purple-600', 'text-purple-600', 'border-blue-600', 'text-blue-600');
       btn.classList.add('border-transparent', 'text-gray-500');
       content.classList.add('hidden');
     }
@@ -41,7 +45,11 @@ function switchVideoTab(tab) {
   // 선택된 탭 활성화
   const selectedTab = tabs[tab];
   if (selectedTab && selectedTab.btn && selectedTab.content) {
-    selectedTab.btn.classList.add('border-purple-600', 'text-purple-600');
+    if (tab === 'stream') {
+      selectedTab.btn.classList.add('border-blue-600', 'text-blue-600');
+    } else {
+      selectedTab.btn.classList.add('border-purple-600', 'text-purple-600');
+    }
     selectedTab.btn.classList.remove('border-transparent', 'text-gray-500');
     selectedTab.content.classList.remove('hidden');
   }
@@ -521,6 +529,7 @@ function getVideoData() {
   // 탭별 핸들러 맵핑
   const handlers = {
     'youtube': getYouTubeVideoData,
+    'stream': getStreamVideoData,
     'fileupload': getFileUploadVideoData,
     'urlupload': getUrlUploadVideoData
   };
@@ -542,6 +551,35 @@ function getVideoData() {
   }
   
   return videoData;
+}
+
+/**
+ * Cloudflare Stream 영상 데이터 가져오기
+ */
+function getStreamVideoData() {
+  const videoIdInput = document.getElementById('streamVideoId');
+  const videoId = videoIdInput?.value?.trim();
+  
+  if (!videoId) {
+    alert('Cloudflare Stream Video ID를 입력해주세요.');
+    videoIdInput?.focus();
+    return null;
+  }
+  
+  // Video ID 형식 검증 (32자리 영문자+숫자)
+  if (videoId.length !== 32) {
+    alert('Video ID는 32자리 영문자와 숫자 조합이어야 합니다.');
+    videoIdInput?.focus();
+    return null;
+  }
+  
+  console.log('☁️ Cloudflare Stream Video ID:', videoId);
+  
+  return {
+    video_provider: 'cloudflare',
+    video_id: videoId,
+    video_url: `https://customer-2e8c2335c9dc802347fb23b9d608d4f4.cloudflarestream.com/${videoId}/manifest/video.m3u8`
+  };
 }
 
 /**

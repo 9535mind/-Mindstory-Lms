@@ -1673,11 +1673,15 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                                 </p>
                             </div>
                             
-                            <!-- 탭 메뉴 (3개 탭) -->
+                            <!-- 탭 메뉴 (4개 탭) -->
                             <div class="flex border-b mb-4">
                                 <button type="button" id="youtubeTab" onclick="switchVideoTab('youtube')"
                                     class="px-4 py-2 font-medium border-b-2 border-purple-600 text-purple-600 video-tab active">
                                     <i class="fab fa-youtube mr-2"></i>YouTube
+                                </button>
+                                <button type="button" id="streamTab" onclick="switchVideoTab('stream')"
+                                    class="px-4 py-2 font-medium border-b-2 border-transparent text-blue-500 hover:text-blue-700 video-tab">
+                                    <i class="fas fa-cloud mr-2"></i>Stream
                                 </button>
                                 <button type="button" id="fileUploadTab" onclick="switchVideoTab('fileupload')"
                                     class="px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 video-tab">
@@ -1708,6 +1712,87 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                                     <i class="fas fa-info-circle mr-1"></i>
                                     YouTube 영상 링크를 입력하세요 (공개/비공개 모두 가능)
                                 </p>
+                            </div>
+
+                            <!-- Cloudflare Stream 탭 -->
+                            <div id="streamTabContent" class="video-tab-content hidden">
+                                <div class="mb-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+                                    <div class="flex items-start">
+                                        <i class="fas fa-info-circle text-blue-600 mt-0.5 mr-3"></i>
+                                        <div class="text-sm text-blue-800">
+                                            <p class="font-semibold mb-2">📹 Cloudflare Stream - 프리미엄 영상 서비스</p>
+                                            <p class="mb-2">• <strong>완벽한 보안:</strong> Signed URL, 도메인 제한, 워터마크</p>
+                                            <p class="mb-2">• <strong>빠른 스트리밍:</strong> 전 세계 330개 도시에서 CDN 배포</p>
+                                            <p class="mb-2">• <strong>자동 최적화:</strong> 네트워크 상태에 따라 화질 자동 조절</p>
+                                            <p class="mb-2">• <strong>분석 데이터:</strong> 시청 통계, 이탈률, 재생 위치 추적</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4 flex items-center justify-between">
+                                    <label class="text-sm font-medium text-gray-700">
+                                        <i class="fas fa-cloud mr-1 text-blue-600"></i>Cloudflare Stream 영상 ID
+                                    </label>
+                                    <a href="https://dash.cloudflare.com/2e8c2335c9dc802347fb23b9d608d4f4/stream" 
+                                       target="_blank" 
+                                       class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                                        <i class="fas fa-cloud mr-2"></i>Stream 대시보드
+                                        <i class="fas fa-external-link-alt ml-2 text-xs"></i>
+                                    </a>
+                                </div>
+                                
+                                <input type="text" id="streamVideoId" placeholder="abcdef1234567890abcdef1234567890"
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+                                
+                                <p class="text-sm text-gray-500 mt-2">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Stream 대시보드에서 영상 업로드 후 Video ID를 복사하여 입력하세요
+                                </p>
+                                
+                                <!-- Stream 영상 미리보기 -->
+                                <div id="streamPreview" class="mt-4 hidden">
+                                    <div class="p-4 bg-gray-50 rounded-lg">
+                                        <p class="text-sm font-medium text-gray-700 mb-2">
+                                            <i class="fas fa-eye mr-1"></i>영상 미리보기
+                                        </p>
+                                        <div class="aspect-video bg-black rounded overflow-hidden">
+                                            <iframe id="streamPreviewFrame"
+                                                    style="border: none; width: 100%; height: 100%;"
+                                                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                                                    allowfullscreen="true">
+                                            </iframe>
+                                        </div>
+                                        <p class="text-xs text-gray-600 mt-2">
+                                            <i class="fas fa-shield-alt mr-1"></i>
+                                            실제 학습 페이지에서는 Signed URL과 워터마크가 자동 적용됩니다
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Stream 영상 업로드 -->
+                                <div class="mt-6">
+                                    <p class="text-sm font-medium text-gray-700 mb-3">
+                                        <i class="fas fa-upload mr-1"></i>영상 업로드 방법
+                                    </p>
+                                    <div class="space-y-2 text-sm text-gray-600">
+                                        <div class="flex items-start">
+                                            <span class="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-700 rounded-full mr-3 text-xs font-bold">1</span>
+                                            <p>위 "Stream 대시보드" 버튼을 클릭하여 새 탭에서 Cloudflare Stream 열기</p>
+                                        </div>
+                                        <div class="flex items-start">
+                                            <span class="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-700 rounded-full mr-3 text-xs font-bold">2</span>
+                                            <p>"Upload" 버튼으로 영상 파일 업로드 또는 URL에서 가져오기</p>
+                                        </div>
+                                        <div class="flex items-start">
+                                            <span class="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-700 rounded-full mr-3 text-xs font-bold">3</span>
+                                            <p>업로드 완료 후 영상의 <strong>Video ID</strong> 복사 (32자리 영문자+숫자)</p>
+                                        </div>
+                                        <div class="flex items-start">
+                                            <span class="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-700 rounded-full mr-3 text-xs font-bold">4</span>
+                                            <p>위의 입력창에 Video ID 붙여넣기 (자동으로 미리보기 표시됨)</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- 파일 업로드 탭 -->
@@ -2553,9 +2638,9 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                 inputField = document.getElementById('videoUrlInput');
                 message = '✨ R2에 파일을 업로드한 후, 공개 URL을 복사해서 아래에 붙여넣으세요!';
               } else if (platform === 'stream') {
-                targetTab = 'urlupload';
-                inputField = document.getElementById('videoUrlInput');
-                message = '✨ Cloudflare Stream에서 영상을 업로드한 후, URL을 복사해서 아래에 붙여넣으세요!';
+                targetTab = 'stream';
+                inputField = document.getElementById('streamVideoId');
+                message = '✨ Cloudflare Stream에서 영상 업로드 후, Video ID를 복사해서 입력하세요!';
               }
               
               // 3. 해당 탭 활성화
@@ -2644,6 +2729,68 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                   setTimeout(() => toast.remove(), 300);
                 }
               }, 10000);
+            }
+            
+            /**
+             * Stream Video ID 미리보기
+             */
+            const streamVideoIdInput = document.getElementById('streamVideoId');
+            if (streamVideoIdInput) {
+              streamVideoIdInput.addEventListener('input', function(e) {
+                const videoId = e.target.value.trim();
+                const preview = document.getElementById('streamPreview');
+                const previewFrame = document.getElementById('streamPreviewFrame');
+                
+                if (videoId && videoId.length === 32) {
+                  // Video ID 형식이 올바른 경우 (32자리)
+                  const embedUrl = \`https://customer-2e8c2335c9dc802347fb23b9d608d4f4.cloudflarestream.com/\${videoId}/iframe?preload=true\`;
+                  previewFrame.src = embedUrl;
+                  preview.classList.remove('hidden');
+                  
+                  console.log('✅ Stream 미리보기 활성화:', videoId);
+                } else {
+                  // Video ID가 없거나 형식이 틀린 경우
+                  preview.classList.add('hidden');
+                  previewFrame.src = '';
+                }
+              });
+            }
+            
+            /**
+             * 탭 전환 함수 (Stream 탭 포함)
+             */
+            function switchVideoTab(tab) {
+              console.log('🔄 탭 전환:', tab);
+              
+              // 모든 탭 버튼 비활성화
+              document.querySelectorAll('.video-tab').forEach(btn => {
+                btn.classList.remove('border-purple-600', 'text-purple-600', 'border-blue-600', 'text-blue-600', 'active');
+                btn.classList.add('border-transparent', 'text-gray-500');
+              });
+              
+              // 모든 탭 컨텐츠 숨기기
+              document.querySelectorAll('.video-tab-content').forEach(content => {
+                content.classList.add('hidden');
+              });
+              
+              // 선택된 탭 활성화
+              if (tab === 'youtube') {
+                document.getElementById('youtubeTab').classList.remove('border-transparent', 'text-gray-500');
+                document.getElementById('youtubeTab').classList.add('border-purple-600', 'text-purple-600', 'active');
+                document.getElementById('youtubeTabContent').classList.remove('hidden');
+              } else if (tab === 'stream') {
+                document.getElementById('streamTab').classList.remove('border-transparent', 'text-gray-500');
+                document.getElementById('streamTab').classList.add('border-blue-600', 'text-blue-600', 'active');
+                document.getElementById('streamTabContent').classList.remove('hidden');
+              } else if (tab === 'fileupload') {
+                document.getElementById('fileUploadTab').classList.remove('border-transparent', 'text-gray-500');
+                document.getElementById('fileUploadTab').classList.add('border-gray-700', 'text-gray-700', 'active');
+                document.getElementById('fileUploadTabContent').classList.remove('hidden');
+              } else if (tab === 'urlupload') {
+                document.getElementById('urlUploadTab').classList.remove('border-transparent', 'text-gray-500');
+                document.getElementById('urlUploadTab').classList.add('border-purple-600', 'text-purple-600', 'active');
+                document.getElementById('urlUploadTabContent').classList.remove('hidden');
+              }
             }
         </script>
         
