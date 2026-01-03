@@ -181,6 +181,14 @@ pages.get('/login', (c) => {
     
     <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-md w-full space-y-8">
+            <!-- 세션 정리 버튼 (디버깅용) -->
+            <div class="text-center">
+                <button onclick="AuthManager.clearSession(); localStorage.clear(); sessionStorage.clear(); location.reload();" 
+                    class="text-sm text-gray-500 hover:text-gray-700 underline">
+                    🧹 로그인 문제 해결 (세션 초기화)
+                </button>
+            </div>
+            
             <div>
                 <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
                     로그인
@@ -253,31 +261,37 @@ pages.get('/login', (c) => {
         })
     </script>
     <script>
-        // 이미 로그인된 경우 서버 세션 확인 후 리다이렉트
-        async function checkLoginStatus() {
-            if (AuthManager.isLoggedIn()) {
+        // 로그인 페이지 로드 시 즉시 로컬 세션 정리 (서버 세션 없는 경우)
+        async function checkAndCleanupSession() {
+            const hasLocalSession = AuthManager.isLoggedIn()
+            
+            if (hasLocalSession) {
+                console.log('🔍 Checking server session...')
                 try {
-                    // 서버 세션 확인
-                    const response = await axios.get('/api/auth/me')
+                    const response = await axios.get('/api/auth/me', { timeout: 3000 })
+                    
                     if (response.data && response.data.success) {
-                        // 서버 세션도 유효하면 리다이렉트
+                        console.log('✅ Server session valid, redirecting...')
                         const urlParams = new URLSearchParams(window.location.search)
                         const redirect = urlParams.get('redirect') || '/my-courses'
                         window.location.href = redirect
                     } else {
-                        // 서버 세션 없으면 로컬 세션 삭제
+                        console.warn('⚠️ Server session invalid, clearing local session')
                         AuthManager.clearSession()
                     }
                 } catch (error) {
-                    // 에러 발생 시 로컬 세션 삭제
-                    console.warn('Session check failed:', error)
+                    console.error('❌ Session check failed:', error.message)
+                    // 서버 세션 확인 실패 시 로컬 세션 강제 삭제
                     AuthManager.clearSession()
+                    console.log('🧹 Local session cleared')
                 }
+            } else {
+                console.log('ℹ️ No local session found')
             }
         }
         
-        // 페이지 로드 시 세션 확인
-        checkLoginStatus()
+        // 페이지 로드 시 즉시 실행
+        checkAndCleanupSession()
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault()
