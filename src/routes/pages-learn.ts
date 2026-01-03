@@ -16,7 +16,7 @@ app.get('/courses/:courseId/learn', async (c) => {
   const courseId = c.req.param('courseId')
   
   // 서버 사이드 인증 확인
-  const sessionToken = c.req.header('Cookie')?.match(/session=([^;]+)/)?.[1]
+  const sessionToken = c.req.cookie('session_token')
   
   if (!sessionToken) {
     // 세션이 없으면 로그인 페이지로 리다이렉트

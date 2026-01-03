@@ -78,11 +78,11 @@ async function logout() {
   window.location.href = '/login';
 }
 
-// 현재 사용자 정보 가져오기
+// 현재 사용자 정보 가져오기 (리다이렉트 제거)
 async function getCurrentUser() {
   const token = getSessionToken();
   if (!token) {
-    window.location.href = '/login';
+    console.warn('⚠️ No session token found');
     return null;
   }
 
@@ -94,14 +94,14 @@ async function getCurrentUser() {
     if (response.data.success) {
       return response.data.data;
     } else {
-      clearSessionToken();
-      window.location.href = '/login';
+      console.warn('⚠️ Auth failed:', response.data.error);
       return null;
     }
   } catch (error) {
     console.error('Get user error:', error);
-    clearSessionToken();
-    window.location.href = '/login';
+    if (error.response?.status === 401) {
+      console.warn('⚠️ Unauthorized - token may be expired');
+    }
     return null;
   }
 }
