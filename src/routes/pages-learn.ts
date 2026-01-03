@@ -400,20 +400,35 @@ app.get('/courses/:courseId/learn', async (c) => {
                     return;
                 }
 
-                // Update UI
+                // Update UI immediately (before video loads)
                 document.getElementById('currentLessonTitle').textContent = 
                     \`차시 \${currentLesson.lesson_number}: \${currentLesson.title}\`;
                 document.getElementById('currentLessonDescription').textContent = 
                     currentLesson.description || '차시 설명이 없습니다.';
-
-                // Load video player
-                await loadVideoPlayer(currentLesson);
-
-                // Start progress tracking
-                startProgressTracking();
-
-                // Update lesson list active state
+                
+                // Update lesson list active state immediately
                 renderLessonList();
+                
+                // Show loading indicator
+                const container = document.getElementById('videoPlayer');
+                container.innerHTML = \`
+                    <div class="flex items-center justify-center h-full bg-gray-900">
+                        <div class="text-center">
+                            <div class="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
+                            <p class="text-white text-lg font-medium">영상 로딩 중...</p>
+                            <p class="text-gray-400 text-sm mt-2">\${currentLesson.title}</p>
+                        </div>
+                    </div>
+                \`;
+
+                // Load video player (async, non-blocking UI)
+                loadVideoPlayer(currentLesson).catch(error => {
+                    console.error('❌ Video load error:', error);
+                    showError('영상을 불러오는 중 오류가 발생했습니다.');
+                });
+
+                // Start progress tracking (will activate once player is ready)
+                setTimeout(() => startProgressTracking(), 1000);
 
             } catch (error) {
                 console.error('❌ Load lesson error:', {
@@ -640,40 +655,72 @@ app.get('/courses/:courseId/learn', async (c) => {
                 return;
             }
 
-            // Load Stream Player SDK
-            if (!document.getElementById('stream-player-sdk')) {
-                const script = document.createElement('script');
-                script.id = 'stream-player-sdk';
-                script.src = '/static/js/stream-player.js';
-                document.head.appendChild(script);
-                
-                await new Promise((resolve) => {
-                    script.onload = resolve;
-                });
-            }
-
-            // Create Stream Player instance
             try {
-                const streamPlayer = new CloudflareStreamPlayer('videoPlayer', {
-                    videoId: videoId,
-                    userId: currentUserId,
-                    userName: currentUserName,
-                    courseId: currentCourse.id,
-                    lessonId: currentLesson.id,
-                    onProgress: async (progress, currentTime, duration) => {
-                        console.log(\`📊 진도율: \${progress}% (\${Math.floor(currentTime)}s / \${Math.floor(duration)}s)\`);
-                        
-                        // 서버에 진도율 전송
-                        await updateProgress();
-                    },
-                    onComplete: async () => {
-                        console.log('🏁 영상 재생 완료');
-                        await markLessonCompleted();
-                    }
-                });
+                // 간단하고 빠른 IFrame 방식 (SDK 불필요)
+                const accountId = '2e8c2335c9dc802347fb23b9d608d4f4';
+                const embedUrl = \`https://customer-\${accountId}.cloudflarestream.com/\${videoId}/iframe?preload=true&autoplay=false&muted=false\`;
+                
+                console.log('🔗 Stream Embed URL:', embedUrl);
+                
+                // 워터마크 포함 컨테이너 생성
+                container.innerHTML = \`
+                    <div style="position: relative; width: 100%; padding-top: 56.25%;">
+                        <iframe
+                            id="streamPlayerFrame"
+                            src="\${embedUrl}"
+                            loading="eager"
+                            style="border: none; position: absolute; top: 0; left: 0; height: 100%; width: 100%;"
+                            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                            allowfullscreen="true"
+                        ></iframe>
+                        <div id="streamWatermark" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; pointer-events: none; z-index: 1000; animation: watermarkFloat 15s infinite ease-in-out;">
+                            \${currentUserName || '사용자'} (ID: \${currentUserId || 'N/A'})
+                        </div>
+                    </div>
+                    
+                    <style>
+                        @keyframes watermarkFloat {
+                            0%, 100% { top: 10px; right: 10px; }
+                            25% { top: 10px; right: calc(100% - 250px); }
+                            50% { top: calc(100% - 50px); right: calc(100% - 250px); }
+                            75% { top: calc(100% - 50px); right: 10px; }
+                        }
+                    </style>
+                \`;
 
-                window.currentStreamPlayer = streamPlayer;
-                console.log('✅ Cloudflare Stream player initialized');
+                // IFrame 로드 완료 대기
+                const iframe = document.getElementById('streamPlayerFrame');
+                iframe.onload = () => {
+                    console.log('✅ Cloudflare Stream iframe loaded successfully');
+                    
+                    // Stream SDK 로드 (선택적, 이벤트 트래킹용)
+                    if (window.Stream) {
+                        player = window.Stream(iframe);
+                        console.log('✅ Stream SDK connected');
+                        
+                        // 이벤트 리스너
+                        player.addEventListener('ended', async () => {
+                            console.log('🏁 영상 재생 완료');
+                            await markLessonCompleted();
+                        });
+                    }
+                };
+                
+                iframe.onerror = (error) => {
+                    console.error('❌ Stream iframe failed to load:', error);
+                    container.innerHTML = \`
+                        <div class="text-center p-12">
+                            <i class="fas fa-exclamation-circle text-6xl text-red-500 mb-4"></i>
+                            <p class="text-xl text-red-600">영상을 불러올 수 없습니다</p>
+                            <p class="text-sm text-gray-600 mt-2">Video ID: \${videoId}</p>
+                            <button onclick="location.reload()" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                다시 시도
+                            </button>
+                        </div>
+                    \`;
+                };
+
+                console.log('✅ Stream player setup complete');
 
             } catch (error) {
                 console.error('❌ Failed to create Stream player:', error);
@@ -682,6 +729,9 @@ app.get('/courses/:courseId/learn', async (c) => {
                         <i class="fas fa-exclamation-circle text-6xl text-red-500 mb-4"></i>
                         <p class="text-xl text-red-600">Stream 플레이어를 불러오는 중 오류가 발생했습니다</p>
                         <p class="text-sm text-gray-600 mt-2">\${error?.message || '알 수 없는 오류'}</p>
+                        <button onclick="location.reload()" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            다시 시도
+                        </button>
                     </div>
                 \`;
             }
