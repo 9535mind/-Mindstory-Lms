@@ -98,11 +98,12 @@ async function loadCourseData() {
             throw new Error(response.data.error || '강좌를 찾을 수 없습니다.');
         }
         
-        // 응답 데이터 추출 (response.data.data 또는 response.data)
-        courseData = response.data.data || response.data;
+        // 응답 데이터 추출 (API는 { data: { course: {...}, lessons: [...] } } 구조)
+        courseData = response.data.course || response.data.data || response.data;
         
         // 데이터 유효성 검증
         if (!courseData || !courseData.title) {
+            console.error('Invalid course data:', response.data);
             throw new Error('강좌 데이터가 올바르지 않습니다.');
         }
         
