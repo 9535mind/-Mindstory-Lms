@@ -43,6 +43,20 @@ app.get('/courses/:courseId/learn', async (c) => {
                 height: 600px;
             }
             
+            /* YouTube IFrame 보호 */
+            iframe {
+                -webkit-user-select: none !important;
+                -moz-user-select: none !important;
+                user-select: none !important;
+            }
+            
+            /* YouTube 컨트롤 보호 */
+            .ytp-chrome-top,
+            .ytp-share-button,
+            .ytp-watch-later-button {
+                display: none !important;
+            }
+            
             /* 모바일 최적화 - 폰트 크기 조정 */
             @media (max-width: 768px) {
                 html {
@@ -474,7 +488,8 @@ app.get('/courses/:courseId/learn', async (c) => {
                 await loadYouTubeAPI();
             }
 
-            container.innerHTML = '<div id="youtubePlayer"></div>';
+            // YouTube 플레이어 컨테이너 + 보호 오버레이
+            container.innerHTML = '<div style="position: relative; width: 100%; height: 600px;"><div id="youtubePlayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div><div id="youtubeProtection" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></div></div>';
 
             player = new YT.Player('youtubePlayer', {
                 height: '600',
@@ -484,7 +499,12 @@ app.get('/courses/:courseId/learn', async (c) => {
                     autoplay: 1,
                     controls: 1,
                     modestbranding: 1,
-                    rel: 0
+                    rel: 0,
+                    disablekb: 1,           // 키보드 컨트롤 비활성화
+                    fs: 0,                  // 전체화면 버튼 숨김
+                    iv_load_policy: 3,      // 주석 숨김
+                    cc_load_policy: 0,      // 자막 표시 안함
+                    showinfo: 0             // 제목 표시 안함
                 },
                 events: {
                     onReady: onYouTubePlayerReady,

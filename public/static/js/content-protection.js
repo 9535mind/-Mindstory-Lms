@@ -140,10 +140,101 @@
   `;
   document.head.appendChild(style);
 
-  // 8. 콘솔 메시지
+  // 8. YouTube IFrame 보호 (학습 플레이어 전용)
+  function protectVideoPlayer() {
+    // YouTube IFrame 찾기
+    const youtubeIframe = document.querySelector('iframe[src*="youtube.com"]');
+    const apiVideoIframe = document.querySelector('iframe[src*="api.video"]');
+    const videoPlayer = document.getElementById('videoPlayer');
+    
+    if (youtubeIframe || apiVideoIframe || videoPlayer) {
+      console.log('🛡️ 영상 플레이어 보호 활성화');
+      
+      // 영상 컨테이너 보호
+      if (videoPlayer) {
+        videoPlayer.style.cssText = `
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          user-select: none !important;
+          pointer-events: auto !important;
+        `;
+        
+        // 우클릭 차단
+        videoPlayer.addEventListener('contextmenu', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          alert('⚠️ 영상 복사 및 다운로드가 금지되어 있습니다.\n\n저작권 보호 콘텐츠입니다.');
+          return false;
+        }, true);
+        
+        // 드래그 차단
+        videoPlayer.addEventListener('dragstart', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }, true);
+      }
+      
+      // IFrame 보호
+      [youtubeIframe, apiVideoIframe].forEach(iframe => {
+        if (iframe) {
+          iframe.style.cssText = `
+            pointer-events: auto !important;
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            user-select: none !important;
+          `;
+          
+          // IFrame 부모에도 보호 적용
+          if (iframe.parentElement) {
+            iframe.parentElement.addEventListener('contextmenu', function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+              alert('⚠️ 영상 복사가 금지되어 있습니다.');
+              return false;
+            }, true);
+          }
+        }
+      });
+    }
+  }
+  
+  // 페이지 로드 후 영상 플레이어 보호 적용
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', protectVideoPlayer);
+  } else {
+    protectVideoPlayer();
+  }
+  
+  // 동적 콘텐츠 로딩 감지 (MutationObserver)
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.addedNodes.length > 0) {
+        protectVideoPlayer();
+      }
+    });
+  });
+  
+  // 전체 body 감시
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+  
+  // 9. 영상 URL 추출 시도 차단
+  const originalFetch = window.fetch;
+  window.fetch = function(...args) {
+    const url = args[0];
+    if (typeof url === 'string' && (url.includes('youtube.com') || url.includes('googlevideo.com'))) {
+      console.warn('⚠️ 영상 URL 접근이 차단되었습니다.');
+    }
+    return originalFetch.apply(this, args);
+  };
+  
+  // 10. 콘솔 메시지
   console.clear();
   console.log('%c🛡️ 콘텐츠 보호 활성화', 'color: green; font-size: 20px; font-weight: bold;');
-  console.log('%c저작권 보호를 위해 복사, 우클릭이 제한됩니다.', 'font-size: 14px;');
+  console.log('%c저작권 보호를 위해 복사, 우클릭, 영상 다운로드가 제한됩니다.', 'font-size: 14px;');
   console.log('%c© 2026 Mindstory LMS. All rights reserved.', 'font-size: 12px; color: gray;');
 
 })();
