@@ -13,6 +13,7 @@ let progressUpdateInterval = null;
 let currentUserId = null;
 let currentUserName = null;
 let isRedirecting = false; // 리다이렉트 방지 플래그
+let isInitialized = false; // 초기화 완료 플래그
 
 const PROGRESS_UPDATE_INTERVAL = 5000; // 5초마다 진도 업데이트
 
@@ -23,8 +24,28 @@ const courseId = window.COURSE_ID;
  * 초기화
  */
 document.addEventListener('DOMContentLoaded', async () => {
+    // 중복 초기화 방지
+    if (isInitialized) {
+        console.warn('⚠️ Already initialized, skip');
+        return;
+    }
+    
+    // 리다이렉트 중이면 중단
+    if (isRedirecting) {
+        console.warn('⚠️ Redirecting, skip initialization');
+        return;
+    }
+    
+    isInitialized = true;
     console.log('🎬 Learn Player 초기화 시작');
-    await loadCourseData();
+    
+    // 인증 확인이 실패하면 여기서 중단
+    const courseLoaded = await loadCourseData();
+    if (!courseLoaded) {
+        console.error('❌ Failed to load course data, stop initialization');
+        return;
+    }
+    
     await loadLessons();
     await loadEnrollment();
     
@@ -54,7 +75,7 @@ async function loadCourseData() {
         // 리다이렉트 방지 체크
         if (isRedirecting) {
             console.warn('⚠️ Already redirecting, skip loading');
-            return;
+            return false;
         }
         
         // 관리자 확인
@@ -62,11 +83,16 @@ async function loadCourseData() {
         if (!user) {
             console.error('❌ User not authenticated');
             isRedirecting = true;
-            // 1초 후 리다이렉트 (무한 루프 방지)
+            
+            // 에러 메시지 표시
+            document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 18px; color: #666;">로그인이 필요합니다. 로그인 페이지로 이동합니다...</div>';
+            
+            // 2초 후 리다이렉트
             setTimeout(() => {
-                window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
-            }, 1000);
-            return;
+                window.location.replace('/login?redirect=' + encodeURIComponent(window.location.pathname));
+            }, 2000);
+            
+            return false;
         }
         
         const isAdmin = user && user.role === 'admin';
@@ -94,14 +120,21 @@ async function loadCourseData() {
         document.getElementById('courseDescription').textContent = courseData.description || '';
         
         console.log('✅ Course data loaded:', courseData.title);
+        return true;
     } catch (error) {
         console.error('❌ Failed to load course data:', error);
-        showError(error.message || '강좌 정보를 불러올 수 없습니다.');
         
-        // 3초 후 강좌 목록으로 리다이렉트
-        setTimeout(() => {
-            window.location.href = '/courses';
-        }, 3000);
+        // 리다이렉트 중이 아닐 때만 처리
+        if (!isRedirecting) {
+            showError(error.message || '강좌 정보를 불러올 수 없습니다.');
+            
+            // 3초 후 강좌 목록으로 리다이렉트
+            setTimeout(() => {
+                window.location.replace('/courses');
+            }, 3000);
+        }
+        
+        return false;
     }
 }
 
