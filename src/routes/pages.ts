@@ -253,12 +253,31 @@ pages.get('/login', (c) => {
         })
     </script>
     <script>
-        // 이미 로그인된 경우 리다이렉트
-        if (AuthManager.isLoggedIn()) {
-            const urlParams = new URLSearchParams(window.location.search)
-            const redirect = urlParams.get('redirect') || '/my-courses'
-            window.location.href = redirect
+        // 이미 로그인된 경우 서버 세션 확인 후 리다이렉트
+        async function checkLoginStatus() {
+            if (AuthManager.isLoggedIn()) {
+                try {
+                    // 서버 세션 확인
+                    const response = await axios.get('/api/auth/me')
+                    if (response.data && response.data.success) {
+                        // 서버 세션도 유효하면 리다이렉트
+                        const urlParams = new URLSearchParams(window.location.search)
+                        const redirect = urlParams.get('redirect') || '/my-courses'
+                        window.location.href = redirect
+                    } else {
+                        // 서버 세션 없으면 로컬 세션 삭제
+                        AuthManager.clearSession()
+                    }
+                } catch (error) {
+                    // 에러 발생 시 로컬 세션 삭제
+                    console.warn('Session check failed:', error)
+                    AuthManager.clearSession()
+                }
+            }
         }
+        
+        // 페이지 로드 시 세션 확인
+        checkLoginStatus()
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault()
