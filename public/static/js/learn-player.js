@@ -81,16 +81,11 @@ async function loadCourseData() {
         // 관리자 확인
         const user = await getCurrentUser();
         if (!user) {
-            console.error('❌ User not authenticated');
+            console.error('❌ User not authenticated - redirecting to login');
             isRedirecting = true;
             
-            // 에러 메시지 표시
-            document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 18px; color: #666;">로그인이 필요합니다. 로그인 페이지로 이동합니다...</div>';
-            
-            // 2초 후 리다이렉트
-            setTimeout(() => {
-                window.location.replace('/login?redirect=' + encodeURIComponent(window.location.pathname));
-            }, 2000);
+            // 즉시 리다이렉트 (메시지 없이)
+            window.location.replace('/login?redirect=' + encodeURIComponent(window.location.pathname));
             
             return false;
         }
