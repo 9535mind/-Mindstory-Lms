@@ -15,6 +15,14 @@ const app = new Hono<{ Bindings: Bindings }>()
 app.get('/courses/:courseId/learn', async (c) => {
   const courseId = c.req.param('courseId')
   
+  // 서버 사이드 인증 확인
+  const sessionToken = c.req.header('Cookie')?.match(/session=([^;]+)/)?.[1]
+  
+  if (!sessionToken) {
+    // 세션이 없으면 로그인 페이지로 리다이렉트
+    return c.redirect(`/login?redirect=${encodeURIComponent('/courses/' + courseId + '/learn')}`)
+  }
+  
   return c.html(`
     <!DOCTYPE html>
     <html lang="ko">

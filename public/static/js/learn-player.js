@@ -39,23 +39,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     isInitialized = true;
     console.log('🎬 Learn Player 초기화 시작');
     
-    try {
-        // 인증 확인이 실패하면 여기서 중단
-        const courseLoaded = await loadCourseData();
-        if (!courseLoaded) {
-            console.error('❌ Failed to load course data, stop initialization');
-            return;
-        }
-        
-        await loadLessons();
-        await loadEnrollment();
-    } catch (error) {
-        if (error.message === 'REDIRECT_TO_LOGIN') {
-            console.log('✅ Redirecting to login page...');
-            return;
-        }
-        throw error;
+    // 인증 확인이 실패하면 여기서 중단
+    const courseLoaded = await loadCourseData();
+    if (!courseLoaded) {
+        console.error('❌ Failed to load course data, stop initialization');
+        return;
     }
+    
+    await loadLessons();
+    await loadEnrollment();
     
     // URL에서 lessonId 파라미터 확인
     const urlParams = new URLSearchParams(window.location.search);
@@ -86,17 +78,12 @@ async function loadCourseData() {
             return false;
         }
         
-        // 관리자 확인
+        // 사용자 정보 가져오기
         const user = await getCurrentUser();
         if (!user) {
-            console.error('❌ User not authenticated - redirecting to login');
-            isRedirecting = true;
-            
-            // 즉시 리다이렉트 후 중단
-            window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
-            
-            // 리다이렉트 후 모든 코드 실행 중단
-            throw new Error('REDIRECT_TO_LOGIN');
+            console.error('❌ User not authenticated');
+            showError('로그인이 필요합니다.');
+            return false;
         }
         
         const isAdmin = user && user.role === 'admin';
