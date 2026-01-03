@@ -766,8 +766,12 @@ app.get('/courses/:courseId/learn', async (c) => {
         });
         </script>
         
+        <!-- 영상 플레이어 시스템 -->
+        <script src="/static/js/learn-player.js"></script>
+        
         <!-- 보안 시스템 -->
         <script src="/static/js/security.js"></script>
+        <script src="/static/js/content-protection.js"></script>
     </body>
     </html>
   `)
