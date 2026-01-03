@@ -288,8 +288,15 @@ async function loadYouTubePlayer(lesson) {
     // YouTube API 로드 대기
     await waitForYouTubeAPI();
 
-    // 플레이어 컨테이너 생성
-    container.innerHTML = '<div style="position: relative; width: 100%; height: 600px;"><div id="youtubePlayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div><div id="youtubeProtection" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></div></div>';
+    // 플레이어 컨테이너 생성 (로딩 인디케이터를 완전히 대체)
+    container.innerHTML = `
+        <div style="position: relative; width: 100%; height: 600px; background: #000;">
+            <div id="youtubePlayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+            <div id="youtubeProtection" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></div>
+        </div>
+    `;
+
+    console.log('🎬 Initializing YouTube Player...');
 
     // YouTube Player 초기화
     player = new YT.Player('youtubePlayer', {
@@ -315,7 +322,7 @@ async function loadYouTubePlayer(lesson) {
 }
 
 function onYouTubePlayerReady(event) {
-    console.log('✅ YouTube player ready');
+    console.log('✅ YouTube player ready - video will start playing');
     
     // 영상 플레이어 보호 즉시 적용
     setTimeout(() => {
