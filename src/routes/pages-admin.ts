@@ -1636,40 +1636,40 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                                 </div>
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                                     <!-- YouTube 바로가기 -->
-                                    <a href="https://studio.youtube.com/channel/UCXF55ON7qD6Z_iVYhkcOffg/videos" 
-                                       target="_blank"
-                                       class="flex items-center justify-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-all transform hover:scale-105">
+                                    <button type="button"
+                                            onclick="quickUpload('youtube', 'https://studio.youtube.com/channel/UCXF55ON7qD6Z_iVYhkcOffg/videos')"
+                                            class="flex items-center justify-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-all transform hover:scale-105 cursor-pointer">
                                         <i class="fab fa-youtube mr-2"></i>YouTube
-                                        <i class="fas fa-external-link-alt ml-2 text-xs opacity-75"></i>
-                                    </a>
+                                        <i class="fas fa-upload ml-2 text-xs opacity-75"></i>
+                                    </button>
                                     
                                     <!-- api.video 바로가기 -->
-                                    <a href="https://dashboard.api.video/videos" 
-                                       target="_blank"
-                                       class="flex items-center justify-center px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-all transform hover:scale-105">
+                                    <button type="button"
+                                            onclick="quickUpload('apivideo', 'https://dashboard.api.video/videos')"
+                                            class="flex items-center justify-center px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-all transform hover:scale-105 cursor-pointer">
                                         <i class="fas fa-video mr-2"></i>api.video
-                                        <i class="fas fa-external-link-alt ml-2 text-xs opacity-75"></i>
-                                    </a>
+                                        <i class="fas fa-upload ml-2 text-xs opacity-75"></i>
+                                    </button>
                                     
                                     <!-- Cloudflare R2 바로가기 -->
-                                    <a href="https://dash.cloudflare.com/2e8c2335c9dc802347fb23b9d608d4f4/r2/default/buckets/mindstory-lms" 
-                                       target="_blank"
-                                       class="flex items-center justify-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded-lg transition-all transform hover:scale-105">
+                                    <button type="button"
+                                            onclick="quickUpload('r2', 'https://dash.cloudflare.com/2e8c2335c9dc802347fb23b9d608d4f4/r2/default/buckets/mindstory-lms')"
+                                            class="flex items-center justify-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded-lg transition-all transform hover:scale-105 cursor-pointer">
                                         <i class="fas fa-database mr-2"></i>R2 Storage
-                                        <i class="fas fa-external-link-alt ml-2 text-xs opacity-75"></i>
-                                    </a>
+                                        <i class="fas fa-upload ml-2 text-xs opacity-75"></i>
+                                    </button>
                                     
                                     <!-- Cloudflare Stream 바로가기 -->
-                                    <a href="https://dash.cloudflare.com/?to=/:account/stream" 
-                                       target="_blank"
-                                       class="flex items-center justify-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-all transform hover:scale-105">
+                                    <button type="button"
+                                            onclick="quickUpload('stream', 'https://dash.cloudflare.com/?to=/:account/stream')"
+                                            class="flex items-center justify-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-all transform hover:scale-105 cursor-pointer">
                                         <i class="fas fa-cloud mr-2"></i>CF Stream
-                                        <i class="fas fa-external-link-alt ml-2 text-xs opacity-75"></i>
-                                    </a>
+                                        <i class="fas fa-upload ml-2 text-xs opacity-75"></i>
+                                    </button>
                                 </div>
                                 <p class="text-xs text-indigo-700 mt-3 flex items-start">
-                                    <i class="fas fa-info-circle mr-2 mt-0.5"></i>
-                                    <span><strong>사용 가이드:</strong> YouTube(무료+일반), api.video(프리미엄), R2(이미지/문서), Stream(VIP)</span>
+                                    <i class="fas fa-magic mr-2 mt-0.5"></i>
+                                    <span><strong>스마트 업로드:</strong> 버튼 클릭 → 새 탭에서 영상 업로드 → URL 복사 → 돌아와서 붙여넣기 (자동 감지)</span>
                                 </p>
                             </div>
                             
@@ -2526,7 +2526,143 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                 el.style.transform = 'translate3d(' + xPos + 'px, ' + yPos + 'px, 0)';
               }
             })();
+            
+            /**
+             * 🚀 스마트 빠른 업로드
+             * 플랫폼별로 새 창을 열고, 사용자가 붙여넣기할 수 있도록 클립보드 감지
+             */
+            function quickUpload(platform, url) {
+              // 1. 새 탭에서 플랫폼 열기
+              window.open(url, '_blank');
+              
+              // 2. 플랫폼별 탭 자동 전환 및 안내 표시
+              let targetTab = '';
+              let inputField = null;
+              let message = '';
+              
+              if (platform === 'youtube') {
+                targetTab = 'youtube';
+                inputField = document.getElementById('lessonVideoUrl');
+                message = '✨ YouTube에서 영상을 업로드한 후, 영상 URL을 복사해서 아래에 붙여넣으세요!';
+              } else if (platform === 'apivideo') {
+                targetTab = 'urlupload';
+                inputField = document.getElementById('videoUrlInput');
+                message = '✨ api.video에서 영상을 업로드한 후, Embed URL을 복사해서 아래에 붙여넣으세요!';
+              } else if (platform === 'r2') {
+                targetTab = 'urlupload';
+                inputField = document.getElementById('videoUrlInput');
+                message = '✨ R2에 파일을 업로드한 후, 공개 URL을 복사해서 아래에 붙여넣으세요!';
+              } else if (platform === 'stream') {
+                targetTab = 'urlupload';
+                inputField = document.getElementById('videoUrlInput');
+                message = '✨ Cloudflare Stream에서 영상을 업로드한 후, URL을 복사해서 아래에 붙여넣으세요!';
+              }
+              
+              // 3. 해당 탭 활성화
+              if (targetTab) {
+                switchVideoTab(targetTab);
+              }
+              
+              // 4. 입력 필드에 포커스
+              if (inputField) {
+                setTimeout(() => {
+                  inputField.focus();
+                  inputField.placeholder = message;
+                  
+                  // 5. 입력 필드 하이라이트 효과
+                  inputField.classList.add('ring-4', 'ring-purple-300', 'ring-opacity-50');
+                  
+                  // 6. 안내 토스트 메시지 표시
+                  showQuickUploadToast(platform, message);
+                  
+                  // 7. 붙여넣기 감지 및 자동 완료 메시지
+                  inputField.addEventListener('paste', function pasteHandler(e) {
+                    setTimeout(() => {
+                      // 하이라이트 제거
+                      inputField.classList.remove('ring-4', 'ring-purple-300', 'ring-opacity-50');
+                      
+                      // 성공 메시지
+                      showSuccess('✅ URL이 입력되었습니다! 이제 저장 버튼을 눌러주세요.');
+                      
+                      // 이벤트 리스너 제거 (한 번만 실행)
+                      inputField.removeEventListener('paste', pasteHandler);
+                    }, 100);
+                  }, { once: true });
+                }, 500);
+              }
+            }
+            
+            /**
+             * 빠른 업로드 토스트 메시지 표시
+             */
+            function showQuickUploadToast(platform, message) {
+              // 기존 토스트 제거
+              const existingToast = document.getElementById('quickUploadToast');
+              if (existingToast) {
+                existingToast.remove();
+              }
+              
+              // 플랫폼별 색상
+              const colors = {
+                youtube: 'bg-red-600',
+                apivideo: 'bg-purple-600',
+                r2: 'bg-orange-500',
+                stream: 'bg-blue-600'
+              };
+              
+              const icons = {
+                youtube: 'fab fa-youtube',
+                apivideo: 'fas fa-video',
+                r2: 'fas fa-database',
+                stream: 'fas fa-cloud'
+              };
+              
+              // 토스트 생성
+              const toast = document.createElement('div');
+              toast.id = 'quickUploadToast';
+              toast.className = \`fixed top-20 right-4 \${colors[platform]} text-white px-6 py-4 rounded-lg shadow-2xl z-50 max-w-md animate-slide-in\`;
+              toast.innerHTML = \`
+                <div class="flex items-start">
+                  <i class="\${icons[platform]} text-2xl mr-3 mt-1"></i>
+                  <div>
+                    <p class="font-bold text-sm mb-1">빠른 업로드 활성화</p>
+                    <p class="text-xs opacity-90">\${message}</p>
+                  </div>
+                  <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              \`;
+              
+              document.body.appendChild(toast);
+              
+              // 10초 후 자동 제거
+              setTimeout(() => {
+                if (toast && toast.parentElement) {
+                  toast.style.opacity = '0';
+                  toast.style.transform = 'translateX(400px)';
+                  setTimeout(() => toast.remove(), 300);
+                }
+              }, 10000);
+            }
         </script>
+        
+        <style>
+          @keyframes slide-in {
+            from {
+              transform: translateX(400px);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
+          }
+          
+          .animate-slide-in {
+            animation: slide-in 0.3s ease-out;
+          }
+        </style>
         
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/js/auth.js"></script>
