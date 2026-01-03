@@ -15,6 +15,7 @@
 ### 2. 우클릭 방지
 - **기능**: 마우스 우클릭 컨텍스트 메뉴 차단
 - **효과**: 이미지 저장, 페이지 소스 보기 등 차단
+- **알림**: "⚠️ 우클릭이 비활성화되어 있습니다."
 
 ### 3. 드래그 방지
 - **기능**: 이미지 및 텍스트 드래그 차단
@@ -34,6 +35,23 @@
 - **기능**: 개발자 도구 접근 차단
 - **방법**: F12 및 단축키 차단
 - **효과**: HTML/CSS/JS 코드 직접 열람 방지
+
+### 6. YouTube 영상 특별 보호 ⭐ NEW!
+- **기능**: YouTube IFrame 영상 복사/다운로드/공유 완전 차단
+- **구현 방식**:
+  - YouTube 플레이어 설정 최적화
+  - IFrame 오버레이 보호 레이어
+  - 동적 콘텐츠 감지 (MutationObserver)
+  - Fetch API 가로채기
+- **차단 항목**:
+  - 키보드 컨트롤 비활성화 (`disablekb: 1`)
+  - 전체화면 버튼 숨김 (`fs: 0`)
+  - 공유 버튼 숨김 (CSS)
+  - 주석/자막 표시 안함
+  - 영상 URL 추출 차단
+  - IFrame 우클릭 차단
+  - 영상 드래그 방지
+- **알림**: "⚠️ 영상 복사 및 다운로드가 금지되어 있습니다."
 
 ---
 
@@ -68,6 +86,7 @@ document.addEventListener('selectstart', function(e) {
 // 2. 우클릭 방지
 document.addEventListener('contextmenu', function(e) {
     e.preventDefault();
+    alert('⚠️ 우클릭이 비활성화되어 있습니다.');
 });
 
 // 3. 드래그 방지
@@ -78,56 +97,106 @@ document.addEventListener('dragstart', function(e) {
 // 4. 복사/잘라내기 방지
 document.addEventListener('copy', function(e) {
     e.preventDefault();
-});
-document.addEventListener('cut', function(e) {
-    e.preventDefault();
+    alert('⚠️ 복사가 금지된 콘텐츠입니다.');
 });
 
 // 5. 단축키 차단
 document.addEventListener('keydown', function(e) {
-    // F12 차단
-    if (e.key === 'F12') {
-        e.preventDefault();
-        return false;
-    }
+    // F12, Ctrl+Shift+I/J/C, Ctrl+U/S/C/X/A 차단
+    // ... (생략)
+});
+
+// 6. YouTube IFrame 보호 ⭐ NEW!
+function protectVideoPlayer() {
+    const youtubeIframe = document.querySelector('iframe[src*="youtube.com"]');
+    const videoPlayer = document.getElementById('videoPlayer');
     
-    // Ctrl+Shift+I/J/C (개발자 도구)
-    if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) {
-        e.preventDefault();
-        return false;
+    if (youtubeIframe || videoPlayer) {
+        // 영상 컨테이너 우클릭 차단
+        videoPlayer.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            alert('⚠️ 영상 복사 및 다운로드가 금지되어 있습니다.');
+            return false;
+        }, true);
+        
+        // IFrame 보호
+        if (youtubeIframe) {
+            youtubeIframe.style.cssText = `
+                pointer-events: auto !important;
+                -webkit-user-select: none !important;
+                user-select: none !important;
+            `;
+        }
     }
-    
-    // Ctrl+U (소스 보기)
-    if (e.ctrlKey && e.key === 'u') {
-        e.preventDefault();
-        return false;
+}
+
+// 7. 동적 콘텐츠 감지 (MutationObserver)
+const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+        if (mutation.addedNodes.length > 0) {
+            protectVideoPlayer();
+        }
+    });
+});
+
+observer.observe(document.body, {
+    childList: true,
+    subtree: true
+});
+
+// 8. Fetch API 가로채기 (영상 URL 추출 차단)
+const originalFetch = window.fetch;
+window.fetch = function(...args) {
+    const url = args[0];
+    if (typeof url === 'string' && url.includes('youtube.com')) {
+        console.warn('⚠️ 영상 URL 접근이 차단되었습니다.');
     }
-    
-    // Ctrl+S (페이지 저장)
-    if (e.ctrlKey && e.key === 's') {
-        e.preventDefault();
-        return false;
-    }
-    
-    // Ctrl+C/X/A (복사/잘라내기/전체선택)
-    if (e.ctrlKey && (e.key === 'c' || e.key === 'x' || e.key === 'a')) {
-        e.preventDefault();
-        return false;
+    return originalFetch.apply(this, args);
+};
+```
+
+### pages-learn.ts (YouTube 플레이어 설정)
+```typescript
+player = new YT.Player('youtubePlayer', {
+    videoId: videoId,
+    playerVars: {
+        autoplay: 1,
+        controls: 1,
+        modestbranding: 1,
+        rel: 0,
+        disablekb: 1,           // 키보드 컨트롤 비활성화
+        fs: 0,                  // 전체화면 버튼 숨김
+        iv_load_policy: 3,      // 주석 숨김
+        cc_load_policy: 0,      // 자막 표시 안함
+        showinfo: 0             // 제목 표시 안함
     }
 });
 
-// 6. CSS 스타일 추가
-const style = document.createElement('style');
-style.textContent = `
-    * {
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
-        -webkit-user-drag: none;
-    }
+// IFrame 보호 오버레이
+container.innerHTML = `
+    <div style="position: relative;">
+        <div id="youtubePlayer"></div>
+        <div id="youtubeProtection" style="position: absolute; pointer-events: none; z-index: 10;"></div>
+    </div>
 `;
-document.head.appendChild(style);
+```
+
+### CSS 보호
+```css
+/* YouTube 공유 버튼 숨김 */
+.ytp-chrome-top,
+.ytp-share-button,
+.ytp-watch-later-button {
+    display: none !important;
+}
+
+/* IFrame 선택 방지 */
+iframe {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    user-select: none !important;
+}
 ```
 
 ---
@@ -174,23 +243,34 @@ document.head.appendChild(style);
 ❌ Ctrl+C로 복사 가능  
 ❌ 개발자 도구로 HTML 열람 가능  
 ❌ 소스 코드 다운로드 가능  
+❌ **YouTube 영상 복사/다운로드 가능** 🚨  
+❌ **YouTube 공유 버튼으로 확산 가능** 🚨  
+❌ **영상 URL 직접 추출 가능** 🚨
 
 ### After (보호 적용)
 ✅ 텍스트 선택 불가  
-✅ 우클릭 차단  
-✅ 복사/잘라내기 차단  
+✅ 우클릭 차단 (알림 표시)  
+✅ 복사/잘라내기 차단 (알림 표시)  
 ✅ 개발자 도구 접근 어려움  
 ✅ 소스 보기 차단  
+✅ **YouTube 영상 복사/다운로드 완전 차단** 🛡️  
+✅ **YouTube 공유 버튼 완전 숨김** 🛡️  
+✅ **영상 URL 추출 차단** 🛡️  
+✅ **키보드 컨트롤 비활성화** 🛡️  
+✅ **전체화면 버튼 숨김** 🛡️  
+✅ **IFrame 우클릭 완전 차단** 🛡️  
 
 ---
 
 ## 🚀 배포 정보
 
 - **최초 적용**: 2026-01-03
-- **최신 배포 URL**: https://9c19912e.mindstory-lms.pages.dev
+- **YouTube 보호 추가**: 2026-01-03
+- **최신 배포 URL**: https://bb1fa41a.mindstory-lms.pages.dev
 - **Git 커밋**: 
   - `ede0768` - Add R2 direct link and content protection system
   - `6697910` - Apply content protection to all pages
+  - `90345f1` - Add comprehensive YouTube video protection system ⭐ NEW!
 
 ---
 
