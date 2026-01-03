@@ -2028,7 +2028,10 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
               
               console.log('[DEBUG] 차시 렌더링 중, 개수:', lessons.length);
 
-              container.innerHTML = lessons.map(lesson => \`
+              // 차시 번호 역순 정렬 (최신 차시가 위로)
+              const sortedLessons = [...lessons].sort((a, b) => b.lesson_number - a.lesson_number);
+
+              container.innerHTML = sortedLessons.map(lesson => \`
                 <div class="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                   <div class="flex justify-between items-start">
                     <div class="flex items-start flex-1">
