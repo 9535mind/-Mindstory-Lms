@@ -179,15 +179,28 @@ async function loadLessons() {
  */
 async function loadEnrollment() {
     try {
-        const response = await axios.get(`/api/enrollments`);
-        const enrollments = response.data;
-        enrollmentData = enrollments.find(e => e.course_id === courseId);
+        const response = await axios.get(`/api/enrollments/my`, {
+            headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+        });
         
-        if (enrollmentData) {
-            updateProgressUI(enrollmentData.watch_percentage || 0);
+        if (response.data.success && response.data.data) {
+            const enrollments = response.data.data;
+            enrollmentData = enrollments.find(e => e.course_id === courseId);
+            
+            if (enrollmentData) {
+                updateProgressUI(enrollmentData.progress_rate || 0);
+                console.log('✅ Enrollment loaded:', enrollmentData);
+            } else {
+                console.log('ℹ️ No enrollment found for this course');
+            }
         }
     } catch (error) {
-        console.error('❌ Failed to load enrollment:', error);
+        // 401/404는 정상 (비로그인 또는 미수강)
+        if (error.response && [401, 404].includes(error.response.status)) {
+            console.log('ℹ️ Not enrolled in this course');
+        } else {
+            console.error('❌ Failed to load enrollment:', error);
+        }
     }
 }
 
