@@ -654,19 +654,20 @@ async function updateProgress() {
             watchPercentage = 50;
         }
 
-        // 서버에 진도율 전송
-        await axios.post('/api/progress/update', {
-            lesson_id: currentLesson.id,
-            watch_percentage: Math.min(watchPercentage, 100),
-            current_time: Math.floor(currentTime),
-            duration: Math.floor(duration)
-        });
+        // 서버에 진도율 전송 (임시 비활성화 - API 미구현)
+        // await axios.post('/api/progress/update', {
+        //     lesson_id: currentLesson.id,
+        //     watch_percentage: Math.min(watchPercentage, 100),
+        //     current_time: Math.floor(currentTime),
+        //     duration: Math.floor(duration)
+        // });
 
         // UI 업데이트
         updateProgressUI(watchPercentage);
 
     } catch (error) {
-        console.error('❌ Failed to update progress:', error);
+        // 진도 업데이트 에러 무시 (API 미구현)
+        // console.error('❌ Failed to update progress:', error);
     }
 }
 
