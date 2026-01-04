@@ -20,10 +20,10 @@ courses.get('/', optionalAuth, async (c) => {
     const { DB } = c.env
     const user = c.get('user')
 
-    // 관리자는 모든 과정, 일반 사용자는 공개된 과정만
+    // 관리자는 모든 과정, 일반 사용자는 공개된 과정만 (published, active)
     const query = user?.role === 'admin' 
       ? `SELECT * FROM courses ORDER BY created_at DESC`
-      : `SELECT * FROM courses WHERE status = 'published' ORDER BY created_at DESC`
+      : `SELECT * FROM courses WHERE status IN ('published', 'active') ORDER BY created_at DESC`
 
     const result = await DB.prepare(query).all<Course>()
 
@@ -45,7 +45,7 @@ courses.get('/featured', async (c) => {
 
     const result = await DB.prepare(`
       SELECT * FROM courses 
-      WHERE status = 'published'
+      WHERE status IN ('published', 'active')
       ORDER BY created_at DESC
       LIMIT 10
     `).all<Course>()
@@ -77,8 +77,8 @@ courses.get('/:id', optionalAuth, async (c) => {
       return c.json(errorResponse('과정을 찾을 수 없습니다.'), 404)
     }
 
-    // 비공개 과정은 관리자만 조회 가능
-    if (course.status !== 'published' && user?.role !== 'admin') {
+    // 비공개 과정은 관리자만 조회 가능 (published, active는 공개)
+    if (!['published', 'active'].includes(course.status) && user?.role !== 'admin') {
       return c.json(errorResponse('접근 권한이 없습니다.'), 403)
     }
 
