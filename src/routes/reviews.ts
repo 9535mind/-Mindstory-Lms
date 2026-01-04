@@ -37,7 +37,7 @@ const reviews = new Hono<{ Bindings: Bindings }>()
  * - 강좌당 1개의 리뷰만 작성 가능
  * - 별점은 1~5 범위
  */
-reviews.post('/courses/:courseId/reviews', requireAuth, async (c) => {
+reviews.post('/:courseId/reviews', requireAuth, async (c) => {
   try {
     const user = c.get('user')
     const courseId = parseInt(c.req.param('courseId'))
@@ -119,7 +119,7 @@ reviews.post('/courses/:courseId/reviews', requireAuth, async (c) => {
  * - limit: 페이지당 개수 (기본값: 10)
  * - sort: 정렬 기준 (recent, rating_high, rating_low)
  */
-reviews.get('/courses/:courseId/reviews', async (c) => {
+reviews.get('/:courseId/reviews', async (c) => {
   try {
     const courseId = parseInt(c.req.param('courseId'))
     const page = parseInt(c.req.query('page') || '1')
@@ -215,7 +215,7 @@ reviews.get('/courses/:courseId/reviews', async (c) => {
  * GET /api/courses/:courseId/reviews/summary
  * 수강평 통계 요약만 조회
  */
-reviews.get('/courses/:courseId/reviews/summary', async (c) => {
+reviews.get('/:courseId/reviews/summary', async (c) => {
   try {
     const courseId = parseInt(c.req.param('courseId'))
     const { DB } = c.env

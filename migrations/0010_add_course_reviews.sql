@@ -22,9 +22,9 @@ CREATE INDEX IF NOT EXISTS idx_course_reviews_user_id ON course_reviews(user_id)
 CREATE INDEX IF NOT EXISTS idx_course_reviews_rating ON course_reviews(rating);
 CREATE INDEX IF NOT EXISTS idx_course_reviews_created_at ON course_reviews(created_at DESC);
 
--- 강좌 테이블에 별점 통계 컬럼 추가 (이미 있을 수 있음)
--- ALTER TABLE courses ADD COLUMN rating_average REAL DEFAULT 0.0;
--- ALTER TABLE courses ADD COLUMN rating_count INTEGER DEFAULT 0;
+-- 강좌 테이블에 별점 통계 컬럼 추가
+ALTER TABLE courses ADD COLUMN rating_average REAL DEFAULT 0.0;
+ALTER TABLE courses ADD COLUMN rating_count INTEGER DEFAULT 0;
 
 -- 트리거: 리뷰 생성 시 강좌 통계 업데이트
 CREATE TRIGGER IF NOT EXISTS update_course_rating_on_insert
