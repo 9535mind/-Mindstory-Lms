@@ -25,13 +25,11 @@
     "git:log": "git log --oneline"
   },
   "dependencies": {
-    "@api.video/nodejs-client": "^2.6.8",
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
     "hono": "^4.11.3",
     "js-yaml": "^4.1.1",
-    "jsonwebtoken": "^9.0.3",
-    "openai": "^6.15.0"
+    "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251210.0",

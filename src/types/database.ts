@@ -242,6 +242,14 @@ export interface CreateCertificateInput {
   test_score?: number;
 }
 
+// Certificate Eligibility Check
+export interface CertificateEligibility {
+  eligible: boolean;
+  progress?: number;
+  completed_at?: string;
+  required_progress?: number;
+}
+
 // Session Types
 export interface UserSession {
   id: number;
@@ -296,6 +304,42 @@ export interface PaginatedResponse<T> {
   };
 }
 
+// Review Types (수강평/별점)
+export interface Review {
+  id: number;
+  course_id: number;
+  user_id: number;
+  user_name: string;
+  rating: number; // 1~5
+  comment: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateReviewInput {
+  course_id: number;
+  user_id: number;
+  rating: number;
+  comment: string;
+}
+
+export interface UpdateReviewInput {
+  rating?: number;
+  comment?: string;
+}
+
+export interface ReviewSummary {
+  average: number;
+  total: number;
+  distribution: {
+    5: number;
+    4: number;
+    3: number;
+    2: number;
+    1: number;
+  };
+}
+
 // Dashboard Statistics Types
 export interface DashboardStats {
   totalUsers: number;
@@ -307,3 +351,44 @@ export interface DashboardStats {
   recentEnrollments: Enrollment[];
   popularCourses: Course[];
 }
+
+// Error Code Types
+export enum ErrorCode {
+  // 인증 관련
+  AUTH_REQUIRED = 'AUTH_REQUIRED',
+  AUTH_INVALID = 'AUTH_INVALID',
+  AUTH_EXPIRED = 'AUTH_EXPIRED',
+  
+  // 권한 관련
+  FORBIDDEN = 'FORBIDDEN',
+  ADMIN_ONLY = 'ADMIN_ONLY',
+  
+  // 리소스 관련
+  NOT_FOUND = 'NOT_FOUND',
+  ALREADY_EXISTS = 'ALREADY_EXISTS',
+  
+  // 유효성 검증
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  INVALID_INPUT = 'INVALID_INPUT',
+  
+  // 비즈니스 로직
+  ALREADY_ENROLLED = 'ALREADY_ENROLLED',
+  NOT_ENROLLED = 'NOT_ENROLLED',
+  CERTIFICATE_NOT_ELIGIBLE = 'CERTIFICATE_NOT_ELIGIBLE',
+  REVIEW_ALREADY_EXISTS = 'REVIEW_ALREADY_EXISTS',
+}
+
+// Extended API Response with Error Code
+export interface ApiErrorResponse {
+  success: false;
+  error: string;
+  code?: ErrorCode;
+}
+
+export interface ApiSuccessResponse<T = any> {
+  success: true;
+  data: T;
+  message?: string;
+}
+
+export type ApiResponseUnion<T = any> = ApiSuccessResponse<T> | ApiErrorResponse;

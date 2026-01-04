@@ -59,8 +59,9 @@ app.route('/api/auth', auth)
 app.route('/api/auth/kakao', authKakao)  // 카카오 소셜 로그인
 app.route('/api/auth/google', authGoogle)  // 구글 소셜 로그인
 app.route('/api/courses', courses)
-app.route('/api/courses', reviews)  // 강좌 리뷰
+app.route('/api', reviews)  // 수강평/별점 API (courses/:id/reviews, reviews/:id, my/reviews)
 app.route('/api/enrollments', enrollments)
+app.route('/api', certificates)  // 수료증 API (courses/:id/certificate, my/certificates, certificates/:number)
 // Removed payment routes (Phase 2 cleanup)
 app.route('/api/admin', admin)
 // Removed popups route

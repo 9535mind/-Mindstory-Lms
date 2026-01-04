@@ -374,11 +374,21 @@ async function loadYouTubePlayer(lesson) {
     // YouTube API 로드 대기
     await waitForYouTubeAPI();
 
-    // 플레이어 컨테이너 생성 (투명 보호막으로 YouTube 로고/제목 클릭 완전 차단)
+    // 플레이어 컨테이너 생성 (투명 보호막으로 YouTube 로고/제목 클릭 완전 차단 + 배속 재생 컨트롤)
     container.innerHTML = `
         <div id="youtubeWrapper" style="position: relative; width: 100%; height: 600px; background: #000;">
             <div id="youtubePlayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
             <div id="youtubeProtectionLayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: auto; z-index: 999; background: transparent; cursor: default;"></div>
+            
+            <!-- 배속 재생 컨트롤 -->
+            <div id="playbackSpeedControl" style="position: absolute; bottom: 20px; right: 20px; z-index: 1000; display: flex; gap: 8px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px;">
+                <button class="speed-btn" data-speed="0.5" style="padding: 8px 12px; background: #444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;">0.5x</button>
+                <button class="speed-btn" data-speed="0.75" style="padding: 8px 12px; background: #444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;">0.75x</button>
+                <button class="speed-btn active" data-speed="1" style="padding: 8px 12px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;">1x</button>
+                <button class="speed-btn" data-speed="1.25" style="padding: 8px 12px; background: #444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;">1.25x</button>
+                <button class="speed-btn" data-speed="1.5" style="padding: 8px 12px; background: #444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;">1.5x</button>
+                <button class="speed-btn" data-speed="2" style="padding: 8px 12px; background: #444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;">2x</button>
+            </div>
         </div>
     `;
 
@@ -409,6 +419,27 @@ async function loadYouTubePlayer(lesson) {
 
 function onYouTubePlayerReady(event) {
     console.log('✅ YouTube player ready - video will start playing');
+    
+    // 배속 재생 버튼 이벤트 리스너 추가
+    const speedButtons = document.querySelectorAll('.speed-btn');
+    speedButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const speed = parseFloat(btn.dataset.speed);
+            if (player && player.setPlaybackRate) {
+                player.setPlaybackRate(speed);
+                
+                // 활성 버튼 스타일 업데이트
+                speedButtons.forEach(b => {
+                    b.style.background = '#444';
+                    b.classList.remove('active');
+                });
+                btn.style.background = '#1a73e8';
+                btn.classList.add('active');
+                
+                console.log(`⚡ 재생 속도 변경: ${speed}x`);
+            }
+        });
+    });
 }
 
 function onYouTubePlayerStateChange(event) {
