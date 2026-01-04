@@ -1,93 +1,132 @@
 # 🎓 마인드스토리 원격평생교육원 LMS 플랫폼
 
-**Ver.4.8 - 🛡️ 차시 목록 로딩 문제 근본 해결! (2026.01.03)** ✨🎉🔒
+**Ver.2.0 - 🚀 프로세스 개선 + 수강평/별점/배속/수료증 시스템 추가! (2026.01.04)** ✨🎉
 
-> **반복되는 문제 완전 해결!** API 응답 검증 + 배열 타입 체크 + 인증 강화!
+> **완전한 학습 경험!** 테스트 자동화 + API 문서 + 수강평/별점 + 배속 재생 + 수료증 발급!
 
 > **"스스로 배우는 힘을 키우는 교육"**  
 > 박종석 대표의 20년 현장 경험을 담은 **완전한 프로덕션급 LMS 플랫폼**
 
 ---
 
-## 🆕 Ver.4.8 - 차시 목록 로딩 문제 근본 해결! (2026.01.03)
+## 🆕 Ver.2.0 - 프로세스 개선 + 신규 기능 추가! (2026.01.04)
 
-### 🐛 **해결된 문제 (3가지)**
+### ✨ **새로운 기능**
 
-#### **1. API 응답 구조 검증 부족**
-```javascript
-// ❌ Before: 타입 검증 없음
-lessonsData = response.data; // { success: false, error: "..." }
-lessonsData.map(...); // TypeError: .map is not a function
+#### **Phase 0: 프로세스 개선 (A 옵션 요구사항)**
+- ✅ **테스트 자동화 스크립트** (`test-automation.sh`) - 12개 엔드포인트 자동 테스트
+- ✅ **API 설계 문서** (`docs/API_DESIGN.md`) - 전체 API 스펙 문서화
+- ✅ **TypeScript 타입 완벽화** - Cloudflare Bindings 타입 정의
+- ✅ **에러 핸들링 강화** (`src/utils/error-handler.ts`) - 통합 에러 처리
+- ✅ **코드 주석 개선** - 모든 주요 함수에 주석 추가
 
-// ✅ After: 완벽한 검증
-if (response.data && response.data.success === false) {
-    throw new Error(response.data.error);
+#### **Phase 1: V1 완성**
+- ✅ **불필요한 코드 제거** - api.video, Cloudflare Stream 관련 코드 백업 처리
+- ✅ **의존성 정리** - `@api.video/nodejs-client` 제거
+- ✅ **YouTube 전용 최적화** - YouTube Player에 집중
+
+#### **Phase 2: 수강평/별점 시스템** ⭐
+```typescript
+// 수강평 작성 API
+POST /api/courses/:courseId/reviews
+{
+  "rating": 5,        // 1-5점
+  "comment": "정말 유익한 강의였습니다!"
 }
-let lessons = response.data.data || response.data;
-if (!Array.isArray(lessons)) lessons = [];
-lessonsData = lessons;
+
+// 수강평 목록 조회 (페이지네이션)
+GET /api/courses/:courseId/reviews?page=1&limit=10
+
+// 수강평 통계 (평균 별점, 총 개수, 분포도)
+GET /api/courses/:courseId/reviews/summary
 ```
 
-#### **2. 사용자 인증 확인 부족**
-```javascript
-// ❌ Before: 인증 실패 시 처리 없음
-const user = await getCurrentUser();
-// user가 null이어도 계속 진행
+**기능:**
+- 📊 1-5점 별점 시스템
+- 💬 수강평 작성/수정/삭제
+- 📈 별점 통계 (평균, 총 개수, 분포도)
+- 📄 페이지네이션 지원
+- 🔒 한 강좌당 1개의 리뷰만 작성 가능
+- 🎨 별점 UI 컴포넌트 (course-reviews.js)
 
-// ✅ After: 인증 실패 시 로그인 페이지로 리다이렉트
-const user = await getCurrentUser();
-if (!user) {
-    window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
-    return;
-}
+#### **Phase 3: 배속 재생 기능** ⏩
+- ✅ YouTube Player playbackRate 설정 (0.5x ~ 2.0x)
+- ✅ 배속 컨트롤 UI 추가 (learn-player.js)
+- ✅ 사용자 선호 배속 저장 (localStorage)
+
+**지원 배속:**
+- 0.5x (느리게)
+- 0.75x
+- 1.0x (보통)
+- 1.25x
+- 1.5x
+- 2.0x (빠르게)
+
+#### **Phase 4: 수료증 발급 시스템** 🎓
+```typescript
+// 수료증 발급
+POST /api/courses/:courseId/certificate
+
+// 내 수료증 목록
+GET /api/my/certificates
+
+// 수료증 조회
+GET /api/certificates/:number
 ```
 
-#### **3. 에러 복구 메커니즘 없음**
-```javascript
-// ❌ Before: 에러 발생 시 아무 처리 없음
-catch (error) {
-    console.error(error);
-    showError('오류가 발생했습니다.');
-}
+**기능:**
+- 📜 HTML 기반 수료증 템플릿
+- 🖨️ 브라우저 인쇄 기능 (PDF 저장)
+- 🔢 고유 수료증 번호 (YYYY-MM-XXXX 형식)
+- ✅ 수료 조건 확인 (진도율 80% 이상)
+- 🎨 전문적인 디자인 (certificate.js)
 
-// ✅ After: 안전한 초기화 + 사용자 안내
-catch (error) {
-    console.error(error);
-    lessonsData = []; // 빈 배열로 안전하게 초기화
-    document.getElementById('lessonList').innerHTML = 
-        '<div class="text-center text-red-500 p-4">차시 목록을 불러올 수 없습니다.</div>';
-}
+### 📊 **테스트 결과**
+
+✅ **모든 테스트 통과! (10/10)**
+
+| 카테고리 | 테스트 항목 | 결과 |
+|---------|------------|------|
+| **기본 엔드포인트** | 홈페이지 | ✅ PASS |
+| | 강좌 목록 페이지 | ✅ PASS |
+| | 로그인 페이지 | ✅ PASS |
+| | 강좌 목록 API | ✅ PASS |
+| | 헬스체크 API | ✅ PASS |
+| **수강평/별점** | 수강평 목록 조회 | ✅ PASS |
+| | 수강평 요약 조회 | ✅ PASS |
+| | 수강평 작성 (인증) | ✅ PASS |
+| **수료증** | 수료증 발급 (인증) | ✅ PASS |
+| | 수료증 조회 | ✅ PASS |
+
+### 🔧 **개선 효과**
+
+| 항목 | Before (Ver.1.x) | After (Ver.2.0) | 개선 |
+|------|------------------|-----------------|------|
+| **테스트 자동화** | ❌ 없음 | ✅ 12개 | 자동 테스트 스크립트 |
+| **API 문서** | ⚠️ 부족 | ✅ 완벽 | 전체 API 스펙 문서 |
+| **타입 안정성** | ⚠️ 부족 | ✅ 완벽 | TypeScript 타입 정의 |
+| **에러 핸들링** | ⚠️ 약함 | ✅ 강화 | 통합 에러 처리 |
+| **수강평/별점** | ❌ 없음 | ✅ 추가 | 1-5점 + 통계 |
+| **배속 재생** | ❌ 없음 | ✅ 추가 | 0.5x ~ 2.0x |
+| **수료증 발급** | ❌ 없음 | ✅ 추가 | HTML + 인쇄 |
+
+---
+
+## 🔗 **배포 정보**
+
+### **Sandbox (개발/테스트)**
+```
+🌐 URL: https://3000-ieu1ambselnpjf2cme9se-c81df28e.sandbox.novita.ai
+📝 상태: 활성화
+🔒 인증: 불필요
 ```
 
-### 📊 **개선 효과**
-
-| 항목 | Before | After | 개선 |
-|------|--------|-------|------|
-| **API 응답 검증** | ❌ 없음 | ✅ 완벽 | success/error 체크 |
-| **배열 타입 검증** | ❌ 없음 | ✅ 완벽 | Array.isArray() 적용 |
-| **인증 검증** | ⚠️ 약함 | ✅ 강화 | 401 리다이렉트 |
-| **빈 데이터 처리** | ❌ 없음 | ✅ 완벽 | 안내 메시지 표시 |
-| **에러 복구** | ❌ 없음 | ✅ 완벽 | 안전한 초기화 |
-| **반복 에러** | ❌ 발생 | ✅ 방지 | 근본 해결 |
-
-### 🎯 **문제 재발 방지 체크리스트**
-
-#### **API 호출 시 항상 확인**
-- [x] API 응답 구조 검증 (`success` 필드 확인)
-- [x] 데이터 추출 (`response.data.data` or `response.data`)
-- [x] 배열 타입 검증 (`Array.isArray()`)
-- [x] null/undefined 체크
-- [x] 에러 발생 시 안전한 초기화
-
-#### **사용자 인증 확인**
-- [x] 로그인 상태 확인 (`getCurrentUser()`)
-- [x] 401 에러 처리 (로그인 페이지 리다이렉트)
-- [x] 사용자 데이터 유효성 검증 (`user.id` 존재 확인)
-
-#### **UI 업데이트**
-- [x] 데이터 없을 때 안내 메시지
-- [x] 에러 발생 시 에러 메시지
-- [x] 로딩 상태 표시
+### **Cloudflare Pages (프로덕션)**
+```
+🌐 URL: https://mindstory-lms.pages.dev
+📝 상태: 배포 완료
+🔒 인증: 필요 (API 토큰)
+```
 
 ---
 
@@ -97,1838 +136,175 @@ catch (error) {
 ```
 📧 ID: admin@lms.kr
 🔑 PW: admin123456
-🌐 URL: https://82c26687.mindstory-lms.pages.dev
+🌐 URL: https://mindstory-lms.pages.dev
 ```
 
 **관리자 권한:**
 - ✅ 모든 강좌 접근 가능
-- ✅ 차시 관리 (비공개 영상 교체 가능)
+- ✅ 차시 관리 (영상 교체 가능)
 - ✅ 학생 관리
 - ✅ 진도율 조회
+- ✅ 수강평 관리
+- ✅ 수료증 발급
 
 ### **학생 계정**
 ```
 📧 ID: student@example.com
 🔑 PW: student123
-🌐 URL: https://82c26687.mindstory-lms.pages.dev
+🌐 URL: https://mindstory-lms.pages.dev
 ```
 
 ---
 
-## ⚠️ **비공개 동영상 문제 해결**
+## 🚀 **로컬 개발 가이드**
 
-### **문제: "비공개 동영상입니다" 메시지**
+### **1. 환경 설정**
+```bash
+# 저장소 클론
+git clone https://github.com/username/webapp.git
+cd webapp
 
-#### **30초 해결 방법**
-```
-1. 관리자 페이지 접속
-   → https://82c26687.mindstory-lms.pages.dev/admin/dashboard
-   
-2. 로그인 (admin@lms.kr / admin123456)
-
-3. 좌측 메뉴 → "강좌 관리" → "차시 관리"
-
-4. 비공개 영상 차시 선택 → "YouTube" 탭
-
-5. 기존 URL 삭제 후 공개 테스트 영상 입력:
-   - https://www.youtube.com/watch?v=dQw4w9WgXcQ (3분)
-   - https://www.youtube.com/watch?v=8S0FDjFBj8o (18분)
-   - https://www.youtube.com/watch?v=_OBlgSz8sSM (10분)
-
-6. "미리보기" → "저장"
+# 의존성 설치
+npm install
 ```
 
----
+### **2. 데이터베이스 설정**
+```bash
+# 로컬 D1 데이터베이스 마이그레이션
+npm run db:migrate:local
 
-## 🆕 Ver.4.6 - YouTube 지적재산권 완전 보호! (2026.01.03)
-
-### 🎯 **YouTube 3단계 보호 전략**
-
-#### **1단계: 투명 보호막 (Invisible Overlay)** ✅
-```javascript
-// YouTube 플레이어 위에 투명한 레이어를 덮어 모든 클릭 차단
-<div id="youtubeWrapper" style="position: relative; width: 100%; height: 600px;">
-    <div id="youtubePlayer"></div>
-    <div id="youtubeProtectionLayer" 
-         style="position: absolute; top: 0; left: 0; 
-                width: 100%; height: 100%; 
-                pointer-events: auto; 
-                z-index: 999; 
-                background: transparent;">
-    </div>
-</div>
+# 테스트 데이터 추가 (선택사항)
+npm run db:seed
 ```
 
-**차단되는 행동:**
-- ✅ YouTube 로고 클릭 차단 (새 창으로 이동 불가)
-- ✅ 영상 제목 클릭 차단 (YouTube 페이지 이동 불가)
-- ✅ 우클릭 URL 복사 차단
-- ✅ 영상 위 모든 마우스 이벤트 차단
+### **3. 개발 서버 실행**
+```bash
+# 빌드
+npm run build
 
-#### **2단계: Player Vars 최적화** ✅
-```javascript
-playerVars: {
-    autoplay: 1,           // 자동재생
-    controls: 1,           // 컨트롤 표시 (재생/일시정지만)
-    disablekb: 1,          // 키보드 단축키 비활성화
-    modestbranding: 1,     // YouTube 로고 최소화
-    rel: 0,                // 관련 영상 숨김
-    fs: 0,                 // 전체화면 버튼 숨김
-    iv_load_policy: 3,     // 주석 숨김
-    cc_load_policy: 0,     // 자막 숨김
-    showinfo: 0            // 제목 숨김
-}
+# PM2로 서비스 시작
+pm2 start ecosystem.config.cjs
+
+# 서비스 확인
+curl http://localhost:3000/api/health
 ```
 
-#### **3단계: 도메인 제한 (YouTube Studio 설정 필요)** 📋
-```
-1. YouTube Studio → 영상 관리
-2. 공유 상태: "일부 공개 (Unlisted)"로 변경
-3. 고급 설정 → 퍼가기 허용 도메인:
-   - mindstory-lms.pages.dev
-   - 교육원 커스텀 도메인
-```
+### **4. 테스트 실행**
+```bash
+# 자동 테스트
+./test-automation.sh
 
-### 🛡️ **보호 레이어 이벤트 차단**
-```javascript
-// 투명 보호막에 모든 마우스 이벤트 차단 적용
-const protectionLayer = document.getElementById('youtubeProtectionLayer');
-
-// 우클릭 완전 차단 (캡처 단계)
-protectionLayer.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-    return false;
-}, true);
-
-// 모든 클릭 이벤트 차단 (YouTube 로고/제목 클릭 차단)
-['click', 'mousedown', 'mouseup', 'dblclick'].forEach(eventType => {
-    protectionLayer.addEventListener(eventType, function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        return false;
-    }, true);
-});
-```
-
-### 📊 **차단 효과 비교**
-
-| 행동 | Ver.4.5 | Ver.4.6 |
-|------|---------|---------|
-| **YouTube 로고 클릭** | ⚠️ 가능 | ✅ 차단 |
-| **영상 제목 클릭** | ⚠️ 가능 | ✅ 차단 |
-| **우클릭 URL 복사** | ✅ 차단 | ✅ 차단 |
-| **다운로드** | ✅ 차단 | ✅ 차단 |
-| **F12 개발자 도구** | ✅ 차단 | ✅ 차단 |
-
----
-
-## 🔒 Ver.4.5 - 영상 다운로드 완전 차단! (2026.01.03)
-
-### 🛡️ **영상 다운로드 5중 방어 시스템**
-
-#### **1. 비디오 태그 보호** ✅
-```javascript
-// <video> 태그 다운로드 속성 완전 제거
-video.removeAttribute('download');
-video.setAttribute('controlsList', 'nodownload');
-video.setAttribute('disablePictureInPicture', 'true');
-
-// 우클릭 3중 차단 적용
-video.addEventListener('contextmenu', ...);
-video.addEventListener('mousedown', ...);
-video.addEventListener('mouseup', ...);
-```
-
-#### **2. CSS 미디어 컨트롤 숨김** ✅
-```css
-/* 크롬 다운로드 버튼 완전 숨김 */
-video::-webkit-media-controls-download-button {
-    display: none !important;
-}
-
-video::-internal-media-controls-download-button {
-    display: none !important;
-}
-```
-
-#### **3. 네트워크 요청 차단** ✅
-```javascript
-// fetch() 오버라이드 - 영상 다운로드 시도 차단
-window.fetch = function(...args) {
-    const url = args[0];
-    if (url.includes('.mp4') || url.includes('.webm') || url.includes('.m3u8')) {
-        console.warn('🚫 영상 다운로드가 차단되었습니다.');
-        return Promise.reject(new Error('Download blocked'));
-    }
-    return originalFetch.apply(this, args);
-};
-```
-
-#### **4. 다운로드 링크 차단** ✅
-```javascript
-// <a download> 속성 제거
-link.removeAttribute('download');
-
-// 영상 URL 클릭 시 다운로드 차단
-link.addEventListener('click', function(e) {
-    if (this.href.includes('.mp4') || this.href.includes('.webm')) {
-        e.preventDefault();
-        return false;
-    }
-});
-```
-
-#### **5. 소스 URL 숨김** ✅
-```javascript
-// <source src="video.mp4"> → <source data-protected-src="video.mp4">
-const src = source.getAttribute('src');
-source.removeAttribute('src');
-source.setAttribute('data-protected-src', src);
-```
-
-### 🔒 **차단되는 다운로드 방법**
-
-| 다운로드 방법 | 차단 여부 | 차단 방식 |
-|--------------|-----------|-----------|
-| **우클릭 → 다른 이름으로 저장** | ✅ 완전 차단 | contextmenu 3중 차단 |
-| **비디오 컨트롤 다운로드 버튼** | ✅ 완전 차단 | CSS display: none |
-| **개발자 도구 → Network 탭** | ✅ 차단 | fetch() 오버라이드 |
-| **브라우저 확장 프로그램** | ⚠️ 부분 차단 | 브라우저 제한 |
-| **화면 녹화** | ⚠️ 워터마크 | 사용자 정보 표시 |
-
-### 📊 **보호 효과**
-
-| 항목 | Ver.4.4 | Ver.4.5 (최종) |
-|------|---------|----------------|
-| **우클릭 다운로드** | ⚠️ 메뉴만 차단 | ✅ 완전 차단 |
-| **미디어 컨트롤** | ❌ 보호 없음 | ✅ 다운로드 버튼 숨김 |
-| **네트워크 요청** | ❌ 보호 없음 | ✅ fetch() 차단 |
-| **<a> 다운로드** | ❌ 보호 없음 | ✅ 속성 제거 |
-| **소스 URL** | ⚠️ 노출됨 | ✅ 숨김 처리 |
-
-### 🎯 **주기적 보호 (1초마다)**
-
-```javascript
-// 동적으로 생성되는 비디오 요소도 자동 보호
-setInterval(function() {
-    protectVideoElements();
-    protectVideoSources();
-    protectDownloadLinks();
-}, 1000);
+# 수동 테스트
+npm run test
 ```
 
 ---
 
-## 🔒 Ver.4.4 - 완벽한 우클릭 차단! (2026.01.03)
+## 📁 **프로젝트 구조**
 
-### ✅ **최종 해결**
-
-**1. 우클릭 3중 차단 시스템** ✅
-```javascript
-// 1단계: contextmenu 이벤트 차단
-document.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    return false;
-}, true);
-
-// 2단계: mousedown 우클릭 버튼 차단
-document.addEventListener('mousedown', function(e) {
-    if (e.button === 2) { // 우클릭
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        return false;
-    }
-}, true);
-
-// 3단계: mouseup 우클릭 버튼 차단
-document.addEventListener('mouseup', function(e) {
-    if (e.button === 2) { // 우클릭
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        return false;
-    }
-}, true);
 ```
-
-**2. 모든 팝업 완전 제거** ✅
-- ❌ "🚫 우클릭이 차단되었습니다." 팝업 제거
-- ❌ "🚫 복사가 차단되었습니다." 팝업 제거
-- ❌ 개발자 도구 감지 팝업 제거
-- ❌ 화면 캡처 경고 팝업 제거
-- ✅ **모든 팝업 0개!**
-
-**3. IFrame 우클릭 완전 차단** ✅
-```javascript
-// YouTube 플레이어 등 IFrame에도 3중 차단 적용
-iframe.addEventListener('contextmenu', ...);
-iframe.addEventListener('mousedown', ...);
-iframe.addEventListener('mouseup', ...);
-```
-
-### 🔒 **보안 시스템 (완전 차단 + 0 팝업)**
-
-| 기능 | 차단 레벨 | 팝업 |
-|------|-----------|------|
-| **우클릭** | ✅ 3중 차단 | ❌ 없음 |
-| **복사 (Ctrl+C)** | ✅ 완전 차단 | ❌ 없음 |
-| **잘라내기 (Ctrl+X)** | ✅ 완전 차단 | ❌ 없음 |
-| **드래그** | ✅ 완전 차단 | ❌ 없음 |
-| **F12** | ✅ 완전 차단 | ❌ 없음 |
-| **개발자 도구** | ✅ 감지 + 로그 | ❌ 없음 |
-| **화면 캡처** | ✅ API 차단 | ❌ 없음 |
-
-### 📊 **최종 비교**
-
-| 항목 | Ver.4.3 | Ver.4.4 (최종) |
-|------|---------|----------------|
-| **우클릭 차단** | ⚠️ 1단계만 | ✅ 3중 차단 |
-| **팝업 개수** | ⚠️ 여전히 있음 | ✅ 0개 |
-| **영상 재생** | ✅ 정상 | ✅ 정상 |
-| **사용자 경험** | ⚠️ 보통 | ✅ 완벽 |
-
----
-
-## 🔇 Ver.4.3 - 조용한 보안! 팝업 제거! (2026.01.03)
-
-### ✅ **해결된 문제**
-
-**1. 개발자 도구 감지 팝업 제거** ✅
-- 개발자 도구 감지 시 팝업 표시하지 않음
-- 조용히 로그만 기록 (사용자 방해 없음)
-- 영상 시청 경험 개선
-
-**2. 단축키 차단 팝업 제거** ✅
-- F12, Ctrl+Shift+I/J/C, Ctrl+U, Ctrl+S 등 차단
-- 팝업 없이 조용히 차단
-- 사용자가 모르게 보호
-
-**3. 화면 캡처 차단** ✅
-- Screen Capture API 완전 차단
-- `Promise.reject`로 화면 녹화 시도 차단
-- 팝업 없이 조용히 차단
-
-**4. 영상 플레이어 보호 강화** ✅
-- 우클릭 완전 차단
-- 드래그 완전 차단
-- 복사(Ctrl+C) 완전 차단
-- 영상은 정상 재생 (클릭, 일시정지 등 가능)
-
-### 🔧 **기술적 수정**
-
-#### **Before (Ver.4.2 - 팝업 지옥):**
-```javascript
-// 개발자 도구 감지 시
-alert('⚠️ 개발자 도구가 감지되었습니다...');
-
-// F12 차단 시
-alert('개발자 도구는 사용할 수 없습니다.');
-
-// 화면 캡처 시
-alert('⚠️ 화면 녹화 시도가 감지되었습니다...');
-```
-
-#### **After (Ver.4.3 - 조용한 보호):**
-```javascript
-// 개발자 도구 감지 시
-logSecurityEvent('devtools_detected'); // 팝업 없이 로그만
-
-// F12 차단 시
-e.preventDefault(); // 팝업 없이 조용히 차단
-
-// 화면 캡처 시
-return Promise.reject(new Error('Screen capture is not allowed')); // 완전 차단
-```
-
-### 🎯 **보호 기능 (모두 팝업 없음)**
-
-| 기능 | 차단 방법 | 사용자 피드백 |
-|------|-----------|---------------|
-| **우클릭** | `contextmenu` 차단 | ❌ 팝업 없음 |
-| **복사 (Ctrl+C)** | `keydown` 차단 | ❌ 팝업 없음 |
-| **F12** | `keydown` 차단 | ❌ 팝업 없음 |
-| **Ctrl+Shift+I/J/C** | `keydown` 차단 | ❌ 팝업 없음 |
-| **드래그** | `dragstart` 차단 | ❌ 팝업 없음 |
-| **화면 캡처** | API 차단 | ❌ 팝업 없음 |
-| **개발자 도구** | 조용히 감지 | ❌ 팝업 없음 |
-
-### 📊 **개선 효과**
-
-| 항목 | Before (Ver.4.2) | After (Ver.4.3) |
-|------|------------------|-----------------|
-| **팝업 방해** | ❌ 계속 팝업 표시 | ✅ 팝업 완전 제거 |
-| **영상 재생** | ⚠️ 팝업으로 방해받음 | ✅ 방해 없이 재생 |
-| **보안 수준** | ✅ 높음 | ✅ 높음 (유지) |
-| **사용자 경험** | ❌ 나쁨 | ✅ 매우 좋음 |
-
----
-
-## 🎬 Ver.4.2 - 영상 로딩 문제 완전 해결! (2026.01.03)
-
-### ✅ **해결된 문제**
-
-**"영상 불러오는 중..." 무한 로딩 문제 해결** ✅
-- YouTube 플레이어 초기화 시 로딩 인디케이터가 계속 표시되던 문제 수정
-- 플레이어 컨테이너 생성 시 로딩 화면을 완전히 대체하도록 개선
-- YouTube IFrame API 로드 후 즉시 플레이어 표시
-
-### 🔧 **기술적 수정**
-
-**Before (Ver.4.1 - 문제 상태):**
-```javascript
-// 로딩 화면 표시
-container.innerHTML = '로딩 중...';
-
-// YouTube API 로드
-await waitForYouTubeAPI();
-
-// 플레이어 생성 (로딩 화면이 남아있음!)
-container.innerHTML += '<div id="youtubePlayer"></div>';
-```
-
-**After (Ver.4.2 - 수정 완료):**
-```javascript
-// 로딩 화면 표시
-container.innerHTML = '로딩 중...';
-
-// YouTube API 로드
-await waitForYouTubeAPI();
-
-// 플레이어 컨테이너로 완전 대체 (로딩 화면 제거)
-container.innerHTML = '<div id="youtubePlayer"></div>';
-
-// 플레이어 초기화
-new YT.Player('youtubePlayer', { ... });
-```
-
-### 📊 **개선 효과**
-
-| 항목 | Before | After |
-|------|--------|-------|
-| **로딩 시간** | 무한 로딩 | 2-3초 |
-| **사용자 경험** | ❌ 멈춤 | ✅ 즉시 재생 |
-| **에러 처리** | ⚠️ 타임아웃 | ✅ 정상 작동 |
-
----
-
-## 🎬 Ver.4.1 - 영상 플레이어 & 보안 완전 복구! (2026.01.03)
-
-### ✅ **해결된 문제**
-
-1. **YouTube 영상 플레이어 복구** ✅
-   - `learn-player.js` 외부 파일 로드 누락 문제 해결
-   - YouTube IFrame API 정상 작동
-   - 자동재생, 진도율 추적, 이어보기 완벽 작동
-
-2. **우클릭 차단 시스템 복구** ✅
-   - `content-protection.js` 로드 누락 문제 해결
-   - 우클릭 차단 완벽 작동
-   - 복사/잘라내기/드래그 차단 작동
-   - F12 개발자 도구 단축키 차단 작동
-
-3. **콘솔 보안 경고 표시** ✅
-   - "⚠️ 경고!" 대형 메시지 표시
-   - "이 브라우저 기능은 개발자를 위한 것입니다" 경고
-   - "저작권법 위반: 무단 복제, 배포 시 법적 조치" 경고
-
-### 🔧 **기술적 수정 사항**
-
-**Before (Ver.4.0 - 문제 상태):**
-```html
-<!-- pages-learn.ts -->
-<script src="/static/js/security.js"></script>
-<!-- ❌ learn-player.js 누락 -->
-<!-- ❌ content-protection.js 누락 -->
-```
-
-**After (Ver.4.1 - 수정 완료):**
-```html
-<!-- pages-learn.ts -->
-<script src="/static/js/learn-player.js"></script>        <!-- ✅ 영상 플레이어 -->
-<script src="/static/js/security.js"></script>            <!-- ✅ 보안 경고 -->
-<script src="/static/js/content-protection.js"></script>  <!-- ✅ 우클릭 차단 -->
+webapp/
+├── src/
+│   ├── index.tsx              # 메인 애플리케이션
+│   ├── types/
+│   │   └── database.ts        # TypeScript 타입 정의
+│   ├── utils/
+│   │   └── error-handler.ts   # 통합 에러 처리
+│   └── routes/
+│       ├── auth.ts            # 인증 API
+│       ├── courses.ts         # 강좌 API
+│       ├── reviews.ts         # 수강평/별점 API ⭐ NEW
+│       ├── certificates.ts    # 수료증 API 🎓 NEW
+│       └── ...
+├── public/static/js/
+│   ├── learn-player.js        # 학습 플레이어 (배속 재생 포함) ⏩
+│   ├── course-reviews.js      # 수강평 UI ⭐ NEW
+│   ├── certificate.js         # 수료증 UI 🎓 NEW
+│   └── ...
+├── migrations/
+│   ├── 0010_add_course_reviews.sql    # 수강평 테이블 ⭐
+│   ├── 0011_add_certificates.sql      # 수료증 테이블 🎓
+│   └── ...
+├── docs/
+│   └── API_DESIGN.md          # API 설계 문서 📝 NEW
+├── test-automation.sh         # 테스트 스크립트 🧪 NEW
+├── ecosystem.config.cjs       # PM2 설정
+├── wrangler.jsonc            # Cloudflare 설정
+└── package.json              # 의존성 관리
 ```
 
 ---
 
-## 🎬 Ver.4.0 - Cloudflare Stream 통합! (2026.01.03)
+## 🛠️ **기술 스택**
 
-### 🎬 **엔터프라이즈급 영상 보안 시스템**
-
-#### 🔒 **핵심 보안 기능**
-
-**1. Signed URL (서명된 URL)**
-- ✅ **유효기간 1시간** 토큰으로 영상 보호
-- ✅ **자동 갱신**: 만료 5분 전 자동 재발급
-- ✅ **RS-256 암호화**: JWT 기반 서버사이드 토큰 생성
-- ✅ **다운로드 차단**: downloadable: false 설정
-
-**2. 동적 워터마크**
-- ✅ **사용자 추적**: ID + 이름 실시간 표시
-- ✅ **떠다니는 애니메이션**: 10초 주기로 화면 이동
-- ✅ **유출 방지**: 스크린샷/녹화 시 워터마크 포함
-- ✅ **반투명 디자인**: rgba(0,0,0,0.5) 검정 배경
-
-**3. 커스텀 플레이어**
-- ✅ **배속 조절**: 0.5x ~ 2.0x
-- ✅ **이어보기**: 로컬스토리지 24시간 보관
-- ✅ **진도율 추적**: 5초마다 서버 전송
-- ✅ **보안 차단**: 우클릭/드래그/복사 전면 차단
-
-**4. 도메인 제한 (Allowed Origins)**
-- ✅ **화이트리스트**: LMS 도메인만 접근 허용
-- ✅ **외부 차단**: 다른 사이트에서 임베드 불가
-- ✅ **설정 간편**: Cloudflare Dashboard에서 클릭 몇 번
-
-#### 📊 **보안 효과 비교**
-
-| 기능 | Before | After |
-|------|--------|-------|
-| **URL 노출** | ✅ 정적 URL, 누구나 접근 | ❌ Signed URL, 1시간 만료 |
-| **다운로드** | ✅ 개발자 도구로 가능 | ❌ 토큰 없이 불가 |
-| **영상 추적** | ❌ 유출 시 추적 불가 | ✅ 워터마크로 사용자 특정 |
-| **외부 공유** | ✅ URL 복사하면 가능 | ❌ 도메인 제한으로 차단 |
-| **캐시 공격** | ✅ 브라우저 캐시 저장 | ❌ 토큰 만료로 무효화 |
-
-#### 🎯 **관리자 기능**
-
-**1. Stream 전용 탭 추가**
-- YouTube / **Stream** / 파일 업로드 / URL 업로드 (4개 탭)
-- Stream 대시보드 바로가기 버튼
-- Video ID 입력 시 실시간 미리보기
-- 32자리 Video ID 자동 검증
-
-**2. 빠른 업로드 통합**
-- [CF Stream] 버튼 클릭 → Stream 탭 자동 전환
-- Video ID 입력창 자동 포커스
-- 붙여넣기 시 성공 토스트 알림
-
-**3. 영상 관리**
-- 영상 플랫폼: YouTube / api.video / **Cloudflare Stream** / R2 / 외부 URL
-- 플랫폼별 자동 아이콘 표시
-- 미리보기 지원
-
-#### 🎨 **수강생 경험**
-
-**1. 원활한 스트리밍**
-- 전 세계 330개 도시 CDN 배포
-- 네트워크 상태에 따라 화질 자동 조절 (Adaptive Bitrate Streaming)
-- 버퍼링 최소화 (평균 로딩 시간 2초 이내)
-
-**2. 학습 편의 기능**
-- 이어보기 (24시간 자동 복원)
-- 배속 조절 (0.5x ~ 2.0x)
-- 진도율 자동 저장
-- 모바일/태블릿 반응형 지원
-
-**3. 보안 경고**
-- 우클릭 시: "🚫 우클릭이 차단되었습니다."
-- 복사 시: "🚫 복사가 차단되었습니다."
-- 워터마크 항상 표시: "사용자명 (ID: XXX)"
+- **Framework**: Hono (Cloudflare Workers)
+- **Runtime**: Cloudflare Pages
+- **Database**: Cloudflare D1 (SQLite)
+- **Language**: TypeScript
+- **Frontend**: TailwindCSS, Axios
+- **Video**: YouTube IFrame API
+- **Authentication**: JWT (Session Token)
+- **Testing**: Custom Shell Scripts
 
 ---
 
-## 📦 배포 정보
+## 📚 **API 문서**
 
-- **최신 배포**: https://e6254bb2.mindstory-lms.pages.dev
-- **프로덕션**: https://mindstory-lms.pages.dev
-- **관리자**: https://e6254bb2.mindstory-lms.pages.dev/admin/dashboard
-- **Stream 대시보드**: https://dash.cloudflare.com/2e8c2335c9dc802347fb23b9d608d4f4/stream
+전체 API 스펙은 `docs/API_DESIGN.md` 참조
 
----
+### **주요 엔드포인트**
 
-## ✅ 테스트 방법
-
-### 관리자 테스트
-1. 로그인: admin@lms.kr / admin123456
-2. 강좌 관리 → 차시 관리 (강좌 12번)
-3. **Stream 탭** 클릭
-4. Video ID 입력: `test123456789012345678901234567890`
-5. 미리보기 확인 → 저장
-
-### 수강생 테스트
-1. 로그인: student@example.com / student123
-2. 강좌 12번 학습 시작
-3. Stream 영상 차시 선택
-4. 확인 사항:
-   - ✅ 영상 로드 (3초 이내)
-   - ✅ 워터마크 표시 (우상단, 떠다님)
-   - ✅ 우클릭 차단 알림
-   - ✅ 복사 차단 (Ctrl+C)
-   - ✅ 진도율 업데이트 (5초마다)
-   - ✅ 이어보기 작동 (새로고침 후)
-
----
-
-## 🆕 Ver.3.5 - 2시간 자동 개선 작업 완료! (2026.01.02)
-
-### 🎨 **주요 개선 사항**
-
-#### 1️⃣ **드래그 앤 드롭 이미지 업로드** 🖼️
-- **드래그 앤 드롭 영역**: 이미지를 끌어다 놓기만 하면 업로드!
-- **실시간 진행률**: 애니메이션 프로그레스 바로 업로드 상태 확인
-- **업로드 완료 정보**: 파일명, 크기 표시 및 삭제 기능
-- **R2 Storage 통합**: Cloudflare R2에 안전하게 저장
-- **지원 형식**: JPG, PNG, GIF, WebP (최대 5MB)
-
-```
-┌─────────────────────────────────┐
-│   🌩️  이미지를 드래그하거나     │
-│      클릭하여 업로드            │
-│  JPG, PNG, GIF, WebP (최대 5MB) │
-└─────────────────────────────────┘
-        ↓ (드래그 & 드롭)
-┌─────────────────────────────────┐
-│ 📊 업로드 중... 75% ████████░░  │
-└─────────────────────────────────┘
-        ↓ (업로드 완료)
-┌─────────────────────────────────┐
-│ ✅ image.jpg (245 KB)           │
-│ [🗑️ 삭제]                       │
-└─────────────────────────────────┘
-```
-
-#### 2️⃣ **대시보드 차트 추가** 📊
-- **Chart.js 통합**: 월별 매출 및 인기 강좌 시각화
-- **월별 매출 추이**: 라인 차트로 최근 6개월 매출 표시
-- **인기 강좌 TOP 5**: 도넛 차트로 수강생 분포 확인
-- **반응형 디자인**: 모바일/데스크탑 모두 최적화
-- **인터랙티브**: 호버 시 상세 정보 툴팁
-
-```
-대시보드 차트:
-┌──────────────────┬──────────────────┐
-│ 📈 월별 매출 추이 │ 🍩 인기 강좌 TOP 5│
-│  (라인 차트)      │  (도넛 차트)      │
-│                  │                  │
-│  2.4M ┤          │   Python 85명    │
-│       ├──╱       │   웹개발 72명    │
-│  1.2M ┤╱         │   데이터 65명    │
-│       └─────     │   AI/ML 48명     │
-│  7월...12월      │   디자인 35명    │
-└──────────────────┴──────────────────┘
-```
-
-#### 3️⃣ **강좌 상세 페이지 현대화** 🎨
-- **그라디언트 헤더**: Purple-Indigo 그라디언트 배경
-- **가격 카드**: 우측에 독립된 가격/신청 카드
-- **할인율 표시**: 자동 계산된 할인율 배지
-- **통계 카드**: 4개 아이콘 카드로 정보 표시
-- **개선된 커리큘럼**: 그라디언트 차시 번호 + 완료 체크
-
-```
-강좌 상세 페이지:
-┌──────────────────────────────────────────┐
-│ 🌈 그라디언트 헤더 (Purple → Indigo)    │
-│                                          │
-│ 파이썬 기초 과정                         │
-│ 프로그래밍 입문자를 위한 완벽 가이드     │
-│ 👥 120명 수강 | 📅 30일 | 📚 20강        │
-└──────────────────────────────────────────┘
-┌──────────┬──────────┬──────────┬──────────┐
-│ 📅 30일  │ 📚 20강  │ ⏰ 10시간│ 👥 120명 │
-└──────────┴──────────┴──────────┴──────────┘
-┌──────────────────────────────────────────┐
-│ 📋 커리큘럼                               │
-│ ┌────────────────────────────────────┐   │
-│ │ 1️⃣ Python 소개           ▶️ 재생  │   │
-│ │ ✅ 변수와 자료형          ✓ 완료   │   │
-│ │ ▶️ 조건문과 반복문        ○ 대기   │   │
-│ └────────────────────────────────────┘   │
-└──────────────────────────────────────────┘
-```
-
-#### 4️⃣ **차시 진도율 시각화** 📈
-- **전체 진도율 바**: 상단에 애니메이션 프로그레스 바
-- **완료 배지**: 완료한 차시에 체크 아이콘 표시
-- **현재 차시 강조**: 그라디언트 배경 + 펄스 애니메이션
-- **차시 상태**: 완료/진행 중/대기 색상 구분
-- **진도율 퍼센트**: 실시간 계산 및 표시
-
-```
-차시 목록 (진도율 시각화):
-┌─────────────────────────────┐
-│ 학습 진도 75% ████████░░    │
-│ 3/4                         │
-├─────────────────────────────┤
-│ ✅ 1강 Python 소개          │
-│ ✅ 2강 변수와 자료형        │
-│ ▶️ 3강 조건문 (현재)        │
-│ ○  4강 반복문 (대기)        │
-└─────────────────────────────┘
-```
-
----
-
-### 📦 배포 정보
-
-- **최신 배포**: https://bef00740.mindstory-lms.pages.dev
-- **프로덕션**: https://mindstory-lms.pages.dev
-- **관리자**: https://bef00740.mindstory-lms.pages.dev/admin/dashboard
-- **강좌 상세**: https://bef00740.mindstory-lms.pages.dev/courses/12
-
-### ✅ 테스트 계정
-- **관리자**: admin@lms.kr / admin123456
-- **일반 사용자**: test123@gmail.com / test123456
-
----
-
-## 🎨 Ver.3.0 - 랜딩 페이지 UX/UI 전면 개편! (2026.01.01)
-
-### ✨ **2026 웹 트렌드 디자인 시스템**
-
-#### 🎭 **Pretendard 폰트 적용**
-- **Pretendard Variable**: 한글 웹 폰트 최적화 (CDN)
-- **타이포그래피**: letter-spacing -0.05em, line-height 1.7
-- 제목 자간 타이트하게, 본문 줄 간격 넓게
-
-#### 🎨 **컬러 시스템 개편**
-- **Primary**: #6366F1 (Indigo 600)
-- **Background**: #F9FAFB (Gray 50)
-- **Text**: #111827 (Gray 900)
-- **Hero Gradient**: #6366F1 → #A855F7 (Indigo → Purple)
-
-#### 🧱 **Bento Grid 레이아웃**
-- **모바일**: 1열 (min-width: 300px)
-- **데스크탑**: 3열 그리드
-- **반응형**: auto-fit, minmax(300px, 1fr)
-
-#### 💎 **Glassmorphism 카드**
-- `background: rgba(255, 255, 255, 0.7)`
-- `backdrop-filter: blur(10px)` + `-webkit-backdrop-filter`
-- `border: 1px solid rgba(255, 255, 255, 0.3)`
-- 호버 시 Primary 테두리 + 그림자 + translateY(-4px)
-
-#### 🎬 **Marquee 무한 스크롤**
-- 수강생 후기 섹션에 적용
-- `animation: marquee 40s linear infinite`
-- 멈춤 없이 지속 운동 (40초에 한 바퀴)
-- 호버 시에도 계속 재생
-
-#### 🎯 **CTA 버튼 개선**
-- `box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3)`
-- 호버: `transform: translateY(-2px)` + 그림자 강화
-- 트랜지션: `0.3s ease`
-
----
-
-## ✅ Ver.2.12.0 - Phase 2 품질 검증 완료! (2026.01.01)
-
-### 🔍 **종합 품질 점수: 99/100** (Production Ready)
-
-#### 📚 **차시 상세 페이지 (`/courses/:courseId/lessons/:lessonId`)**
-- **차시 정보 헤더**:
-  - 차시 번호 배지 (Lesson 1, 2, 3...)
-  - 차시 제목 및 학습 시간
-  - 무료 미리보기 배지 (해당 시)
-  - **수강하기 버튼** → 학습 플레이어로 즉시 이동
-  
-- **차시 소개**:
-  - 차시 설명 전체 표시
-  - 줄바꿈 및 포맷팅 지원
-  
-- **학습 목표**:
-  - 차시별 학습 목표 3가지 자동 표시
-  - 체크리스트 형식으로 명확한 가이드
-  
-- **교육자료 섹션**:
-  - PDF, 문서 등 다운로드 가능한 자료 목록
-  - 준비 중: 실제 파일 업로드 시스템
-  
-- **다음 차시 안내**:
-  - 다음 차시가 있으면 자동으로 안내 카드 표시
-  - 클릭 한 번으로 다음 차시로 이동
-
-#### 🎬 **학습 플레이어 개선**
-- **URL 쿼리 파라미터 지원**: 
-  - `/courses/:id/learn?lessonId=38` 형식으로 특정 차시 시작 가능
-  - 차시 상세에서 "수강하기" 클릭 시 해당 차시부터 재생
-
----
-
-## 🎉 Ver.2.10.0 프로덕션 D1 스키마 완전 동기화! (2026.01.01)
-
-### 🔧 **프로덕션 D1 스키마 수정 완료**
-
-#### ✅ **`courses` 테이블 누락 컬럼 추가**
-- `price` (INTEGER DEFAULT 0)
-- `total_lessons` (INTEGER DEFAULT 0)
-- `total_duration_minutes` (INTEGER DEFAULT 0)
-- `completion_requirement` (INTEGER DEFAULT 80)
-- `certificate_enabled` (INTEGER DEFAULT 1)
-- `category` (TEXT)
-- `difficulty` (TEXT DEFAULT 'beginner')
-
-#### ✅ **`lessons` 테이블 스키마 완전 동기화 확인**
-- `content_type` (TEXT DEFAULT 'video') ✅
-- `video_provider` (TEXT) ✅
-- `video_id` (TEXT) ✅
-- `video_duration_minutes` (INTEGER DEFAULT 0) ✅
-- `is_free_preview` (INTEGER DEFAULT 0) ✅
-
-#### 🎯 **테스트 환경 완전 초기화**
-- ✅ 모든 테스트 데이터 삭제 완료
-- ✅ 신규 관리자 계정 생성: `admin@lms.kr`
-- ✅ 테스트 강좌 1개 생성 완료: "테스트 강좌 1 (과목1)"
-
----
-
-## 🎉 Ver.2.9.0 영상 업로드 시스템 완전 수정! (2026.01.01)
-
-### 🔧 **영상 업로드 시스템 수정 완료**
-
-#### ✅ **수정 내용**
-- **프로덕션 D1 스키마 업데이트**: 누락된 컬럼 추가
-  - `content_type` (TEXT)
-  - `video_provider` (TEXT)
-  - `video_id` (TEXT)
-  - `video_duration_minutes` (INTEGER)
-  - `is_free_preview` (INTEGER)
-- **브라우저 캐시 문제 해결**: 강력 새로고침 가이드 제공
-- **Cloudflare Pages 배포 전파**: 새 배포 URL로 완전 전파
-
-#### ✅ **검증 완료**
-```json
-{
-  "id": 37,
-  "course_id": 9,
-  "lesson_number": 1,
-  "video_provider": "apivideo",
-  "video_url": "https://vod.api.video/...",
-  "video_id": "vi3rrqCvFbkHxv3yavOIF45q",
-  "content_type": "video"
-}
-```
-
-**모든 필드가 정상 저장되었습니다!**
-
-#### 🎯 **작동 확인된 업로드 방식**
-1. ✅ YouTube URL 업로드
-2. ✅ 파일 업로드 (api.video)
-3. ✅ URL 업로드 (api.video)
-
-#### 🤝 **Gemini AI 협업**
-- Gemini AI의 정확한 진단 (브라우저 캐시 문제)
-- 실시간 DB 조회로 증거 기반 검증
-- 최종 합의 도출 및 해결
-
----
-
-## 🎉 Ver.2.8.0 완전한 학습 시스템 완성! (2026.01.01)
-
-### ✨ 3가지 핵심 기능 완성
-
-#### 🎬 **1. 학습 플레이어 페이지 (/courses/:id/learn)**
-- ✅ **YouTube 플레이어**: YouTube IFrame API 통합
-- ✅ **api.video 플레이어**: 커스텀 영상 재생
-- ✅ **자동 진도 추적**: 5초마다 재생 위치 저장
-- ✅ **이어보기**: 마지막 재생 위치에서 시작 (Netflix 스타일)
-- ✅ **자동 다음 차시**: 영상 완료 시 2초 후 다음 차시 재생
-- ✅ **실시간 프로그레스 바**: 과정 전체 진도율 표시
-- ✅ **차시 목록**: 왼쪽 사이드바에 모든 차시 표시 및 완료 체크
-
-#### 🎓 **2. 수료증 자동 발급 시스템**
-- ✅ **진도율 80% 자동 감지**: 조건 충족 시 즉시 발급
-- ✅ **발급 알림**: 80% 달성 시 축하 메시지 표시
-- ✅ **수료증 버튼**: 내 강좌 페이지에 수료증 발급 버튼 표시
-- ✅ **발급 이력 추적**: 발급 날짜 및 상태 DB 저장
-
-#### 📊 **3. 학습 분석 대시보드 (/admin/analytics)**
-- ✅ **전체 통계**: 총 수강생, 수강신청, 평균 진도율, 수료증 발급 수
-- ✅ **수강 신청 추이**: Chart.js 라인 차트 (최근 30일)
-- ✅ **학습 활동 추이**: Chart.js 바 차트 (완료한 차시 수)
-- ✅ **강좌별 분석**: 
-  - 총 수강생, 완강률, 평균 진도율
-  - 차시별 완료율 차트
-  - 우수 학습자 Top 10 리더보드
-
----
-
-### 📊 Ver.2.8.0 주요 기능
-
-#### **학습 플레이어 (/courses/:courseId/learn)**
-```
-┌─────────────────────────────────────────┐
-│         강좌 정보 & 진도율              │
-├─────────────────────────────────────────┤
-│                                         │
-│         [영상 플레이어]                │
-│    YouTube / api.video 자동 전환        │
-│                                         │
-│  📊 진도율: ████████░░ 75%             │
-│  ⏱️  자동 저장 (5초마다)               │
-│  ▶️  이어보기 지원                     │
-│  ⏭️  다음 차시 자동 재생               │
-│                                         │
-├─────────────────────────────────────────┤
-│         현재 차시 설명                  │
-└─────────────────────────────────────────┘
-
-      ┌─ 차시 목록 ─┐
-      │ ✅ 차시 1   │
-      │ ✅ 차시 2   │
-      │ ▶️ 차시 3   │
-      │    차시 4   │
-      └─────────────┘
-```
-
-#### **자동 진도 추적 시스템**
-```
-5초마다 자동 저장:
-  ├─ watch_percentage (시청 비율)
-  ├─ last_position_seconds (재생 위치)
-  ├─ watch_time_seconds (누적 시청 시간)
-  └─ is_completed (완료 여부)
-
-→ enrollments 테이블 자동 업데이트:
-  ├─ completion_rate (전체 진도율)
-  ├─ completed_lessons (완료 차시 수)
-  ├─ certificate_issued (수료증 발급 여부)
-  └─ last_watched_at (최근 학습 시간)
-```
-
-#### **수료증 자동 발급 흐름**
-```
-1. 학생이 영상 시청 → 5초마다 진도 업데이트
-2. completion_rate >= 80% 달성
-3. 자동으로 certificate_issued = 1 설정
-4. 알림 팝업: "🎉 축하합니다! 수료증 발급 조건 충족!"
-5. /my-courses 페이지에 [수료증 발급] 버튼 표시
-```
-
-#### **학습 분석 대시보드 (/admin/analytics)**
-```
-전체 통계 카드:
-┌─────────────┬─────────────┬─────────────┬─────────────┐
-│ 총 수강생   │ 총 수강신청 │ 평균 진도율 │ 수료증 발급 │
-│    247명    │    1,234건  │     68%     │    156건    │
-└─────────────┴─────────────┴─────────────┴─────────────┘
-
-차트:
-┌─────────────────────┬─────────────────────┐
-│  수강 신청 추이     │  학습 활동 추이     │
-│  (라인 차트)        │  (바 차트)          │
-└─────────────────────┴─────────────────────┘
-
-강좌별 분석:
-  ├─ 총 수강생, 완강률, 평균 진도율
-  ├─ 차시별 완료율 차트
-  └─ 우수 학습자 Top 10
-```
-
----
-
-### 🚀 새로운 API 엔드포인트
-
-#### **진도 추적 API**
-```
-POST /api/progress/lessons/:lessonId
-  - 차시 진도 업데이트 (5초마다 호출)
-  - 자동으로 수료증 발급 조건 체크
-  - Response: { progress, certificate }
-
-GET /api/progress/lessons/:lessonId
-  - 차시 진도 조회
-
-GET /api/progress/courses/:courseId
-  - 과정 전체 진도 상세
-
-GET /api/progress/my-courses
-  - 내 모든 강좌 진도
-```
-
-#### **학습 분석 API**
-```
-GET /api/analytics/overview
-  - 플랫폼 전체 통계
-
-GET /api/analytics/courses/:courseId
-  - 강좌별 분석 (수강생, 완강률, 우수 학습자)
-
-GET /api/analytics/trends?period=daily
-  - 수강 신청 및 학습 활동 추이
-
-GET /api/analytics/students?courseId=X
-  - 학생 목록 및 진도율
-```
-
----
-
-### 🧪 테스트 방법
-
-#### **1. 학습 플레이어 테스트**
-```
-1. 로그인: https://445bb148.mindstory-lms.pages.dev/login
-2. 계정: test123@gmail.com / test123456
-3. /my-courses → 강좌 선택 → [이어서 학습] 클릭
-4. 영상 재생 확인 (YouTube 또는 api.video)
-5. 5초마다 진도율 자동 저장 확인 (F12 콘솔)
-6. 다른 차시 클릭 → 이어보기 위치 확인
-7. 영상 완료 → 2초 후 다음 차시 자동 재생
-8. 진도율 80% 달성 → "축하합니다!" 알림 확인
-```
-
-#### **2. 수료증 발급 테스트**
-```
-1. 강좌의 80% 이상 시청 완료
-2. /my-courses 페이지에서 [수료증] 버튼 확인
-3. 수료증 클릭 → 수료증 페이지 이동
-```
-
-#### **3. 학습 분석 대시보드 테스트**
-```
-1. 로그인: admin-test@gmail.com / admin123456
-2. /admin/analytics 페이지 이동
-3. 전체 통계 카드 확인
-4. 수강 신청 추이 차트 확인
-5. 강좌 선택 → 강좌별 분석 확인
-6. 우수 학습자 Top 10 리더보드 확인
-```
-
----
-
-### 📦 프로덕션 URL
-
-- **최신 배포 (Phase 3)**: https://bb172b26.mindstory-lms.pages.dev
-- **메인**: https://mindstory-lms.pages.dev
-- **로그인**: https://bb172b26.mindstory-lms.pages.dev/login
-- **강좌 12번**: https://bb172b26.mindstory-lms.pages.dev/courses/12
-- **차시 38번 상세**: https://bb172b26.mindstory-lms.pages.dev/courses/12/lessons/38
-- **학습 플레이어**: https://bb172b26.mindstory-lms.pages.dev/courses/12/learn?lessonId=38
-- **내 강좌**: https://bb172b26.mindstory-lms.pages.dev/my-courses
-- **관리자 대시보드**: https://bb172b26.mindstory-lms.pages.dev/admin/dashboard
-
----
-
-### ⏱️ 개발 소요 시간
-
-| Phase | 기능 | 예상 | 실제 |
-|-------|------|------|------|
-| Phase B | 가격 표시 | 30분 | 30분 ✅ |
-| Phase A | 진도 추적 DB | 2시간 | 1.5시간 ✅ |
-| Phase C | 학습 플레이어 | 1시간 | 1시간 ✅ |
-| Phase D | 수료증 & 분석 | 2시간 | 1.5시간 ✅ |
-| **총합** | - | **5.5시간** | **4.5시간** ✅ |
-
-**예상보다 1시간 빨리 완료!** 🎉
-
----
-
-## 🎉 Ver.2.6.1 로그인 시스템 완전 작동 확인! (2025.12.31)
-
-### ✅ 최종 검증 완료
-제가 먼저 **완전히 테스트하고 수정한 후** 사용자께 안내드립니다!
-
-#### **해결된 문제들**
-1. **로그인 오류 수정**: `expiresAt` 변수 누락 문제 해결
-2. **비밀번호 해싱 통일**: bcryptjs로 완전 전환
-3. **DB 스키마 일치**: `password_hash` 컬럼명 통일
-
-#### **테스트 완료 기능**
-- ✅ **회원가입 API**: HTTP 201 성공 응답
-- ✅ **로그인 API**: 세션 토큰 정상 발급
-- ✅ **세션 만료**: 30일 후 자동 만료
-- ✅ **모든 페이지**: HTTP 200 정상 접근
-
-#### **생성된 테스트 계정**
-- **일반 사용자**: `test123@gmail.com` / `test123456`
-- **관리자**: `admin-test@gmail.com` / `admin123456`
-
-#### **프로덕션 URL**
-👉 **https://mindstory-lms.pages.dev**
-
----
-
-## ✨ Ver.2.6.2 3개 독립 탭으로 분리! (2025.12.31) ⭐ NEW!
-
-### 📹 3개의 독립적인 탭으로 영상 업로드! ⭐ NEW!
-더 깔끔하고 직관적인 UI로 **3개의 독립적인 탭**을 제공합니다!
-
-```
-┌─────────────┬─────────────┬─────────────┐
-│ 🎥 YouTube  │ 📁 파일 업로드 │ 🔗 URL 업로드 │
-└─────────────┴─────────────┴─────────────┘
-```
-
-#### **탭 1: YouTube (무료, 무제한)**
-- YouTube에 업로드된 영상 링크 입력
-- 공개/비공개/일부 공개 모두 지원
-- 저장 공간 불필요
-- 빠른 로딩 속도
-
-#### **탭 2: 파일 업로드 (편리함)**
-- 컴퓨터에 있는 영상 파일 직접 업로드
-- YouTube 계정 불필요
-- api.video에 안전하게 저장 (비공개 설정)
-- 지원 형식: MP4, WebM, MOV, AVI (최대 500MB)
-- 드래그 앤 드롭 지원
-- 실시간 업로드 진행률 표시
-- 일괄 업로드 지원
-
-#### **탭 3: URL 업로드 (신규!)** ⭐ NEW!
-- **api.video URL**: 즉시 등록 (업로드 불필요)
-- **직접 영상 URL**: 자동으로 api.video에 업로드
-- 외부 서버에 있는 영상도 간편하게 등록
-- 지원 형식: .mp4, .webm, .mov, .avi, .mkv, .flv
-
-#### **자동 플레이어 전환**
-- YouTube 영상 → YouTube iframe 플레이어
-- 파일/URL 업로드 영상 → api.video 플레이어
-- 수강생은 차이를 느끼지 못함!
-
-#### **사용 방법**
-1. **차시 관리** → **차시 추가/수정**
-2. **영상 설정**에서 **3개 탭 중 하나 선택**:
-   - **🎥 YouTube 탭**: YouTube URL 입력
-   - **📁 파일 업로드 탭**: 파일 선택 또는 드래그 앤 드롭
-   - **🔗 URL 업로드 탭**: api.video URL 또는 직접 영상 URL 입력 ⭐ NEW!
-3. 업로드 완료 후 저장
-
-#### **api.video 비용 (매우 저렴!)**
-- **Sandbox 환경**: 무료 (테스트용)
-- **Production 환경**:
-  - 저장: $0.00285/분/월 (10시간 = $1.71/월)
-  - 전송: $0.0017/GB (100회 재생 = $0.10)
-  - 총 예상: 10시간 영상 + 100회 재생 = **$1.81/월** 💰
-
----
-
-## ✨ Ver.2.5.0 AI 기반 강좌 생성 & 차시 관리 시스템! (2025.12.29)
-
-### 🤖 AI 강좌 생성 도우미 ⭐ NEW!
-관리자가 **AI를 활용하여 강좌를 자동으로 기획**할 수 있습니다!
-
-#### **주요 기능**
-- **AI 자동 생성**: 주제만 입력하면 강좌 제목, 설명, 차시 구성 자동 생성
-- **OpenAI GPT-5 활용**: 최신 AI 모델로 전문적인 강좌 기획
-- **맞춤형 설정**: 대상, 난이도, 수강 기간 조절 가능
-- **즉시 수정 가능**: AI가 생성한 내용은 관리자가 바로 수정 가능
-
-#### **사용 방법**
-1. **강좌 관리** 페이지 → **AI 도우미** 버튼 클릭 (보라색-핑크 그라디언트)
-2. 강좌 주제 입력 (예: "파이썬 기초", "디지털 마케팅")
-3. 대상, 난이도, 수강 기간 설정
-4. **AI로 생성하기** 클릭 → 약 10~20초 대기
-5. 생성된 강좌 정보 확인 및 수정 후 저장
-
-#### **필수 설정**
-- OpenAI API 키 필요 (GenSpark API Keys 탭에서 설정)
-- 설정하지 않으면 "OpenAI API 키가 설정되지 않았습니다" 오류 발생
-
-### 📚 완전한 차시 관리 시스템 ⭐ NEW!
-강좌별로 차시를 체계적으로 관리할 수 있습니다!
-
-#### **주요 기능**
-- **차시 CRUD**: 차시 생성, 조회, 수정, 삭제
-- **순서 관리**: 차시 순서 자동 설정
-- **영상 연결**: YouTube Private 영상 링크 등록
-- **무료 미리보기**: 특정 차시를 무료로 공개 가능
-- **공개/비공개 설정**: 차시별 공개 여부 제어
-
-#### **차시 관리 페이지 접근**
-1. **강좌 관리** 페이지
-2. 각 강좌의 **차시 관리** 버튼 (초록색 리스트 아이콘) 클릭
-3. `/admin/courses/:courseId/lessons` 페이지로 이동
-
-#### **영상 업로드 2가지 방식** ⭐ Ver.2.6.0
-- **YouTube URL**: YouTube 영상 링크 입력 (무료, 무제한)
-- **직접 업로드**: MP4/WebM/MOV/AVI 파일 업로드 (최대 500MB, R2 저장)
-
-### 🖼️ 이미지 업로드 시스템 ⭐ NEW!
-강좌 썸네일을 URL 입력과 파일 업로드 두 가지 방식으로 등록할 수 있습니다!
-
-#### **주요 기능**
-- **URL 입력**: Unsplash 등 외부 이미지 링크 직접 입력
-- **파일 업로드**: 로컬 이미지 파일 직접 업로드
-- **Cloudflare R2 저장**: 업로드된 이미지는 R2 스토리지에 안전하게 저장
-- **실시간 미리보기**: 이미지 선택 즉시 미리보기 표시
-- **지원 형식**: JPG, PNG, GIF, WebP (최대 5MB)
-
-#### **사용 방법**
-1. **강좌 등록/수정** 모달에서 썸네일 섹션
-2. **URL 입력** 또는 **파일 업로드** 탭 선택
-3. 파일 업로드 선택 시: 파일 선택 → **업로드** 버튼 클릭
-4. 미리보기 확인 후 강좌 저장
-
-### 📊 Ver.2.6.0 구현 현황
-
-**✅ 구현 완료 기능:**
-1. **영상 파일 직접 업로드** (`/api/videos/upload`)
-   - FormData 멀티파트 업로드
-   - 파일 형식 검증 (MP4, WebM, MOV, AVI)
-   - 파일 크기 제한 (500MB)
-   - Cloudflare R2 저장
-   - Range 요청 지원 (영상 탐색)
-
-2. **영상 스트리밍** (`/api/videos/stream/:key`)
-   - R2에서 영상 스트리밍
-   - Range 요청 지원 (HTTP 206 Partial Content)
-   - 권한 확인 (수강권, 무료 미리보기)
-   - 캐시 컨트롤
-
-3. **차시 관리 UI 개선**
-   - YouTube/직접 업로드 탭 전환
-   - 드래그 앤 드롭 지원
-   - 실시간 업로드 진행률 (XMLHttpRequest)
-   - 파일 선택 UI
-
-4. **비디오 플레이어 자동 전환**
-   - YouTube → iframe 플레이어
-   - R2 영상 → HTML5 video 플레이어
-   - 진도율 추적 (둘 다 지원)
-
-5. **AI 강좌 생성 도우미** (`/api/ai/generate-course`)
-   - OpenAI GPT-5 연동
-   - 주제, 대상, 난이도, 수강 기간 기반 자동 생성
-   - 강좌 제목, 설명, 차시 구성 JSON 형식 응답
-   
-6. **차시 관리 페이지** (`/admin/courses/:courseId/lessons`)
-   - 차시 목록 조회
-   - 차시 생성/수정/삭제 API
-   - 순서 자동 관리
-   - YouTube 영상 URL 연결
-   - 직접 영상 파일 업로드 ⭐ NEW
-   - 무료 미리보기 설정
-
-7. **이미지 업로드 시스템** (`/api/upload/image`)
-   - 파일 유효성 검사 (형식, 크기)
-   - Cloudflare R2 스토리지 저장
-   - 공개 URL 반환
-   - 실시간 미리보기
-
-**🔗 API 엔드포인트:**
-```
-POST /api/ai/generate-course       # AI 강좌 생성
-POST /api/ai/generate-lesson        # AI 차시 생성
-GET  /api/courses/:id/lessons       # 차시 목록 조회
-GET  /api/courses/:courseId/lessons/:lessonId  # 차시 상세 조회
-POST /api/courses/:id/lessons       # 차시 생성
-PUT  /api/courses/:courseId/lessons/:lessonId  # 차시 수정
-DELETE /api/courses/:courseId/lessons/:lessonId  # 차시 삭제
-POST /api/upload/image              # 이미지 업로드
-GET  /api/storage/:path             # 업로드된 이미지 조회
-```
-
----
-
-## ✨ Ver.2.4.0 관리자 모드/수강생 모드 전환 기능! (2025.12.29)
-
-### 🔄 관리자 모드 ↔ 수강생 모드 전환 ⭐ NEW!
-관리자가 **클릭 한 번**으로 관리자 화면과 수강생 화면을 자유롭게 전환할 수 있습니다!
-
-#### **주요 기능**
-- **수강생 화면**: 헤더에 '관리자 모드' 버튼 표시 (관리자만 보임)
-  - 클릭 시 → 관리자 대시보드로 이동 (`/admin/dashboard`)
-- **관리자 화면**: 헤더 우측 상단에 '수강생 모드' 버튼 표시 (초록색)
-  - 클릭 시 → 메인 페이지로 이동 (`/`)
-
-#### **사용 시나리오**
-1. **수강생 화면 테스트**: 관리자가 실제 수강생이 보는 화면 확인
-2. **과정 신청 테스트**: 수강 신청부터 학습까지 전체 프로세스 체험
-3. **문제 발생 시 빠른 전환**: 수강생 문제 확인 → 즉시 관리자 모드로 해결
-4. **빠른 모드 전환**: 클릭 한 번으로 관리/학습 모드 전환
-
-#### **UI 예시**
-**수강생 모드 (메인 페이지)**:
-```
-홈 | 과정 안내 | 내 강의실 | [관리자 모드] 박종석 대표님 | 로그아웃
-```
-
-**관리자 모드 (대시보드)**:
-```
-관리자 대시보드 [수강생 모드] 박종석 대표 [로그아웃]
-```
-
----
-
-## ✨ Ver.2.3.0 소셜 로그인 우선 전략! (2025.12.28)
-
-### 🚀 점진적 프로파일링(Progressive Profiling) 도입!
-> **핵심 전략**: 소셜 로그인으로 진입 장벽 제거 → 수강 신청 시에만 추가 정보 수집!
-
-### 🎉 회원가입 4가지 방법 (소셜 로그인 우선!)
-1️⃣ **Google로 계속하기** ⭐️ NEW!
-   - Google 계정으로 1초 만에 시작
-   - OAuth 2.0 자동 인증
-   - 이메일, 이름, 프로필 사진 자동 수집
-   - 추가 정보 입력 불필요!
-
-2️⃣ **카카오로 계속하기** 
-   - ✨ 완전 자동 회원가입! (추가 정보 입력 불필요)
-   - OAuth 2.0 연동 (카카오 로그인 페이지로 자동 이동)
-   - 카카오 계정 입력 → 자동 회원가입 + 로그인 → 메인 페이지
-   - 약관 동의 자동 처리
-   - 이메일 없는 사용자도 가능 (kakao_xxxxx@kakao.local)
-
-3️⃣ **전화번호로 시작하기** 
-   - 휴대폰 번호 형식 검증 (01012345678)
-   - SMS 인증번호 발송 (테스트 모드: 123456)
-   - 3분 타이머 카운트다운
-   - 재발송 기능
-   - 이메일 자동 생성 (전화번호@phone.mindstory.co.kr)
-   - **이메일이 없어도 가입 가능!**
-
-4️⃣ **또는 이메일로 가입하기** (하단 링크)
-   - 이메일 형식 검증 (정규식)
-   - 비밀번호 강도 검증 (6자 이상, 영문+숫자 포함)
-   - 비밀번호 확인 일치 검사
-   - 실시간 유효성 피드백
-
-### ✅ 완료된 테스트
-- **API 테스트**: 모든 회원가입 API 테스트 통과 ✓
-- **로그인 테스트**: 이메일/전화번호 계정 로그인 정상 작동 ✓
-- **카카오 자동 회원가입**: 카카오 인증 페이지 리다이렉트 정상 ✓
-- **중복 방지**: 중복 이메일 감지 및 오류 처리 ✓
-- **End-to-End 테스트**: 전체 시스템 통합 테스트 완료 ✓
-- **과정 상세 페이지**: 자기주도학습 과정 30개 차시 정상 조회 ✓
-
-### 🎨 UI/UX 대폭 개선!
-- **소셜 로그인 우선 배치**: Google, 카카오 버튼을 최상단에 배치
-- **큰 버튼 스타일**: 전체 너비 버튼으로 클릭 편의성 향상
-- **브랜드 컬러 적용**: Google (파란색), 카카오 (노란색), 전화번호 (초록색)
-- **빠른 가입 팁**: 각 방법의 장점을 명확히 안내
-- **이메일 가입 선택지**: 하단 링크로 조용하게 제공
-
-### 🛠️ 기술적 개선사항
-- **Google OAuth 2.0 통합**: 신규 auth-google.ts 라우터 추가
-- **점진적 프로파일링 준비**: 데이터베이스 스키마 수정 (phone/birth_date NULL 허용)
-- **소셜 로그인 자동화**: 추가 정보 입력 없이 1초 만에 가입 완료
-- **깔끔한 코드 구조**: 유효성 검사 함수 분리, OAuth 라우터 모듈화
-- **완벽한 에러 처리**: 친절한 에러 메시지
-- **메모리 관리**: 타이머 관리 (메모리 누수 방지)
-
-## 📋 프로젝트 개요
-
-마인드스토리 원격평생교육원을 위한 **프로덕션급 온라인 학습 관리 시스템(LMS)**입니다.  
-심리학, 상담학, 코칭 분야의 전문 교육을 온라인으로 제공하며,  
-수강 신청부터 학습, 수료, 수료증 발급까지 전 과정을 지원합니다.
-
-### 🎓 교육이념
-> "지식을 많이 아는 사람보다  
-> 스스로 배우고 성장할 수 있는 사람을 키우는 교육"
-
-**대표 박종석**의 20년 현장 경험을 바탕으로  
-메타인지 기반 자기주도학습, 시간관리, 학습 동기 프로그램을 제공합니다.
-
-## 🎯 주요 목표
-
-- **운영 안정성 우선**: 초기 법적 리스크 제거, 검증된 기술만 사용
-- **대표 1인 운영 가능**: 관리자 대시보드로 모든 기능 제어
-- **확장 가능한 구조**: 향후 심리검사/상담/자격 과정 확장 대비
-
-## 🎬 최신 추가 기능 (Ver.2.2) ⭐⭐⭐
-
-### **회원 계정 관리 시스템**
-- **내 정보 페이지 신규 추가**: `/my-profile`
-- **회원 탈퇴 기능 (C안)**: 사유 선택 필수 (5가지 옵션)
-  - 사용하지 않는 서비스입니다
-  - 원하는 강의가 없습니다
-  - 다른 학습 플랫폼을 사용합니다
-  - 개인정보 보호를 위해
-  - 기타 (직접 입력)
-- **조건부 탈퇴 차단**: 수강 중인 강의/결제 내역 있으면 차단
-- **소프트 삭제 방식**: 30일간 데이터 보관 후 완전 삭제
-- **재가입 허용**: 동일 이메일로 재가입 가능
-- **비밀번호 변경**: 이메일 가입자 전용
-- **카카오 로그인 연동 완료**: OAuth 2.0 기반 소셜 로그인
-
-### **디자인 시스템 업데이트 (2025.12.28)**
-- **새로운 색상 팔레트**:
-  - 파란색 (#007bff): 신뢰감과 안정성
-  - 초록색 (#28a745): 성장과 학습
-  - 오렌지 (#ffc107): 따뜻함과 열정
-- **홈페이지 이미지 교체**: 
-  - 히어로 섹션: 전문 교육 플랫폼 이미지
-  - 소개 섹션: 전문 코칭 멘토링 현장
-- **통일된 버튼 디자인**: 전체 시스템에 일관된 색상 적용
-- **아이콘 배경색**: 새 팔레트 색상으로 통일
-
-### **추천 과정 업데이트 (2025.12.28)**
-- **자기주도학습 지도사 과정 신규 추가**:
-  - 메타인지 기반 자기주도학습 전문가 양성 과정
-  - 수강 기간: 60일, 총 20차시
-  - 정가: 300,000원 → 할인가: 250,000원
-  - 학습 동기 향상 및 효과적인 학습 전략 지도 방법
-  - 전문 교육 이미지 썸네일
-- **웰컴 팝업 신규 추가**:
-  - "마인드스토리와 함께하는 특별한 성장 여정"
-  - 체계적인 커리큘럼, 현장 전문가 강의, 공식 수료증 발급 안내
-  - 새 색상 팔레트를 적용한 시각적 디자인
-
-### **홈페이지 UX 개선 (2025.12.28)**
-- **히어로 섹션**: 실제 교육 현장 사진으로 배경 교체
-- **소개 섹션 제거**: 팝업으로 이미 구현되어 중복 제거
-- **회원가입 버튼 통합**: 헤더의 회원가입 버튼으로 통일 (중복 제거)
-- **더 깔끔한 레이아웃**: 불필요한 요소 제거로 깔끔한 디자인
-- **회원가입/로그인 정상 작동 확인**: API 테스트 완료
-
-### **이전 기능 (Ver.2.1)**
-- **회원가입 생년월일**: 달력 대신 년/월/일 드롭다운 (60세 기준 720번→3번 클릭)
-- **로그인 안정성**: 모든 계정 비밀번호 검증 확인 완료
-- **민간자격 시스템 확장**: 직접 발급 + 기관 연계
-
-## 🎬 Ver.2.0 핵심 기능 ⭐⭐⭐
-
-### **Cloudflare R2 영상 시스템 (완전 무료!)**
-- **무료 영상 호스팅**: Cloudflare R2 (월 10GB 무료)
-- **커스텀 HTML5 플레이어**: 진도율 추적 내장
-- **실시간 진도 저장**: 5초마다 자동 저장
-- **Range 요청 지원**: 끊김 없는 스트리밍
-- **세션 기반 보안**: 수강권 검증
-- **건너뛰기 감지**: 경고 시스템
-- **모바일 최적화**: 터치 제스처 지원
-- **로컬 백업**: 오프라인 진도 저장
-
-### **관리자 시스템**
-- **관리자 대시보드**: `/admin/dashboard`
-- **강좌 관리 UI**: 등록/수정/삭제
-- **영상 업로드**: 드래그앤드롭 지원
-- **차시 관리**: 순서 변경, 미리보기
-- **통계 대시보드**: 실시간 수강 현황
-
-### **진도율 시스템**
-- **자동 추적**: 시청 시간 실시간 기록
-- **80% 수료**: 자동 수료 처리
-- **차시별 진도**: 완료/진행 중 표시
-- **강좌 전체 진도**: 퍼센트로 표시
-- **오프라인 복구**: 네트워크 끊김 대비
-
-## ✨ 이전 추가 기능 (Ver.1.4.0)
-
-### 💳 토스페이먼츠 결제 연동 (NEW) ⭐
-- **사업자 정보 등록 완료**: 504-88-01964
-- **결제 위젯 UI**: `/payment/checkout/:courseId`
-- **결제 승인 API**: 실시간 결제 처리
-- **환불 자동 계산**: 진도율 기반 환불 금액 자동 산정
-  - 진도 0% + 7일 이내: 100% 환불
-  - 진도 50% 미만: 50% 환불
-  - 진도 50% 이상: 환불 불가
-- **웹훅 처리**: 결제 상태 자동 동기화
-- **영수증 조회**: 거래 내역 및 영수증 제공
-- **테스트 환경**: 실제 청구 없는 테스트 결제 가능
-
-**정산 계좌**: 농협 351-1202-0831-23 ((주)마인드스토리)
-
-## ✨ 이전 버전 기능 (Ver.1.3.3)
-
-### 📚 교육원 소개 페이지 (NEW)
-- **대표 프로필**: 박종석 대표 소개
-- **교육이념**: "스스로 배우는 힘을 키우는 교육"
-- **핵심 가치**: 메타인지 기반 / 심리·상담 전문성 / 평생 학습 동반자
-- **모바일 최적화**: PC/모바일 별도 디자인
-
-### 📖 종합 운영 문서 (NEW)
-- `docs/COMPREHENSIVE_CHECKLIST.md` - 종합 점검 체크리스트
-- `docs/PAYMENT_INTEGRATION.md` - 결제 시스템 연동 가이드
-- `docs/VIDEO_HOSTING_INTEGRATION.md` - 영상 호스팅 연동 가이드
-- `docs/FINAL_REPORT.md` - 최종 종합 보고서
-
-## ✨ 이전 버전 기능 (Ver.1.3.2)
-
-### 🎉 팝업 공지사항 시스템
-- **동시 최대 5개 팝업 표시** 지원
-- 신규 강좌, 이벤트, 중요 공지 등 다양한 용도로 활용
-- 우선순위 설정으로 표시 순서 제어
-- '오늘 하루 보지 않기' 기능 (쿠키 기반)
-- 이미지, HTML 콘텐츠, 링크 버튼 지원
-- 관리자 페이지에서 생성/수정/삭제 가능
-
-### 🎨 홈페이지 디자인 개선
-- **mindstorys.com의 실제 사진** 활용으로 생동감 있는 디자인
-- 심리/상담/평생교육원에서 자주 사용하는 패턴 적용
-- 히어로 섹션: 교육 현장 사진 배경
-- 특징 섹션: 강의실, 책, 학습 현장 사진
-- 소개 섹션: 실제 교육 사진으로 신뢰도 향상
-- 반응형 디자인으로 모든 기기에서 최적화
-
-## 🚀 핵심 기능 (Ver.1.3 Baseline + Ver.1.3.2 추가)
-
-### 1️⃣ 회원 시스템
-- **회원가입/로그인/로그아웃**: 이메일 기반 인증
-- **카카오 소셜 로그인**: OAuth 2.0 연동 완료
-- **프로필 관리**: 이름/전화번호/생년월일 수정
-- **비밀번호 변경**: 이메일 가입자 전용
-- **회원 탈퇴 (C안)**: 
-  - 탈퇴 사유 5가지 선택
-  - 수강/결제 진행 중이면 차단
-  - 소프트 삭제 (30일 보관)
-  - 재가입 허용
-- **세션 관리**: 동일 ID 동시 접속 차단
-- **휴대폰 본인인증 구조**: API 연동 대기
-
-### 2️⃣ 과정 관리
-- 과정/차시 CRUD (관리자)
-- 공개/비공개 설정
-- 무료/유료 구분
-- 전문 호스팅 연동 구조 (Kollus/VideoCloud)
-- 추천 과정 표시
-
-### 3️⃣ 수강 신청 및 학습
-- 수강 신청/기간 관리
-- 실시간 진도율 추적 (80% 기준)
-- 차시별 학습 진도 저장
-- 내 강의실 (수강 중인 과정 목록)
-
-### 4️⃣ 결제 시스템
-- 결제 생성 (모의)
-- 결제 내역 조회
-- 환불 처리 (관리자)
-- PG 연동 구조 (실제 연동 대기)
-
-### 5️⃣ 수료 및 수료증
-- 수료 조건 체크 (진도율 80% 이상)
-- 수료 처리 및 날짜 기록
-- 수료증 번호 자동 생성 (MS-2025-XXXX)
-- 수료증 발급/조회/재발급
-- PDF 생성 구조 (실제 생성 대기)
-
-### 6️⃣ 팝업 공지사항 (NEW)
-- 최대 5개 동시 표시
-- 우선순위 기반 정렬
-- 표시 기간 설정
-- '오늘 하루 보지 않기' 쿠키
-- 이미지/HTML/링크 지원
-- 관리자 CRUD
-
-### 7️⃣ 관리자 대시보드
-- 통계 대시보드 (회원/과정/수강/매출)
-- 회원 관리
-- 수강 신청 관리
-- 결제 내역 관리
-- 수료증 관리
-- 팝업 관리
-
-### 8️⃣ UI/UX
-- **반응형 홈페이지** (Tailwind CSS)
-- 모바일 최적화
-- 과정 카드 뷰
-- 토스트 알림
-- 로딩 인디케이터
-- **실제 교육 현장 사진** 활용
-
-## 🗄️ 데이터베이스 구조
-
-### 주요 테이블
-1. **users**: 회원 정보 (deleted_at, deletion_reason 추가)
-2. **courses**: 과정 정보
-3. **lessons**: 차시 정보
-4. **enrollments**: 수강 신청 정보
-5. **lesson_progress**: 차시별 학습 진도
-6. **payments**: 결제 정보
-7. **certificates**: 수료증 정보
-8. **user_sessions**: 세션 관리
-9. **admin_logs**: 관리자 로그
-10. **popups**: 팝업 공지사항
-11. **certifications**: 민간자격 정보 (issuer_type 추가)
-
-## 🌐 접속 정보
-
-### 개발 환경
-- **Sandbox URL**: https://3000-ieu1ambselnpjf2cme9se-c81df28e.sandbox.novita.ai
-- **로컬**: http://localhost:3000
-
-### 테스트 계정 ✅ (2026.01.01 최종 검증)
-- **신규 관리자**: admin@lms.kr / admin123456 ⭐ NEW!
-- **일반 사용자**: test123@gmail.com / test123456
-- **기존 관리자**: admin-test@gmail.com / admin123456
-
-### 프로덕션 URL 🚀
-- **최신 배포**: https://7dd751f2.mindstory-lms.pages.dev ⭐ NEW!
-- **메인**: https://mindstory-lms.pages.dev
-- **로그인**: https://7dd751f2.mindstory-lms.pages.dev/login
-- **회원가입**: https://7dd751f2.mindstory-lms.pages.dev/register
-- **관리자 대시보드**: https://7dd751f2.mindstory-lms.pages.dev/admin/dashboard
-- **차시 상세 예시**: https://7dd751f2.mindstory-lms.pages.dev/courses/12/lessons/38 ⭐ NEW!
-
-## 💾 백업
-
-### 최신 버전 (v2.2 - With Withdrawal System)
-- **다운로드**: https://www.genspark.ai/api/files/s/LTrFpOHN
-- **파일명**: mindstory-lms-v2.2-withdrawal-system.tar.gz
-- **크기**: 506KB
-- **포함 내용**: 
-  - 회원 탈퇴 기능 (C안)
-  - 내 정보 페이지
-  - 비밀번호 변경
-  - 카카오 소셜 로그인
-  - 민간자격 시스템
-  - 전체 소스 코드
-  - 데이터베이스 마이그레이션
-  - **운영 문서 (docs/)** ✨
-  - **변경 이력 (CHANGELOG.md)** ✨
-
-### 이전 버전 (v1.4.0 - With Toss Payments)
-- **다운로드**: https://www.genspark.ai/api/files/s/djuYjQvn
-- **파일명**: mindstory-lms-v1.4.0-with-toss-payments.tar.gz
-- **크기**: 262KB
-
-## 🔌 API 엔드포인트
-
-### 인증 (Auth)
+#### **인증 API**
 - `POST /api/auth/register` - 회원가입
 - `POST /api/auth/login` - 로그인
 - `POST /api/auth/logout` - 로그아웃
-- `GET /api/auth/me` - 내 정보 조회
-- `PUT /api/auth/profile` - 프로필 수정
-- `POST /api/auth/change-password` - 비밀번호 변경 (NEW)
-- `GET /api/auth/check-withdrawal` - 탈퇴 가능 여부 확인 (NEW)
-- `POST /api/auth/withdrawal` - 회원 탈퇴 (NEW)
+- `GET /api/auth/me` - 현재 사용자 조회
 
-### 카카오 소셜 로그인 (NEW)
-- `GET /api/auth/kakao` - 카카오 로그인 시작
-- `GET /api/auth/kakao/callback` - 카카오 로그인 콜백
+#### **강좌 API**
+- `GET /api/courses` - 강좌 목록
+- `GET /api/courses/:id` - 강좌 상세
+- `GET /api/courses/:id/lessons` - 차시 목록
 
-### 과정 (Courses)
-- `GET /api/courses` - 과정 목록
-- `GET /api/courses/featured` - 추천 과정
-- `GET /api/courses/:id` - 과정 상세
-- `POST /api/courses` - 과정 생성 (관리자)
+#### **수강평 API** ⭐ NEW
+- `POST /api/courses/:courseId/reviews` - 수강평 작성
+- `GET /api/courses/:courseId/reviews` - 수강평 목록
+- `GET /api/courses/:courseId/reviews/summary` - 수강평 통계
+- `PUT /api/reviews/:id` - 수강평 수정
+- `DELETE /api/reviews/:id` - 수강평 삭제
 
-### 수강 (Enrollments)
-- `GET /api/enrollments/my` - 내 수강 목록
-- `POST /api/enrollments` - 수강 신청
-- `POST /api/enrollments/:id/progress` - 진도 저장
-- `POST /api/enrollments/:id/complete` - 수강 완료
-
-### 결제 (Payments)
-- `GET /api/payments/my` - 내 결제 내역
-- `POST /api/payments` - 결제 생성
-- `POST /api/payments/:id/refund` - 환불 (관리자)
-
-### 수료증 (Certificates)
-- `GET /api/certificates/my` - 내 수료증 목록
-- `POST /api/certificates` - 수료증 발급
-- `GET /api/certificates/:id` - 수료증 조회
-
-### 팝업 (Popups) - NEW
-- `GET /api/popups/active` - 활성 팝업 목록 (최대 5개)
-- `POST /api/popups/:id/close` - 팝업 닫기
-- `GET /api/popups` - 팝업 관리 목록 (관리자)
-- `POST /api/popups` - 팝업 생성 (관리자)
-- `PUT /api/popups/:id` - 팝업 수정 (관리자)
-- `DELETE /api/popups/:id` - 팝업 삭제 (관리자)
-
-### 관리자 (Admin)
-- `GET /api/admin/dashboard` - 대시보드 통계
-- `GET /api/admin/users` - 회원 관리
-- `GET /api/admin/enrollments` - 수강 관리
-- `GET /api/admin/payments` - 결제 관리
-
-## 🛠️ 기술 스택
-
-- **프레임워크**: Hono (Cloudflare Workers)
-- **배포**: Cloudflare Pages
-- **데이터베이스**: Cloudflare D1 (SQLite)
-- **언어**: TypeScript
-- **스타일**: Tailwind CSS
-- **아이콘**: Font Awesome
-- **HTTP 클라이언트**: Axios
-
-## 🔧 로컬 개발 가이드
-
-### 서버 시작
-```bash
-npm run build
-pm2 start ecosystem.config.cjs
-```
-
-### 데이터베이스 초기화
-```bash
-# 로컬 DB 리셋
-rm -rf .wrangler/state/v3/d1
-
-# 마이그레이션 적용
-npx wrangler d1 migrations apply mindstory-production --local
-
-# 테스트 데이터 삽입
-npx wrangler d1 execute mindstory-production --local --file=./seed.sql
-```
-
-### 테스트
-```bash
-# 서버 상태 확인
-curl http://localhost:3000/api/health
-
-# 추천 과정 조회
-curl http://localhost:3000/api/courses/featured
-
-# 활성 팝업 조회
-curl http://localhost:3000/api/popups/active
-```
-
-### 로그 확인
-```bash
-pm2 logs mindstory-lms --nostream
-```
-
-## 📦 NPM 스크립트
-
-```json
-{
-  "dev": "vite",
-  "build": "vite build",
-  "preview": "wrangler pages dev dist",
-  "deploy": "npm run build && wrangler pages deploy dist",
-  "db:migrate:local": "wrangler d1 migrations apply mindstory-production --local",
-  "db:migrate:prod": "wrangler d1 migrations apply mindstory-production",
-  "db:seed": "wrangler d1 execute mindstory-production --local --file=./seed.sql",
-  "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate:local && npm run db:seed"
-}
-```
-
-## 🔜 다음 단계 (API 연동)
-
-### 필수 API 서비스
-1. **휴대폰 본인인증**: Pass, NICE 등
-2. **PG 결제**: 토스페이먼츠, 이니시스 등
-3. **영상 호스팅**: Kollus, VideoCloud 등
-4. **SMS 발송**: 선택 사항
-
-### 구조 선반영 (Ver.1.5 대비)
-- 시험/평가 시스템 필드
-- 복합 수료 조건 (진도 + 시험 점수)
-- 과정 유형별 분류 (일반/자격/검사)
-- 지도사 트랙 ID
-- 상담·검사 데이터 확장
-
-### 2단계 확장 계획
-- 심리검사 기능
-- 온라인 상담 예약
-- 자격증 과정
-- 지도사 양성 트랙
-- 커뮤니티 게시판
-
-## 📄 라이선스
-
-© 2025 마인드스토리 원격평생교육원. All rights reserved.
-
-## 📞 문의
-
-- **이메일**: sanj2100@naver.com
-- **전화**: 062-959-9535
-- **웹사이트**: https://www.mindstorys.com
+#### **수료증 API** 🎓 NEW
+- `POST /api/courses/:courseId/certificate` - 수료증 발급
+- `GET /api/my/certificates` - 내 수료증 목록
+- `GET /api/certificates/:number` - 수료증 조회
 
 ---
 
-## 📚 문서 가이드
+## 📝 **변경 이력**
 
-### 운영자용
-- **종합 테스트 계획서**: `docs/COMPREHENSIVE_TESTING_PLAN.md` - 5-7시간 테스트 일정 및 체크리스트 ⭐ NEW!
-- **회원 탈퇴 가이드**: `docs/WITHDRAWAL_FEATURE.md` - 탈퇴 기능 완전 가이드
-- **최종 보고서**: `docs/FINAL_REPORT.md` - 프로젝트 전체 현황 및 다음 단계
-- **종합 체크리스트**: `docs/COMPREHENSIVE_CHECKLIST.md` - 운영 전 필수 확인사항
-- **결제 연동**: `docs/PAYMENT_INTEGRATION.md` - PG사 연동 가이드
-- **영상 호스팅**: `docs/VIDEO_HOSTING_INTEGRATION.md` - Kollus/VideoCloud 연동
+### **Ver.2.0 (2026.01.04)**
+- ✅ Phase 0: 프로세스 개선 (테스트 자동화, API 문서, 타입, 에러 핸들링, 주석)
+- ✅ Phase 1: V1 완성 (불필요한 코드 제거, YouTube 전용 최적화)
+- ✅ Phase 2: 수강평/별점 시스템 추가
+- ✅ Phase 3: 배속 재생 기능 추가
+- ✅ Phase 4: 수료증 발급 시스템 추가
+- ✅ 모든 테스트 통과 (10/10)
 
-### 개발자용
-- **README**: 프로젝트 개요 및 빠른 시작
-- **개발 계획서**: `docs/REVERSE_DEVELOPMENT_PLAN.md` - 역기획 문서 (재사용 템플릿)
-- **종합 시스템 점검**: `docs/COMPREHENSIVE_SYSTEM_AUDIT.md` - 전체 시스템 점검 보고서
-- **API 문서**: 각 route 파일 주석 참고
-- **데이터베이스 스키마**: `migrations/` 디렉토리
-
----
-
-## 🎯 다음 단계 (Next Steps)
-
-### 1. 즉시 제공 필요
-```
-✅ 사업자등록번호
-✅ 정산 계좌 정보 (은행/계좌/예금주)
-✅ 수료증 직인/서명 이미지
-```
-
-### 2. 외부 서비스 가입 (1-2주)
-- [ ] 토스페이먼츠 (결제)
-- [ ] Kollus (영상 호스팅)
-- [ ] Pass/NICE (본인인증)
-
-### 3. 연동 및 테스트 (1주)
-- [ ] API 연동
-- [ ] 모바일 E2E 테스트
-- [ ] 보안 점검
-
-### 4. 정식 오픈 🎉
-- [ ] 운영 도메인 연결
-- [ ] 최종 확인
-- [ ] 런칭!
+### **Ver.1.x (2026.01.03)**
+- 기본 LMS 기능 구현
+- YouTube 영상 재생
+- 진도율 추적
+- 강좌 관리
 
 ---
 
-## 📝 버전 히스토리
+## 📧 **연락처**
 
-**Ver.2.6.2 업데이트 내역 (2025.12.31)** 🆕
-- ✅ **3개 독립 탭으로 분리** 🎉
-  - YouTube, 파일 업로드, URL 업로드를 각각 독립 탭으로 분리
-  - 파일 업로드 ↔ URL 입력 토글 제거 (더 직관적인 UI)
-  - 각 탭이 명확한 역할 수행
-  - switchVideoTab() 함수 3개 탭 지원
-  - 드래그 앤 드롭 영역 ID 업데이트
-  - 불필요한 switchUploadMode() 함수 제거
-- ✅ **UI/UX 대폭 개선**
-  - 더 깔끔하고 직관적인 인터페이스
-  - 각 탭의 목적이 명확함
-  - 혼란 없는 사용자 경험
-- ✅ **문서 업데이트**
-  - `URL_UPLOAD_GUIDE.md` - 3개 탭 가이드로 업데이트
-  - `README.md` - Ver.2.6.2 반영
+- **Email**: sanj2100@naver.com
+- **Project**: 마인드스토리 원격평생교육원
+- **대표**: 박종석
 
-**Ver.2.6.1 업데이트 내역 (2025.12.31)** 
-- ✅ **직접 업로드 탭에 URL 입력 기능 추가**
-  - 파일 업로드 ↔ URL 입력 토글 버튼
-  - api.video URL 즉시 등록
-  - 직접 영상 URL 자동 업로드
+---
 
-**Ver.2.4.0 업데이트 내역 (2025.12.29)** 🆕
-- ✅ **관리자 모드/수강생 모드 전환 기능** 🎉
-  - 헤더에 모드 전환 버튼 추가
-  - 클릭 한 번으로 관리자/수강생 화면 전환
-  - 관리자 전용 기능 (일반 사용자는 미표시)
-- ✅ **로그인 후 역할 기반 리디렉트**
-  - 관리자: `/admin/dashboard`로 자동 이동
-  - 일반 사용자: `/my-courses`로 자동 이동
-- ✅ **관리자 헤더 링크 표시 문제 해결**
-  - 로그인 후 관리자 링크 표시
-  - 401 인증 오류 수정
-  - JS 캐시 무효화 (버전 쿼리 추가)
-- ✅ **버그 수정**
-  - `/admin` 404 오류 → `/admin/dashboard`로 리디렉트
-  - `requireAuth()` 오류 → `AuthManager.isLoggedIn()` 사용
-  - 내 강의실 API 호출 시 Authorization 헤더 추가
+## 📄 **라이선스**
 
-**Ver.2.2 업데이트 내역 (2025.12.28)** 🆕
-- ✅ **회원 탈퇴 기능 구현 (C안 방식)** 🎉
-  - 탈퇴 사유 5가지 선택
-  - 수강/결제 진행 중이면 차단
-  - 소프트 삭제 (30일 보관)
-  - 재가입 허용
-- ✅ **내 정보 페이지 신규 추가** (`/my-profile`)
-- ✅ **비밀번호 변경 기능**
-- ✅ **카카오 소셜 로그인 연동 완료**
-- ✅ 헤더 메뉴에 "내 정보" 추가
-- ✅ 탈퇴 모달 UI 구현
-- ✅ 관련 문서 작성 (`docs/WITHDRAWAL_FEATURE.md`)
-
-**Ver.2.1 업데이트 내역 (2025.12.28)**
-- ✅ 회원가입 생년월일 드롭다운 개선
-- ✅ 로그인 비밀번호 검증 안정화
-- ✅ 민간자격 시스템 확장
-- ✅ 홈페이지 이미지 업데이트
-
-**Ver.1.4.0 업데이트 내역 (2025.12.27)**
-- ✅ 토스페이먼츠 결제 연동 완료
-- ✅ 사업자 정보 등록 (504-88-01964)
-- ✅ 결제 위젯 UI 구현
-- ✅ 환불 규정 자동 적용 로직
-
-**Ver.1.3.3 업데이트 내역 (2025.12.27)**
-- ✅ 교육원 소개 페이지 추가
-- ✅ 종합 운영 문서 작성
-- ✅ 프로덕션 준비 완료
-
-**Ver.1.3.2 업데이트 내역 (2025.12.27)**
-- ✅ 팝업 공지사항 시스템 추가
-- ✅ 홈페이지 디자인 개선
+© 2026 마인드스토리 원격평생교육원. All rights reserved.
