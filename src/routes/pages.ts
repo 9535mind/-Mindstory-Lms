@@ -1621,8 +1621,9 @@ pages.get('/courses', async (c) => {
           
           grid.innerHTML = courses.map(course => \`
             <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">
-              <img src="\${course.thumbnail_url || 'https://via.placeholder.com/400x300'}" 
-                   alt="\${course.title}" class="w-full h-48 object-cover">
+              <img src="\${course.thumbnail_url || '/static/images/course-placeholder.jpg'}" 
+                   alt="\${course.title}" class="w-full h-48 object-cover"
+                   onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23667eea%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23ffffff%22 font-family=%22Arial%22 font-size=%2224%22 text-anchor=%22middle%22 x=%22200%22 y=%22150%22%3E강좌 이미지%3C/text%3E%3C/svg%3E'">
               <div class="p-6">
                 <h3 class="text-xl font-semibold text-gray-900 mb-2">\${course.title}</h3>
                 <p class="text-gray-600 text-sm mb-4 line-clamp-2">\${course.description || ''}</p>

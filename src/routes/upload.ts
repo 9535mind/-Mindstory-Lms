@@ -74,7 +74,7 @@ upload.post('/image', requireAdmin, async (c) => {
     // R2 Storage 사용 가능 여부 확인
     if (!c.env.R2) {
       console.warn('[Upload] R2 바인딩이 없습니다. Placeholder 사용')
-      const placeholderUrl = `https://via.placeholder.com/800x600/667eea/ffffff?text=${encodeURIComponent(file.name)}`
+      const placeholderUrl = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect fill='%23667eea' width='800' height='600'/%3E%3Ctext fill='%23ffffff' font-family='Arial' font-size='24' text-anchor='middle' x='400' y='300'%3E${encodeURIComponent(file.name)}%3C/text%3E%3C/svg%3E`
       return c.json(successResponse({
         url: placeholderUrl,
         filename: file.name,
