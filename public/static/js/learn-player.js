@@ -14,6 +14,7 @@ let currentUserId = null;
 let currentUserName = null;
 let isRedirecting = false; // 리다이렉트 방지 플래그
 let isInitialized = false; // 초기화 완료 플래그
+let authToken = localStorage.getItem('token'); // 인증 토큰
 
 const PROGRESS_UPDATE_INTERVAL = 5000; // 5초마다 진도 업데이트
 
@@ -610,15 +611,16 @@ async function loadApiVideoPlayer(lesson) {
 }
 
 /**
- * 진도율 추적 시작
+ * 진도율 추적 시작 (임시 비활성화 - API 미구현)
  */
 function startProgressTracking() {
-    stopProgressTracking();
-    progressUpdateInterval = setInterval(() => {
-        updateProgress().catch(err => {
-            console.error('❌ Progress tracking error:', err);
-        });
-    }, PROGRESS_UPDATE_INTERVAL);
+    // stopProgressTracking();
+    // progressUpdateInterval = setInterval(() => {
+    //     updateProgress().catch(err => {
+    //         console.error('❌ Progress tracking error:', err);
+    //     });
+    // }, PROGRESS_UPDATE_INTERVAL);
+    console.log('ℹ️ Progress tracking disabled (API not implemented)');
 }
 
 /**
