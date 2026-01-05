@@ -76,11 +76,36 @@ auth.post('/register', async (c) => {
       return c.json(errorResponse('회원가입에 실패했습니다.'), 500)
     }
 
+    // 자동 로그인을 위한 세션 토큰 생성
+    const userId = result.meta.last_row_id
+    const sessionToken = generateSessionToken()
+    const expiresAt = addDays(new Date(), 30)
+
+    // 세션 저장
+    await DB.prepare(`
+      INSERT INTO sessions (user_id, session_token, expires_at)
+      VALUES (?, ?, ?)
+    `).bind(userId, sessionToken, expiresAt.toISOString()).run()
+
+    // 쿠키 설정
+    setCookie(c, 'session_token', sessionToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Lax',
+      maxAge: 30 * 24 * 60 * 60, // 30일
+      path: '/'
+    })
+
     return c.json(successResponse({
-      id: result.meta.last_row_id,
-      email,
-      name
-    }, '회원가입이 완료되었습니다.'), 201)
+      user: {
+        id: userId,
+        email,
+        name,
+        role: 'student'
+      },
+      session_token: sessionToken,
+      expires_at: expiresAt.toISOString()
+    }, '회원가입이 완료되었습니다. 자동 로그인되었습니다.'), 201)
 
   } catch (error) {
     console.error('Register error:', error)
