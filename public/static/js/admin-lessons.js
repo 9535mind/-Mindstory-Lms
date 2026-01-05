@@ -361,8 +361,8 @@ async function generateLessonDescription() {
     descriptionField.placeholder = '🤖 AI가 설명을 생성하고 있습니다...';
     descriptionField.disabled = true;
     
-    // YouTube 영상 정보 가져오기
-    const response = await axios.get(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+    // YouTube 영상 정보 가져오기 (서버 프록시 사용 - CORS 해결)
+    const response = await axios.get(`/api/youtube/oembed?url=https://www.youtube.com/watch?v=${videoId}`);
     const videoInfo = response.data;
     
     // 간단한 설명 생성 (실제 AI API 대신 템플릿 사용)

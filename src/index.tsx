@@ -37,6 +37,7 @@ import pagesLearn from './routes/pages-learn'
 import analytics from './routes/analytics'
 import pagesAnalytics from './routes/pages-analytics'
 import pagesCourseDetail from './routes/pages-course-detail'
+import youtubeProxy from './routes/youtube-proxy'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -75,6 +76,7 @@ app.route('/api/ai', ai)  // AI 도우미
 // Removed external video API routes (YouTube only)
 app.route('/api/ai-bulk-lessons', aiBulkLessons)  // AI 일괄 차시 생성
 app.route('/api/analytics', analytics)  // 학습 분석 통계
+app.route('/api/youtube', youtubeProxy)  // YouTube oEmbed 프록시 (CORS 해결)
 
 // 페이지 라우트
 app.route('/', landing)  // 신규 랜딩 페이지 (Phase 3)
