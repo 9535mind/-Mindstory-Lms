@@ -263,7 +263,7 @@ courses.get('/:id/lessons', optionalAuth, async (c) => {
       ORDER BY lesson_number ASC
     `).bind(courseId).all<Lesson>()
 
-    // 수강 중인 경우 진도 정보 포함
+    // 수강 중인 경우 진도 정보 포함 (lesson_progress 테이블 있을 때만)
     if (user) {
       const enrollment = await DB.prepare(`
         SELECT * FROM enrollments 
@@ -271,22 +271,33 @@ courses.get('/:id/lessons', optionalAuth, async (c) => {
       `).bind(user.id, courseId).first()
 
       if (enrollment) {
-        // 각 차시별 진도 조회
-        const lessonsWithProgress = await Promise.all(
-          lessons.results.map(async (lesson) => {
-            const progress = await DB.prepare(`
-              SELECT * FROM lesson_progress 
-              WHERE enrollment_id = ? AND lesson_id = ?
-            `).bind(enrollment.id, lesson.id).first()
+        // lesson_progress 테이블 존재 확인
+        try {
+          // 각 차시별 진도 조회
+          const lessonsWithProgress = await Promise.all(
+            lessons.results.map(async (lesson) => {
+              try {
+                const progress = await DB.prepare(`
+                  SELECT * FROM lesson_progress 
+                  WHERE enrollment_id = ? AND lesson_id = ?
+                `).bind(enrollment.id, lesson.id).first()
 
-            return {
-              ...lesson,
-              progress
-            }
-          })
-        )
+                return {
+                  ...lesson,
+                  progress
+                }
+              } catch (error) {
+                // lesson_progress 테이블이 없으면 진도 없이 반환
+                return lesson
+              }
+            })
+          )
 
-        return c.json(successResponse(lessonsWithProgress))
+          return c.json(successResponse(lessonsWithProgress))
+        } catch (error) {
+          // lesson_progress 테이블이 없으면 그냥 차시 목록만 반환
+          return c.json(successResponse(lessons.results))
+        }
       }
     }
 
