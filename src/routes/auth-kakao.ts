@@ -24,11 +24,17 @@ authKakao.get('/login', async (c) => {
     const clientId = c.env.KAKAO_CLIENT_ID || 'your_kakao_rest_api_key'
     const redirectUri = c.env.KAKAO_REDIRECT_URI || 'http://localhost:3000/api/auth/kakao/callback'
     
+    // 디버그: 설정값 로그
+    console.log('[KAKAO_LOGIN] Client ID:', clientId)
+    console.log('[KAKAO_LOGIN] Redirect URI:', redirectUri)
+    
     // 카카오 인증 URL 생성
     const kakaoAuthUrl = new URL('https://kauth.kakao.com/oauth/authorize')
     kakaoAuthUrl.searchParams.set('client_id', clientId)
     kakaoAuthUrl.searchParams.set('redirect_uri', redirectUri)
     kakaoAuthUrl.searchParams.set('response_type', 'code')
+    
+    console.log('[KAKAO_LOGIN] Full OAuth URL:', kakaoAuthUrl.toString())
     
     // 카카오 로그인 페이지로 리다이렉트
     return c.redirect(kakaoAuthUrl.toString())
@@ -46,13 +52,37 @@ authKakao.get('/login', async (c) => {
 authKakao.get('/callback', async (c) => {
   try {
     const code = c.req.query('code')
+    const error = c.req.query('error')
+    const errorDescription = c.req.query('error_description')
+    
+    // 에러 파라미터 확인
+    if (error) {
+      console.error('[KAKAO_CALLBACK] OAuth Error:', error, errorDescription)
+      return c.html(`
+        <html>
+          <head>
+            <title>카카오 로그인 오류</title>
+          </head>
+          <body>
+            <script>
+              alert('카카오 로그인 오류:\\n${error}\\n${errorDescription || ''}');
+              window.location.href = '/login';
+            </script>
+          </body>
+        </html>
+      `)
+    }
     
     if (!code) {
+      console.error('[KAKAO_CALLBACK] No authorization code')
       return c.json(errorResponse('인증 코드가 없습니다.'), 400)
     }
     
     const clientId = c.env.KAKAO_CLIENT_ID || 'your_kakao_rest_api_key'
     const redirectUri = c.env.KAKAO_REDIRECT_URI || 'http://localhost:3000/api/auth/kakao/callback'
+    
+    console.log('[KAKAO_CALLBACK] Code received:', code.substring(0, 10) + '...')
+    console.log('[KAKAO_CALLBACK] Using redirect_uri:', redirectUri)
     
     // 1. 액세스 토큰 요청
     const tokenResponse = await fetch('https://kauth.kakao.com/oauth/token', {
