@@ -395,8 +395,8 @@ pages.get('/register', (c) => {
             <div id="registerMethodSelection" class="mt-8">
                 <!-- 이메일 회원가입 (기본 추천) -->
                 <div class="mb-6">
-                    <button onclick="selectRegisterMethod('email')" 
-                        class="w-full flex items-center justify-center gap-3 px-6 py-5 bg-indigo-600 border-2 border-indigo-600 rounded-lg hover:bg-indigo-700 transition-all shadow-lg">
+                    <button type="button" data-method="email" 
+                        class="register-method-btn w-full flex items-center justify-center gap-3 px-6 py-5 bg-indigo-600 border-2 border-indigo-600 rounded-lg hover:bg-indigo-700 transition-all shadow-lg">
                         <i class="fas fa-envelope text-2xl text-white"></i>
                         <div class="text-left">
                             <div class="text-lg font-bold text-white">이메일로 가입하기</div>
@@ -410,9 +410,9 @@ pages.get('/register', (c) => {
                     <div class="text-center text-sm text-gray-500 mb-2">또는 소셜 계정으로</div>
                     
                     <!-- 카카오로 계속하기 -->
-                    <button type="button" onclick="loginWithKakao()" 
-                        class="w-full flex items-center justify-center gap-3 px-6 py-4 border-2 border-transparent rounded-lg hover:opacity-90 transition-all shadow-md"
-                        style="background-color: #FEE500;">
+                    <button type="button" data-method="kakao" 
+                        class="register-method-btn w-full flex items-center justify-center gap-3 px-6 py-4 border-2 border-transparent rounded-lg hover:opacity-90 transition-all shadow-md"
+                        style="background-color: #FEE500; position: relative; z-index: 10;">
                         <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 3C6.48 3 2 6.58 2 11c0 2.89 1.86 5.44 4.67 7.08l-1.14 4.23c-.1.36.26.66.59.48l5.31-2.88c.51.07 1.03.11 1.57.11 5.52 0 10-3.58 10-8S17.52 3 12 3z"/>
                         </svg>
@@ -420,8 +420,8 @@ pages.get('/register', (c) => {
                     </button>
                     
                     <!-- 구글로 계속하기 ✅ -->
-                    <button onclick="registerWithGoogle()" 
-                        class="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all shadow-md">
+                    <button type="button" data-method="google" 
+                        class="register-method-btn w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all shadow-md">
                         <svg class="w-6 h-6" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -674,7 +674,31 @@ pages.get('/register', (c) => {
 
         // ===== 회원가입 방법 선택 =====
 
+        // ===== 회원가입 방법 선택 (이벤트 위임) =====
+        
+        // 이벤트 위임: 모든 회원가입 방법 버튼 클릭 처리
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.register-method-btn');
+            if (!btn) return;
+            
+            const method = btn.getAttribute('data-method');
+            if (!method) return;
+            
+            console.log('[REGISTER_METHOD] active:', method);
+            
+            if (method === 'email') {
+                selectRegisterMethod('email');
+            } else if (method === 'kakao') {
+                console.log('[KAKAO] Redirecting to /api/auth/kakao/login');
+                window.location.href = '/api/auth/kakao/login';
+            } else if (method === 'google') {
+                console.log('[GOOGLE] Redirecting to /api/auth/google/login');
+                window.location.href = '/api/auth/google/login';
+            }
+        });
+        
         function selectRegisterMethod(method) {
+            console.log('[SELECT_METHOD]', method);
             document.getElementById('registerMethodSelection').style.display = 'none'
             
             if (method === 'email') {
