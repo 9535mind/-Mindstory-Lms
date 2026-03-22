@@ -158,21 +158,42 @@ payments.post('/confirm', requireAuth, async (c) => {
       payment.id
     ).run()
 
-    // 수강 신청 생성
+    // 수강 신청 생성 (또는 기존 체험 등록 업데이트)
     const endDate = new Date()
     endDate.setDate(endDate.getDate() + 90) // 90일 수강 기간
 
-    await DB.prepare(`
-      INSERT INTO enrollments (
-        user_id, course_id, payment_id, status,
-        enrolled_at, expires_at
-      ) VALUES (?, ?, ?, 'active', datetime('now'), ?)
-    `).bind(
-      user.id,
-      payment.course_id,
-      payment.id,
-      endDate.toISOString()
-    ).run()
+    // ✅ 기존 체험 등록(trial enrollment)이 있는지 확인
+    const trialEnrollment: any = await DB.prepare(`
+      SELECT id FROM enrollments
+      WHERE user_id = ? AND course_id = ? AND payment_id IS NULL
+    `).bind(user.id, payment.course_id).first()
+
+    if (trialEnrollment) {
+      // ✅ 체험 등록이 있으면 payment_id 업데이트 (유료 전환)
+      console.log(`Converting trial enrollment ${trialEnrollment.id} to paid`)
+      await DB.prepare(`
+        UPDATE enrollments
+        SET payment_id = ?, expires_at = ?, updated_at = datetime('now')
+        WHERE id = ?
+      `).bind(
+        payment.id,
+        endDate.toISOString(),
+        trialEnrollment.id
+      ).run()
+    } else {
+      // ✅ 체험 등록이 없으면 새로 생성
+      await DB.prepare(`
+        INSERT INTO enrollments (
+          user_id, course_id, payment_id, status,
+          enrolled_at, expires_at
+        ) VALUES (?, ?, ?, 'active', datetime('now'), ?)
+      `).bind(
+        user.id,
+        payment.course_id,
+        payment.id,
+        endDate.toISOString()
+      ).run()
+    }
 
     // TODO: 이메일/SMS 발송
 

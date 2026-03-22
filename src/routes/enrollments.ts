@@ -138,10 +138,25 @@ enrollments.post('/', requireAuth, async (c) => {
       return c.json(errorResponse('현재 수강 신청이 불가능한 강좌입니다.'), 400)
     }
 
-    // ④ 무료 강좌 확인 (price가 0이면 무료)
+    // ④ 무료 강좌 확인 (price가 0이면 완전 무료, price > 0이면 체험 등록)
     const isFree = course.price === 0
+    
+    // 유료 강좌인 경우 - 체험 등록 (1강만 무료)
     if (!isFree) {
-      return c.json(errorResponse('유료 강좌는 결제가 필요합니다.'), 402)
+      // 이미 결제한 강좌인지 확인
+      const paidEnrollment = await DB.prepare(`
+        SELECT e.id 
+        FROM enrollments e
+        JOIN payments p ON e.payment_id = p.id
+        WHERE e.user_id = ? AND e.course_id = ? AND p.status = 'completed'
+      `).bind(user.id, courseId).first()
+
+      if (paidEnrollment) {
+        return c.json(errorResponse('이미 결제하신 강좌입니다.'), 409)
+      }
+      
+      // 체험 등록 허용 (payment_id는 NULL)
+      console.log(`User ${user.id} enrolling in paid course ${courseId} as trial (1강 무료)`)
     }
 
     // ⑤ 중복 등록 방지
@@ -417,6 +432,116 @@ enrollments.get('/:id/lessons/:lessonId', requireAuth, async (c) => {
 
   } catch (error) {
     console.error('Get lesson detail error:', error)
+    return c.json(errorResponse('서버 오류가 발생했습니다.'), 500)
+  }
+})
+
+/**
+ * GET /api/enrollments/:enrollmentId/lessons/:lessonId/check-access
+ * 차시 접근 권한 확인
+ * - 무료 강좌: 모든 차시 접근 가능
+ * - 유료 강좌 (결제 안함): 1강만 접근 가능
+ * - 유료 강좌 (결제 완료): 모든 차시 접근 가능
+ */
+enrollments.get('/:enrollmentId/lessons/:lessonId/check-access', requireAuth, async (c) => {
+  try {
+    const enrollmentId = c.req.param('enrollmentId')
+    const lessonId = c.req.param('lessonId')
+    const user = c.get('user')
+    const { DB } = c.env
+
+    // 수강 신청 정보 조회
+    const enrollment: any = await DB.prepare(`
+      SELECT e.*, c.price, c.title as course_title
+      FROM enrollments e
+      JOIN courses c ON e.course_id = c.id
+      WHERE e.id = ? AND e.user_id = ?
+    `).bind(enrollmentId, user.id).first()
+
+    if (!enrollment) {
+      return c.json({
+        success: false,
+        hasAccess: false,
+        reason: 'enrollment_not_found',
+        message: '수강 신청 정보를 찾을 수 없습니다.'
+      }, 404)
+    }
+
+    // 차시 정보 조회
+    const lesson: any = await DB.prepare(`
+      SELECT lesson_number, title 
+      FROM lessons 
+      WHERE id = ? AND course_id = ?
+    `).bind(lessonId, enrollment.course_id).first()
+
+    if (!lesson) {
+      return c.json({
+        success: false,
+        hasAccess: false,
+        reason: 'lesson_not_found',
+        message: '차시를 찾을 수 없습니다.'
+      }, 404)
+    }
+
+    // 무료 강좌인 경우 - 모든 차시 접근 가능
+    const isFree = enrollment.price === 0
+    if (isFree) {
+      return c.json({
+        success: true,
+        hasAccess: true,
+        reason: 'free_course',
+        courseTitle: enrollment.course_title,
+        lessonNumber: lesson.lesson_number,
+        lessonTitle: lesson.title
+      })
+    }
+
+    // 유료 강좌인 경우 - 결제 여부 확인
+    const hasPaid = enrollment.payment_id !== null
+
+    if (hasPaid) {
+      // 결제 완료 - 모든 차시 접근 가능
+      return c.json({
+        success: true,
+        hasAccess: true,
+        reason: 'paid_course',
+        courseTitle: enrollment.course_title,
+        lessonNumber: lesson.lesson_number,
+        lessonTitle: lesson.title
+      })
+    }
+
+    // 결제하지 않은 경우 - 1강만 접근 가능
+    const isFirstLesson = lesson.lesson_number === 1
+    
+    if (isFirstLesson) {
+      return c.json({
+        success: true,
+        hasAccess: true,
+        reason: 'trial_first_lesson',
+        message: '무료 체험 중입니다. 1강은 무료로 시청 가능합니다.',
+        courseTitle: enrollment.course_title,
+        lessonNumber: lesson.lesson_number,
+        lessonTitle: lesson.title,
+        isTrial: true
+      })
+    }
+
+    // 2강 이상 - 결제 필요
+    return c.json({
+      success: false,
+      hasAccess: false,
+      reason: 'payment_required',
+      message: `${lesson.lesson_number}강부터는 결제가 필요합니다.`,
+      courseTitle: enrollment.course_title,
+      coursePrice: enrollment.price,
+      lessonNumber: lesson.lesson_number,
+      lessonTitle: lesson.title,
+      requirePayment: true
+    }, 402)
+
+  } catch (error) {
+    console.error('Check lesson access error:', error)
     return c.json(errorResponse('서버 오류가 발생했습니다.'), 500)
   }
 })

@@ -250,6 +250,80 @@ async function loadLesson(lessonId) {
             return;
         }
 
+        // ✅ 차시 접근 권한 확인 (enrollmentData가 없으면 스킵)
+        if (enrollmentData && enrollmentData.id) {
+            try {
+                console.log(`🔐 Checking access for lesson ${lessonId}, enrollment ${enrollmentData.id}`);
+                const accessResponse = await axios.get(
+                    `/api/enrollments/${enrollmentData.id}/lessons/${lessonId}/check-access`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    }
+                );
+
+                console.log('✅ Access check response:', accessResponse.data);
+
+                // 접근 권한이 없는 경우 (402 Payment Required)
+                if (!accessResponse.data.hasAccess) {
+                    console.warn('⚠️ No access to this lesson - payment required');
+                    
+                    // 결제 필요 팝업 표시
+                    if (window.showPaymentRequiredModal) {
+                        window.showPaymentRequiredModal({
+                            courseId: courseData.id,
+                            courseTitle: courseData.title,
+                            coursePrice: courseData.price,
+                            lessonNumber: currentLesson.lesson_number,
+                            lessonTitle: currentLesson.title,
+                            message: accessResponse.data.message || '이 차시는 결제가 필요합니다.'
+                        });
+                    } else {
+                        showError('2강부터는 결제가 필요합니다. 결제 후 계속 수강하실 수 있습니다.');
+                    }
+                    
+                    return; // 영상 로드 중단
+                }
+
+                // 무료 체험 중임을 표시
+                if (accessResponse.data.isTrial) {
+                    console.log('🎁 Trial mode: First lesson is free');
+                    // 무료 체험 배지 표시 (선택사항)
+                    document.getElementById('currentLessonTitle').innerHTML = 
+                        `<span class="inline-block px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded mr-2">무료 체험</span>` +
+                        `차시 ${currentLesson.lesson_number}: ${currentLesson.title}`;
+                }
+
+            } catch (accessError) {
+                // 402 응답은 정상적인 흐름 (결제 필요)
+                if (accessError.response && accessError.response.status === 402) {
+                    console.warn('⚠️ Payment required for this lesson');
+                    
+                    const errorData = accessError.response.data;
+                    
+                    // 결제 필요 팝업 표시
+                    if (window.showPaymentRequiredModal) {
+                        window.showPaymentRequiredModal({
+                            courseId: courseData.id,
+                            courseTitle: errorData.courseTitle || courseData.title,
+                            coursePrice: errorData.coursePrice || courseData.price,
+                            lessonNumber: errorData.lessonNumber || currentLesson.lesson_number,
+                            lessonTitle: errorData.lessonTitle || currentLesson.title,
+                            message: errorData.message || '2강부터는 결제가 필요합니다.'
+                        });
+                    } else {
+                        showError(errorData.message || '2강부터는 결제가 필요합니다.');
+                    }
+                    
+                    return; // 영상 로드 중단
+                }
+                
+                // 그 외 오류는 무시하고 계속 진행 (backward compatibility)
+                console.error('❌ Access check failed, but continue:', accessError);
+            }
+        }
+
         // UI 즉시 업데이트
         document.getElementById('currentLessonTitle').textContent = 
             `차시 ${currentLesson.lesson_number}: ${currentLesson.title}`;
