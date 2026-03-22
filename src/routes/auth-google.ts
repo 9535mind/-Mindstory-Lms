@@ -22,8 +22,16 @@ const authGoogle = new Hono<{ Bindings: Bindings }>()
 authGoogle.get('/login', async (c) => {
   try {
     // 환경 변수에서 Google 설정 읽기
-    const clientId = c.env.GOOGLE_CLIENT_ID || 'your_google_client_id'
-    const redirectUri = c.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback'
+    const clientId = c.env.GOOGLE_CLIENT_ID
+    const redirectUri = c.env.GOOGLE_REDIRECT_URI
+    
+    // 필수 환경 변수 확인
+    if (!clientId || !redirectUri) {
+      console.error('[GOOGLE_LOGIN] Missing environment variables')
+      console.error('GOOGLE_CLIENT_ID:', clientId ? 'SET' : 'MISSING')
+      console.error('GOOGLE_REDIRECT_URI:', redirectUri ? 'SET' : 'MISSING')
+      return c.json(errorResponse('Google 로그인 설정이 완료되지 않았습니다.'), 500)
+    }
     
     // 디버그: 설정값 로그
     console.log('[GOOGLE_LOGIN] Client ID:', clientId.substring(0, 20) + '...')
@@ -88,9 +96,15 @@ authGoogle.get('/callback', async (c) => {
       return c.json(errorResponse('인증 코드가 없습니다.'), 400)
     }
     
-    const clientId = c.env.GOOGLE_CLIENT_ID || 'your_google_client_id'
-    const clientSecret = c.env.GOOGLE_CLIENT_SECRET || 'your_google_client_secret'
-    const redirectUri = c.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback'
+    const clientId = c.env.GOOGLE_CLIENT_ID
+    const clientSecret = c.env.GOOGLE_CLIENT_SECRET
+    const redirectUri = c.env.GOOGLE_REDIRECT_URI
+    
+    // 필수 환경 변수 확인
+    if (!clientId || !clientSecret || !redirectUri) {
+      console.error('[GOOGLE_CALLBACK] Missing environment variables')
+      return c.json(errorResponse('Google 로그인 설정이 완료되지 않았습니다.'), 500)
+    }
     
     console.log('[GOOGLE_CALLBACK] Using redirect_uri:', redirectUri)
     

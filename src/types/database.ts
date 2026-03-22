@@ -8,23 +8,23 @@ export type Bindings = {
   R2: R2Bucket;             // Primary R2 Storage for all files
   VIDEO_STORAGE?: R2Bucket; // For course videos (optional, legacy)
   STORAGE?: R2Bucket;       // For PDFs, certificates, documents (optional, legacy)
-  APIVIDEO_API_KEY: string; // api.video API key
-  APIVIDEO_BASE_URL: string; // api.video base URL
-  GEMINI_API_KEY: string;   // Gemini API key
-  GEMINI_BASE_URL: string;  // Gemini API base URL
+  APIVIDEO_API_KEY?: string; // api.video API key
+  APIVIDEO_BASE_URL?: string; // api.video base URL
+  GEMINI_API_KEY?: string;   // Gemini API key
+  GEMINI_BASE_URL?: string;  // Gemini API base URL
   
   // OAuth (Google)
-  GOOGLE_CLIENT_ID: string;
-  GOOGLE_CLIENT_SECRET: string;
-  GOOGLE_REDIRECT_URI: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_REDIRECT_URI?: string;
   
   // OAuth (Kakao)
-  KAKAO_CLIENT_ID: string;
-  KAKAO_CLIENT_SECRET: string;
-  KAKAO_REDIRECT_URI: string;
+  KAKAO_CLIENT_ID?: string;
+  KAKAO_CLIENT_SECRET?: string;
+  KAKAO_REDIRECT_URI?: string;
   
   // JWT
-  JWT_SECRET: string;
+  JWT_SECRET?: string;
 }
 
 // User Types
