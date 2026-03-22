@@ -711,9 +711,17 @@ pagesAdmin.get('/courses', async (c) => {
 
 /**
  * GET /admin/users
- * 회원 관리 페이지
+ * 회원 관리 페이지 (리다이렉트)
  */
 pagesAdmin.get('/users', async (c) => {
+  return c.redirect('/admin-users.html')
+})
+
+/**
+ * GET /admin/users-legacy
+ * 회원 관리 페이지 (레거시)
+ */
+pagesAdmin.get('/users-legacy', async (c) => {
   return c.html(`
     <!DOCTYPE html>
     <html lang="ko">
