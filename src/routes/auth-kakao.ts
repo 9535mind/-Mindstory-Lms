@@ -340,9 +340,8 @@ authKakao.get('/callback', async (c) => {
               profile_image_url: ${user.profile_image_url ? `'${user.profile_image_url}'` : 'null'}
             }));
             
-            // 메인 페이지로 이동
-            alert('카카오 로그인 성공! 환영합니다, ${user.name}님!');
-            window.location.href = '/';
+            // 대시보드로 이동
+            window.location.href = '/dashboard';
           </script>
         </body>
       </html>
