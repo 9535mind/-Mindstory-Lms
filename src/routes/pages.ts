@@ -646,8 +646,13 @@ pages.get('/register', (c) => {
 
         // 이메일 형식 검증
         function validateEmail(email) {
-            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-            return re.test(email)
+            // 빈 문자열 체크
+            if (!email || email.trim() === '') {
+                return false
+            }
+            // 표준 이메일 형식 검증 (숫자로 시작하는 이메일 포함)
+            const re = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+            return re.test(email.trim())
         }
 
         // 전화번호 형식 검증 (010-xxxx-xxxx or 01012345678)
@@ -800,8 +805,14 @@ pages.get('/register', (c) => {
             const marketing_agreed = document.getElementById('email_marketing_agreed').checked
             
             // 유효성 검사
+            if (!email) {
+                showToast('이메일을 입력해주세요.', 'error')
+                return
+            }
+            
             if (!validateEmail(email)) {
-                showToast('올바른 이메일 형식이 아닙니다.', 'error')
+                showToast('올바른 이메일 형식이 아닙니다. (예: user@example.com)', 'error')
+                console.error('이메일 검증 실패:', email) // 디버깅용
                 return
             }
             
