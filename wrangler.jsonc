@@ -16,5 +16,15 @@
       "binding": "R2",
       "bucket_name": "mindstory-lms"
     }
-  ]
+  ],
+  "vars": {
+    "GOOGLE_CLIENT_ID": "966965276792-0bhnlaeo06dcvqm395k0q1faom34455i.apps.googleusercontent.com",
+    "GOOGLE_CLIENT_SECRET": "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",
+    "GOOGLE_REDIRECT_URI": "https://production-ready.mindstory-lms.pages.dev/api/auth/google/callback",
+    "KAKAO_CLIENT_ID": "4a832f4eddd0348ce18774012252bf0a",
+    "KAKAO_CLIENT_SECRET": "gdxTxKOkaONr8eGQVTFwxlh0u4QqRNlo",
+    "KAKAO_REDIRECT_URI": "https://production-ready.mindstory-lms.pages.dev/api/auth/kakao/callback",
+    "GEMINI_API_KEY": "AIzaSyCZKGEqStpm0X9CmpRrtxxojuBAu6h8J7c",
+    "JWT_SECRET": "mindstory-lms-jwt-secret-key-2024-12-27"
+  }
 }
