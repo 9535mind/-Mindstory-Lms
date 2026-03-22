@@ -1,5 +1,5 @@
 /**
- * AI 도우미 API
+ * AI 도우미 API (Gemini 기반)
  * /api/ai/*
  */
 
@@ -9,6 +9,38 @@ import { successResponse, errorResponse } from '../utils/helpers'
 import { requireAdmin } from '../middleware/auth'
 
 const ai = new Hono<{ Bindings: Bindings }>()
+
+/**
+ * Gemini API 호출 헬퍼 함수
+ */
+async function callGemini(apiKey: string, baseURL: string, prompt: string, systemInstruction?: string) {
+  const response = await fetch(`${baseURL}/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{
+          text: systemInstruction ? `${systemInstruction}\n\n${prompt}` : prompt
+        }]
+      }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 2048
+      }
+    })
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    console.error('Gemini API error:', error)
+    throw new Error('AI 생성에 실패했습니다.')
+  }
+
+  const data = await response.json()
+  return data.candidates[0].content.parts[0].text
+}
 
 /**
  * POST /api/ai/generate-course
@@ -29,15 +61,14 @@ ai.post('/generate-course', requireAdmin, async (c) => {
       return c.json(errorResponse('주제를 입력해주세요.'), 400)
     }
 
-    // OpenAI API 키 확인
-    const apiKey = c.env.OPENAI_API_KEY
-    const baseURL = c.env.OPENAI_BASE_URL || 'https://www.genspark.ai/api/llm_proxy/v1'
+    // Gemini API 키 확인
+    const apiKey = c.env.GEMINI_API_KEY
+    const baseURL = c.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta'
 
     if (!apiKey) {
-      return c.json(errorResponse('OpenAI API 키가 설정되지 않았습니다. GenSpark에서 API 키를 설정해주세요.'), 400)
+      return c.json(errorResponse('Gemini API 키가 설정되지 않았습니다. GenSpark에서 API 키를 설정해주세요.'), 400)
     }
 
-    // OpenAI API 호출 (fetch 사용 - Cloudflare Workers 환경)
     const difficultyMap = {
       'beginner': '초급',
       'intermediate': '중급',
@@ -73,30 +104,9 @@ ai.post('/generate-course', requireAdmin, async (c) => {
 4. 각 차시는 논리적 순서로 배열되어야 합니다
 5. 한국어로 작성해주세요`
 
-    const response = await fetch(`${baseURL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-5',
-        messages: [
-          { role: 'system', content: '당신은 온라인 교육 전문가입니다. 효과적인 강좌를 기획하고 구성하는 데 능숙합니다.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7
-      })
-    })
+    const systemInstruction = '당신은 온라인 교육 전문가입니다. 효과적인 강좌를 기획하고 구성하는 데 능숙합니다.'
 
-    if (!response.ok) {
-      const error = await response.text()
-      console.error('OpenAI API error:', error)
-      return c.json(errorResponse('AI 생성에 실패했습니다.'), 500)
-    }
-
-    const data = await response.json()
-    const content = data.choices[0].message.content
+    const content = await callGemini(apiKey, baseURL, prompt, systemInstruction)
 
     // JSON 파싱 시도
     let courseData
@@ -136,12 +146,12 @@ ai.post('/generate-lesson', requireAdmin, async (c) => {
       return c.json(errorResponse('강좌 제목과 차시 번호를 입력해주세요.'), 400)
     }
 
-    // OpenAI API 키 확인
-    const apiKey = c.env.OPENAI_API_KEY
-    const baseURL = c.env.OPENAI_BASE_URL || 'https://www.genspark.ai/api/llm_proxy/v1'
+    // Gemini API 키 확인
+    const apiKey = c.env.GEMINI_API_KEY
+    const baseURL = c.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta'
 
     if (!apiKey) {
-      return c.json(errorResponse('OpenAI API 키가 설정되지 않았습니다. GenSpark에서 API 키를 설정해주세요.'), 400)
+      return c.json(errorResponse('Gemini API 키가 설정되지 않았습니다. GenSpark에서 API 키를 설정해주세요.'), 400)
     }
 
     const prompt = `다음 강좌의 ${lesson_number}차시를 기획해주세요:
@@ -163,30 +173,9 @@ ${topic ? `주제: ${topic}` : ''}
 3. video_duration_minutes는 15~60분 사이로 추천해주세요
 4. 한국어로 작성해주세요`
 
-    const response = await fetch(`${baseURL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-5',
-        messages: [
-          { role: 'system', content: '당신은 온라인 교육 전문가입니다. 효과적인 차시를 기획하고 구성하는 데 능숙합니다.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7
-      })
-    })
+    const systemInstruction = '당신은 온라인 교육 전문가입니다. 효과적인 차시를 기획하고 구성하는 데 능숙합니다.'
 
-    if (!response.ok) {
-      const error = await response.text()
-      console.error('OpenAI API error:', error)
-      return c.json(errorResponse('AI 생성에 실패했습니다.'), 500)
-    }
-
-    const data = await response.json()
-    const content = data.choices[0].message.content
+    const content = await callGemini(apiKey, baseURL, prompt, systemInstruction)
 
     // JSON 파싱 시도
     let lessonData
@@ -220,12 +209,12 @@ ai.post('/generate-description', requireAdmin, async (c) => {
       return c.json(errorResponse('강좌명을 입력해주세요.'), 400)
     }
 
-    // OpenAI API 키 확인
-    const apiKey = c.env.OPENAI_API_KEY
-    const baseURL = c.env.OPENAI_BASE_URL || 'https://www.genspark.ai/api/llm_proxy/v1'
+    // Gemini API 키 확인
+    const apiKey = c.env.GEMINI_API_KEY
+    const baseURL = c.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta'
 
     if (!apiKey) {
-      return c.json(errorResponse('OpenAI API 키가 설정되지 않았습니다.'), 400)
+      return c.json(errorResponse('Gemini API 키가 설정되지 않았습니다.'), 400)
     }
 
     const prompt = `다음 강좌명에 대한 매력적인 강좌 설명을 작성해주세요:
@@ -244,41 +233,9 @@ JSON 형식으로 응답:
   "description": "강좌 설명"
 }`
 
-    const response = await fetch(`${baseURL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: '당신은 온라인 교육 과정 설명 전문가입니다. 주어진 강좌명에 대해 매력적이고 명확한 설명을 작성합니다.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 500
-      })
-    })
+    const systemInstruction = '당신은 온라인 교육 과정 설명 전문가입니다. 주어진 강좌명에 대해 매력적이고 명확한 설명을 작성합니다.'
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('OpenAI API error:', errorText)
-      return c.json(errorResponse('AI 생성에 실패했습니다.'), 500)
-    }
-
-    const data = await response.json()
-    const content = data.choices[0]?.message?.content
-
-    if (!content) {
-      return c.json(errorResponse('AI 응답을 받지 못했습니다.'), 500)
-    }
+    const content = await callGemini(apiKey, baseURL, prompt, systemInstruction)
 
     // JSON 파싱
     let description
@@ -315,12 +272,12 @@ ai.post('/generate-lesson-description', requireAdmin, async (c) => {
       return c.json(errorResponse('차시 제목을 입력해주세요.'), 400)
     }
 
-    // OpenAI API 키 확인
-    const apiKey = c.env.OPENAI_API_KEY
-    const baseURL = c.env.OPENAI_BASE_URL || 'https://www.genspark.ai/api/llm_proxy/v1'
+    // Gemini API 키 확인
+    const apiKey = c.env.GEMINI_API_KEY
+    const baseURL = c.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta'
 
     if (!apiKey) {
-      return c.json(errorResponse('OpenAI API 키가 설정되지 않았습니다.'), 400)
+      return c.json(errorResponse('Gemini API 키가 설정되지 않았습니다.'), 400)
     }
 
     const prompt = `다음 차시에 대한 명확하고 구체적인 설명을 작성해주세요:
@@ -340,41 +297,9 @@ JSON 형식으로 응답:
   "description": "차시 설명"
 }`
 
-    const response = await fetch(`${baseURL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: '당신은 온라인 교육 차시 설명 전문가입니다. 주어진 차시 제목에 대해 학습자가 쉽게 이해할 수 있는 명확한 설명을 작성합니다.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 300
-      })
-    })
+    const systemInstruction = '당신은 온라인 교육 차시 설명 전문가입니다. 주어진 차시 제목에 대해 학습자가 쉽게 이해할 수 있는 명확한 설명을 작성합니다.'
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('OpenAI API error:', errorText)
-      return c.json(errorResponse('AI 생성에 실패했습니다.'), 500)
-    }
-
-    const data = await response.json()
-    const content = data.choices[0]?.message?.content
-
-    if (!content) {
-      return c.json(errorResponse('AI 응답을 받지 못했습니다.'), 500)
-    }
+    const content = await callGemini(apiKey, baseURL, prompt, systemInstruction)
 
     // JSON 파싱
     let description

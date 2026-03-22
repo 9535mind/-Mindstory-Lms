@@ -1,6 +1,6 @@
 /**
  * 마인드스토리 원격평생교육원 LMS 플랫폼
- * Ver.1.3 - MVP
+ * Ver.1.4 - 보안 강화 (Beta 준비)
  */
 
 import { Hono } from 'hono'
@@ -8,6 +8,7 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { serveStatic } from 'hono/cloudflare-workers'
 import { Bindings } from './types/database'
+import { generalRateLimiter, strictRateLimiter, lenientRateLimiter } from './middleware/rate-limiter'
 
 // 라우트 임포트
 import auth from './routes/auth'
@@ -45,14 +46,56 @@ const app = new Hono<{ Bindings: Bindings }>()
 
 // 미들웨어
 app.use('*', logger())
+
+// CORS 설정 강화 - 베타 서비스용
+// 로컬 개발: localhost, 127.0.0.1
+// 샌드박스: *.sandbox.novita.ai
+// 프로덕션: *.pages.dev (배포 후 실제 도메인으로 변경)
 app.use('/api/*', cors({
-  origin: '*',
+  origin: (origin) => {
+    // 로컬 개발 환경
+    if (origin?.includes('localhost') || origin?.includes('127.0.0.1')) {
+      return origin
+    }
+    // 샌드박스 환경
+    if (origin?.includes('.sandbox.novita.ai')) {
+      return origin
+    }
+    // Cloudflare Pages 환경
+    if (origin?.includes('.pages.dev')) {
+      return origin
+    }
+    // 프로덕션 도메인 (배포 후 추가)
+    // if (origin === 'https://www.mindstory-lms.com') {
+    //   return origin
+    // }
+    
+    // 그 외는 차단
+    return false
+  },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
-  exposeHeaders: ['Content-Length', 'X-Request-Id'],
+  exposeHeaders: ['Content-Length', 'X-Request-Id', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
   maxAge: 600,
-  credentials: false,
+  credentials: true,  // 쿠키 전송 허용
 }))
+
+// Rate Limiting 적용
+// 엄격한 제한: 로그인, 회원가입, 비밀번호 재설정 (1분에 10회)
+app.use('/api/auth/login', strictRateLimiter)
+app.use('/api/auth/register', strictRateLimiter)
+app.use('/api/auth/reset-password', strictRateLimiter)
+
+// 일반 제한: 대부분의 API (1분에 100회)
+app.use('/api/courses', generalRateLimiter)
+app.use('/api/enrollments', generalRateLimiter)
+app.use('/api/payments-v2', generalRateLimiter)
+app.use('/api/admin', generalRateLimiter)
+app.use('/api/upload', generalRateLimiter)
+
+// 관대한 제한: 읽기 전용 API (1분에 200회)
+app.use('/api/auth/me', lenientRateLimiter)
+app.use('/api/health', lenientRateLimiter)
 
 // 정적 파일 서빙 (Cloudflare Pages용 - root 제거)
 app.use('/static/*', serveStatic())

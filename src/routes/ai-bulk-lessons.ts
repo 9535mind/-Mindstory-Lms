@@ -54,12 +54,12 @@ aiBulkLessons.post('/analyze-document', requireAdmin, async (c) => {
     const fileBuffer = await file.arrayBuffer()
     const fileText = new TextDecoder().decode(fileBuffer)
 
-    // OpenAI로 문서 분석 및 차시 분할
-    const openaiApiKey = c.env.OPENAI_API_KEY
-    const openaiBaseUrl = c.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'
+    // Gemini로 문서 분석 및 차시 분할
+    const geminiApiKey = c.env.GEMINI_API_KEY
+    const geminiBaseUrl = c.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta'
 
-    if (!openaiApiKey) {
-      return c.json(errorResponse('OpenAI API 키가 설정되지 않았습니다'), 500)
+    if (!geminiApiKey) {
+      return c.json(errorResponse('Gemini API 키가 설정되지 않았습니다'), 500)
     }
 
     const prompt = `다음 문서를 분석하여 학습용 강좌의 차시로 나눠주세요.
@@ -91,37 +91,34 @@ ${lessonCount > 0 ? `총 ${lessonCount}개의 차시로 나눠주세요.` : '적
 - 내용은 마크다운 형식으로 구조화
 - JSON만 반환하고 다른 텍스트는 포함하지 마세요`
 
-    const openaiResponse = await fetch(`${openaiBaseUrl}/chat/completions`, {
+    const systemInstruction = '당신은 교육 콘텐츠 전문가입니다. 문서를 분석하여 효과적인 학습 차시로 나누는 것이 전문입니다.'
+
+    const geminiResponse = await fetch(`${geminiBaseUrl}/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openaiApiKey}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: '당신은 교육 콘텐츠 전문가입니다. 문서를 분석하여 효과적인 학습 차시로 나누는 것이 전문입니다.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 4000
+        contents: [{
+          parts: [{
+            text: `${systemInstruction}\n\n${prompt}`
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 4000
+        }
       })
     })
 
-    if (!openaiResponse.ok) {
-      const error = await openaiResponse.text()
-      console.error('OpenAI API error:', error)
+    if (!geminiResponse.ok) {
+      const error = await geminiResponse.text()
+      console.error('Gemini API error:', error)
       return c.json(errorResponse('AI 분석에 실패했습니다'), 500)
     }
 
-    const openaiData = await openaiResponse.json()
-    const aiResponse = openaiData.choices[0].message.content
+    const geminiData = await geminiResponse.json()
+    const aiResponse = geminiData.candidates[0].content.parts[0].text
 
     // JSON 파싱
     let lessons

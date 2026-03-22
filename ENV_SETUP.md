@@ -16,9 +16,9 @@ GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
 
-# OpenAI API
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_API_KEY=your-openai-api-key
+# Gemini API
+GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
+GEMINI_API_KEY=your-gemini-api-key
 
 # API Video
 APIVIDEO_API_KEY=your-apivideo-api-key
@@ -39,9 +39,9 @@ CLOUDFLARE_API_TOKEN=your-cloudflare-api-token
 - https://console.cloud.google.com
 - OAuth 2.0 클라이언트 ID 생성
 
-### 3. OpenAI
-- https://platform.openai.com/api-keys
-- API 키 생성
+### 3. Google Gemini
+- https://aistudio.google.com/app/apikey
+- API 키 생성 (무료 사용 가능)
 
 ### 4. Cloudflare
 - https://dash.cloudflare.com

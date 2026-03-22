@@ -10,6 +10,8 @@ export type Bindings = {
   STORAGE?: R2Bucket;       // For PDFs, certificates, documents (optional, legacy)
   APIVIDEO_API_KEY: string; // api.video API key
   APIVIDEO_BASE_URL: string; // api.video base URL
+  GEMINI_API_KEY: string;   // Gemini API key
+  GEMINI_BASE_URL: string;  // Gemini API base URL
 }
 
 // User Types

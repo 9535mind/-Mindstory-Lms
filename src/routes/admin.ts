@@ -396,7 +396,7 @@ admin.post('/users/:userId/reset-password', requireAdmin, async (c) => {
   try {
     const userId = c.req.param('userId')
     const { mode } = await c.req.json<{ mode?: 'manual' | 'ai' }>()
-    const { DB, OPENAI_API_KEY, OPENAI_BASE_URL } = c.env
+    const { DB, GEMINI_API_KEY, GEMINI_BASE_URL } = c.env
     
     // 사용자 존재 확인
     const user = await DB.prepare(`
@@ -409,36 +409,39 @@ admin.post('/users/:userId/reset-password', requireAdmin, async (c) => {
     
     let newPassword = ''
     
-    if (mode === 'ai' && OPENAI_API_KEY) {
+    if (mode === 'ai' && GEMINI_API_KEY) {
       // AI로 안전한 비밀번호 생성
       try {
-        const baseURL = OPENAI_BASE_URL || 'https://www.genspark.ai/api/llm_proxy/v1'
-        const response = await fetch(`${baseURL}/chat/completions`, {
+        const baseURL = GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta'
+        const prompt = `사용자 이름: ${user.name}
+
+다음 규칙으로 비밀번호를 생성해주세요:
+1. 8-12자 길이
+2. 영문 대소문자, 숫자, 특수문자(!@#$%^&*) 중 3가지 이상 포함
+3. 사용자 이름과 관련되면서도 예측하기 어려운 패턴
+4. JSON 형식으로 응답: {"password": "생성된비밀번호"}`
+
+        const response = await fetch(`${baseURL}/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OPENAI_API_KEY}`
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              {
-                role: 'system',
-                content: '당신은 안전한 비밀번호 생성 전문가입니다. 8-12자리의 기억하기 쉬우면서도 안전한 비밀번호를 생성합니다.'
-              },
-              {
-                role: 'user',
-                content: `사용자 이름: ${user.name}\n\n다음 규칙으로 비밀번호를 생성해주세요:\n1. 8-12자 길이\n2. 영문 대소문자, 숫자, 특수문자(!@#$%^&*) 중 3가지 이상 포함\n3. 사용자 이름과 관련되면서도 예측하기 어려운 패턴\n4. JSON 형식으로 응답: {"password": "생성된비밀번호"}`
-              }
-            ],
-            temperature: 0.9,
-            max_tokens: 100
+            contents: [{
+              parts: [{
+                text: `당신은 안전한 비밀번호 생성 전문가입니다. 8-12자리의 기억하기 쉬우면서도 안전한 비밀번호를 생성합니다.\n\n${prompt}`
+              }]
+            }],
+            generationConfig: {
+              temperature: 0.9,
+              maxOutputTokens: 100
+            }
           })
         })
         
         if (response.ok) {
           const data = await response.json()
-          const content = data.choices[0]?.message?.content
+          const content = data.candidates[0].content.parts[0].text
           
           try {
             const jsonMatch = content.match(/\{[\s\S]*\}/)
