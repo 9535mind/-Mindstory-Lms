@@ -1,15 +1,49 @@
 # 🎓 마인드스토리 원격평생교육원 LMS 플랫폼
 
-**Ver.2.0 - 🚀 프로세스 개선 + 수강평/별점/배속/수료증 시스템 추가! (2026.01.04)** ✨🎉
+**Ver.2.1 - 🎉 소셜 로그인 통합 완료! (2026.03.22)** ✨
 
-> **완전한 학습 경험!** 테스트 자동화 + API 문서 + 수강평/별점 + 배속 재생 + 수료증 발급!
+> **한 번의 클릭으로 시작!** Google & Kakao 소셜 로그인 + 자동 회원가입 + 개인화된 대시보드!
 
 > **"스스로 배우는 힘을 키우는 교육"**  
 > 박종석 대표의 20년 현장 경험을 담은 **완전한 프로덕션급 LMS 플랫폼**
 
 ---
 
-## 🆕 Ver.2.0 - 프로세스 개선 + 신규 기능 추가! (2026.01.04)
+## 🆕 Ver.2.1 - 소셜 로그인 통합 + 보안 강화! (2026.03.22)
+
+### ✨ **새로운 기능**
+
+#### **소셜 로그인 (Google & Kakao)** 🔐
+- ✅ **Google 로그인** - 구글 계정으로 1초 만에 시작
+- ✅ **Kakao 로그인** - 카카오 계정으로 간편 로그인
+- ✅ **자동 회원가입** - 신규 사용자 자동 가입 처리
+- ✅ **세션 관리** - 7일 자동 로그인 유지
+- ✅ **프로필 연동** - 소셜 계정 프로필 사진/이름 자동 동기화
+- ✅ **환영 대시보드** - 로그인 후 개인화된 대시보드 표시
+
+**데이터베이스 스키마:**
+```sql
+-- users 테이블에 소셜 로그인 컬럼 추가
+ALTER TABLE users ADD COLUMN social_provider TEXT;      -- 'google' or 'kakao'
+ALTER TABLE users ADD COLUMN social_id TEXT UNIQUE;     -- 소셜 계정 고유 ID
+ALTER TABLE users ADD COLUMN profile_image_url TEXT;    -- 프로필 사진 URL
+```
+
+#### **보안 강화** 🔒
+- ✅ **하드코딩된 Secret 제거** - `src/config/env.ts` 삭제
+- ✅ **Cloudflare 런타임 변수 사용** - `c.env`로 안전하게 주입
+- ✅ **Git 연동 배포 준비** - Dashboard 환경 변수로 관리
+- ✅ **환경 변수 검증** - Missing variable 자동 감지 및 에러 처리
+- ✅ **배포 가이드 작성** - `CLOUDFLARE_GIT_DEPLOYMENT_GUIDE.md` 추가
+
+**보안 개선 사항:**
+- ❌ **Before**: OAuth Secret이 코드에 하드코딩 (`ENV_CONFIG`)
+- ✅ **After**: Cloudflare Dashboard에서 안전하게 관리
+- 📚 **가이드**: Git 연동 배포 방법 상세 문서화
+
+---
+
+## 📋 Ver.2.0 - 프로세스 개선 + 신규 기능 추가 (2026.01.04)
 
 ### ✨ **새로운 기능**
 
@@ -123,10 +157,25 @@ GET /api/certificates/:number
 
 ### **Cloudflare Pages (프로덕션)**
 ```
-🌐 URL: https://mindstory-lms.pages.dev
-📝 상태: 배포 완료
-🔒 인증: 필요 (API 토큰)
+🌐 최신 배포: https://c5eea9f5.mindstory-lms.pages.dev (Direct Upload - 임시)
+🌐 메인 URL: https://mindstory-lms.pages.dev (Git 연동 후 사용 권장)
+📝 상태: 코드 준비 완료 (Git 연동 배포 대기)
+🔒 인증: Cloudflare API Token 또는 Git 연동
+📅 마지막 업데이트: 2026.03.22
 ```
+
+**⚠️ 중요: Git 연동 배포로 전환 권장**
+- 현재 Direct Upload 방식은 보안상 권장하지 않음
+- **Git 연동 배포 가이드**: `CLOUDFLARE_GIT_DEPLOYMENT_GUIDE.md` 참고
+- Git 연동 시 환경 변수를 Dashboard에서 안전하게 관리
+
+**배포 준비된 기능:**
+- ✅ Google 소셜 로그인 (`/api/auth/google/login`)
+- ✅ Kakao 소셜 로그인 (`/api/auth/kakao/login`)
+- ✅ 자동 회원가입 및 세션 생성
+- ✅ 개인화된 대시보드 (`/dashboard`)
+- ✅ 로그인 후 환영 알림
+- ✅ 환경 변수 런타임 주입 (c.env)
 
 ---
 

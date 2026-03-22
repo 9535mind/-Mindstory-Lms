@@ -11,7 +11,6 @@ import {
   generateSessionToken,
   addDays
 } from '../utils/helpers'
-import { ENV_CONFIG } from '../config/env'
 
 const authKakao = new Hono<{ Bindings: Bindings }>()
 
@@ -21,9 +20,18 @@ const authKakao = new Hono<{ Bindings: Bindings }>()
  */
 authKakao.get('/login', async (c) => {
   try {
-    // 환경 변수에서 카카오 설정 읽기
-    const clientId = ENV_CONFIG.KAKAO_CLIENT_ID || c.env.KAKAO_CLIENT_ID
-    const redirectUri = ENV_CONFIG.KAKAO_REDIRECT_URI || c.env.KAKAO_REDIRECT_URI
+    // Cloudflare 런타임 환경 변수 사용
+    const clientId = c.env.KAKAO_CLIENT_ID
+    const redirectUri = c.env.KAKAO_REDIRECT_URI
+    
+    // 환경 변수 검증
+    if (!clientId || !redirectUri) {
+      console.error('[KAKAO_LOGIN] Missing environment variables')
+      return c.json({ 
+        success: false, 
+        error: 'Kakao 로그인 설정이 완료되지 않았습니다. 관리자에게 문의하세요.' 
+      }, 500)
+    }
     
     // 디버그: 설정값 로그
     console.log('[KAKAO_LOGIN] Client ID:', clientId)
@@ -117,7 +125,7 @@ authKakao.get('/callback', async (c) => {
             <h3>필요한 설정:</h3>
             <p><strong>Redirect URI:</strong><br>
             <code style="background: #f4f4f4; padding: 5px; display: block; word-break: break-all;">
-            ${ENV_CONFIG.KAKAO_REDIRECT_URI || c.env.KAKAO_REDIRECT_URI}
+            ${c.env.KAKAO_REDIRECT_URI || 'Not configured'}
             </code></p>
             <p><strong>Web 플랫폼 도메인:</strong><br>
             <code style="background: #f4f4f4; padding: 5px; display: block; word-break: break-all;">
@@ -138,8 +146,18 @@ authKakao.get('/callback', async (c) => {
       `)
     }
     
-    const clientId = ENV_CONFIG.KAKAO_CLIENT_ID || c.env.KAKAO_CLIENT_ID
-    const redirectUri = ENV_CONFIG.KAKAO_REDIRECT_URI || c.env.KAKAO_REDIRECT_URI
+    // Cloudflare 런타임 환경 변수 사용
+    const clientId = c.env.KAKAO_CLIENT_ID
+    const redirectUri = c.env.KAKAO_REDIRECT_URI
+    
+    // 환경 변수 검증
+    if (!clientId || !redirectUri) {
+      console.error('[KAKAO_CALLBACK] Missing environment variables')
+      return c.json({ 
+        success: false, 
+        error: 'Kakao 로그인 설정이 완료되지 않았습니다. 관리자에게 문의하세요.' 
+      }, 500)
+    }
     
     console.log('[KAKAO_CALLBACK] Code received:', code.substring(0, 10) + '...')
     console.log('[KAKAO_CALLBACK] Using redirect_uri:', redirectUri)
