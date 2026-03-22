@@ -207,6 +207,9 @@ app.get('/courses/:courseId/learn', async (c) => {
         console.log('🎯 Course ID set:', window.COURSE_ID);
         </script>
         
+        <!-- 결제 유도 팝업 -->
+        <script src="/static/js/payment-required.js?v=1767571255"></script>
+        
         <!-- 영상 플레이어 시스템 -->
         <script src="/static/js/learn-player.js?v=1767571255"></script>
     </body>

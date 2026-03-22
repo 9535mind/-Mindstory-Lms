@@ -16,20 +16,5 @@
       "binding": "R2",
       "bucket_name": "mindstory-lms"
     }
-  ],
-  "vars": {
-    "KAKAO_CLIENT_ID": "your-kakao-client-id",
-    "KAKAO_REDIRECT_URI": "https://your-domain.com/api/auth/kakao/callback",
-    "GOOGLE_CLIENT_ID": "your-google-client-id",
-    "GOOGLE_CLIENT_SECRET": "your-google-client-secret",
-    "GOOGLE_REDIRECT_URI": "https://your-domain.com/api/auth/google/callback",
-    "GEMINI_API_KEY": "your-gemini-api-key",
-    "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta",
-    "APIVIDEO_API_KEY": "your-apivideo-api-key",
-    "APIVIDEO_BASE_URL": "https://sandbox.api.video",
-    "CLOUDFLARE_ACCOUNT_ID": "your-cloudflare-account-id",
-    "STREAM_SIGNING_KEY_ID": "",
-    "STREAM_SIGNING_PRIVATE_KEY": "",
-    "CLOUDFLARE_API_TOKEN": ""
-  }
+  ]
 }
