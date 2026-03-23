@@ -1,6 +1,6 @@
-# 🎓 마인드스토리 원격평생교육원 LMS 플랫폼
+# 🎓 MSLMS (마인드스토리 LMS)
 
-**Ver.2.1 - 🎉 소셜 로그인 통합 완료! (2026.03.22)** ✨
+**Ver.2.2 - ✅ 소셜 로그인 완전 통합! (2026.03.23)** 🎉
 
 > **한 번의 클릭으로 시작!** Google & Kakao 소셜 로그인 + 자동 회원가입 + 개인화된 대시보드!
 
@@ -9,41 +9,99 @@
 
 ---
 
-## 🆕 Ver.2.1 - 소셜 로그인 통합 + 보안 강화! (2026.03.22)
+## 🆕 Ver.2.2 - 소셜 로그인 완전 통합! (2026.03.23)
 
-### ✨ **새로운 기능**
+### ✅ **완료된 기능**
 
-#### **소셜 로그인 (Google & Kakao)** 🔐
+#### **1. OAuth 2.0 소셜 로그인** 🔐
 - ✅ **Google 로그인** - 구글 계정으로 1초 만에 시작
 - ✅ **Kakao 로그인** - 카카오 계정으로 간편 로그인
 - ✅ **자동 회원가입** - 신규 사용자 자동 가입 처리
-- ✅ **세션 관리** - 7일 자동 로그인 유지
+- ✅ **세션 관리** - 7일 자동 로그인 유지 (HttpOnly, Secure 쿠키)
 - ✅ **프로필 연동** - 소셜 계정 프로필 사진/이름 자동 동기화
-- ✅ **환영 대시보드** - 로그인 후 개인화된 대시보드 표시
+- ✅ **환영 대시보드** - 로그인 후 개인화된 환영 메시지
 
-**데이터베이스 스키마:**
-```sql
--- users 테이블에 소셜 로그인 컬럼 추가
-ALTER TABLE users ADD COLUMN social_provider TEXT;      -- 'google' or 'kakao'
-ALTER TABLE users ADD COLUMN social_id TEXT UNIQUE;     -- 소셜 계정 고유 ID
-ALTER TABLE users ADD COLUMN profile_image_url TEXT;    -- 프로필 사진 URL
+**로그인 흐름:**
+```
+1. 사용자가 "Google 로그인" 버튼 클릭
+2. Google OAuth 동의 화면 표시
+3. 승인 후 `/api/auth/google/callback`으로 리다이렉트
+4. 백엔드에서 사용자 정보 조회 및 DB 저장
+   - 기존 사용자: 로그인 처리
+   - 신규 사용자: 자동 회원가입
+5. 세션 토큰 생성 및 쿠키 설정 (7일 유효)
+6. `/dashboard`로 리다이렉트
+7. 개인화된 환영 메시지 표시
 ```
 
-#### **보안 강화** 🔒
-- ✅ **하드코딩된 Secret 제거** - `src/config/env.ts` 삭제
-- ✅ **Cloudflare 런타임 변수 사용** - `c.env`로 안전하게 주입
-- ✅ **Git 연동 배포 준비** - Dashboard 환경 변수로 관리
-- ✅ **환경 변수 검증** - Missing variable 자동 감지 및 에러 처리
-- ✅ **배포 가이드 작성** - `CLOUDFLARE_GIT_DEPLOYMENT_GUIDE.md` 추가
+#### **2. 보안 강화** 🔒
+- ✅ **환경 변수 관리** - Cloudflare Pages 환경 변수 사용
+- ✅ **세션 테이블 수정** - `sessions` → `user_sessions` 통일
+- ✅ **쿠키 보안** - HttpOnly, Secure, SameSite=Lax 설정
+- ✅ **GitHub Secret Scanning 통과** - 하드코딩된 Secret 제거
+- ✅ **도메인 통일** - `mslms.pages.dev` 단일 도메인 사용
 
-**보안 개선 사항:**
-- ❌ **Before**: OAuth Secret이 코드에 하드코딩 (`ENV_CONFIG`)
-- ✅ **After**: Cloudflare Dashboard에서 안전하게 관리
-- 📚 **가이드**: Git 연동 배포 방법 상세 문서화
+#### **3. 대시보드 개선** 🎨
+- ✅ **그레이스풀 에러 핸들링** - DB 테이블 없어도 500 에러 대신 안내 메시지
+- ✅ **프로필 아바타** - 프로필 사진 또는 이름 첫 글자 표시
+- ✅ **환영 메시지** - "안녕하세요, [이름]님! 미래를 만나실 준비 되셨나요?"
+- ✅ **로딩 상태** - 데이터 로딩 중 스피너 표시
+- ✅ **빠른 액션 카드** - 강좌 둘러보기, 내 강좌, 프로필 설정
+
+### 🔧 **기술 스택 업데이트**
+```
+Frontend:
+- Tailwind CSS 3.x (CDN)
+- Axios 1.6.0
+- FontAwesome 6.4.0
+- Vanilla JavaScript
+
+Backend:
+- Hono Framework
+- TypeScript
+- Cloudflare Pages Functions
+
+Database:
+- Cloudflare D1 (SQLite)
+- Tables: users, user_sessions, courses, enrollments, lessons, etc.
+
+Authentication:
+- Google OAuth 2.0
+- Kakao OAuth 2.0
+- Session-based authentication (7-day expiry)
+```
+
+### 🚀 **배포 정보**
+- **Production URL**: https://mslms.pages.dev
+- **Login Page**: https://mslms.pages.dev/login
+- **Dashboard**: https://mslms.pages.dev/dashboard
+- **Platform**: Cloudflare Pages (Git-connected deployment)
+- **Branch**: production-ready-v2
+
+### 📊 **현재 DB 상태**
+✅ **생성 완료:**
+- `users` - 사용자 정보 (social_provider, social_id, profile_image_url 포함)
+- `user_sessions` - 세션 관리 (7일 자동 로그인)
+
+⏳ **추가 필요 (강좌 시스템용):**
+- `courses` - 강좌 정보
+- `lessons` - 강좌 차시
+- `enrollments` - 수강 신청
+- `progress` - 학습 진도
+- `reviews` - 수강평
+- `certificates` - 수료증
+- `payments` - 결제
+
+**DB 초기화 방법:**
+```
+1. Cloudflare Dashboard → Workers & Pages → mslms
+2. Settings → Bindings → D1 databases → mindstory-production
+3. Console 탭에서 SQL 실행 (아래 참조)
+```
 
 ---
 
-## 📋 Ver.2.0 - 프로세스 개선 + 신규 기능 추가 (2026.01.04)
+## 🆕 Ver.2.1 - 소셜 로그인 통합 + 보안 강화! (2026.03.22)
 
 ### ✨ **새로운 기능**
 
@@ -151,29 +209,32 @@ GET /api/certificates/:number
 ### **Sandbox (개발/테스트)**
 ```
 🌐 URL: https://3000-ieu1ambselnpjf2cme9se-c81df28e.sandbox.novita.ai
-📝 상태: 활성화
+📝 상태: 활성화 (개발 중)
 🔒 인증: 불필요
 ```
 
-### **Cloudflare Pages (프로덕션)**
+### **Cloudflare Pages (프로덕션)** ✅
 ```
-🌐 최신 배포: https://c5eea9f5.mindstory-lms.pages.dev (Direct Upload - 임시)
-🌐 메인 URL: https://mindstory-lms.pages.dev (Git 연동 후 사용 권장)
-📝 상태: 코드 준비 완료 (Git 연동 배포 대기)
-🔒 인증: Cloudflare API Token 또는 Git 연동
-📅 마지막 업데이트: 2026.03.22
+🌐 프로덕션 URL: https://mslms.pages.dev
+🌐 로그인 페이지: https://mslms.pages.dev/login
+🌐 대시보드: https://mslms.pages.dev/dashboard
+📝 상태: 완전 배포 완료 (Git 연동)
+🔒 배포 방식: Git-connected deployment (production-ready-v2 브랜치)
+📅 마지막 업데이트: 2026.03.23
 ```
 
-**⚠️ 중요: Git 연동 배포로 전환 권장**
-- 현재 Direct Upload 방식은 보안상 권장하지 않음
-- **Git 연동 배포 가이드**: `CLOUDFLARE_GIT_DEPLOYMENT_GUIDE.md` 참고
-- Git 연동 시 환경 변수를 Dashboard에서 안전하게 관리
-
-**배포 준비된 기능:**
+**✅ 완료된 배포 기능:**
 - ✅ Google 소셜 로그인 (`/api/auth/google/login`)
 - ✅ Kakao 소셜 로그인 (`/api/auth/kakao/login`)
 - ✅ 자동 회원가입 및 세션 생성
 - ✅ 개인화된 대시보드 (`/dashboard`)
+- ✅ 환경 변수 안전 관리 (Cloudflare Dashboard)
+- ✅ 세션 쿠키 보안 설정 (HttpOnly, Secure, SameSite=Lax)
+
+**🔧 DB 초기화 필요 (선택사항):**
+강좌 시스템을 활성화하려면 Cloudflare D1 Console에서 추가 테이블 생성이 필요합니다.
+자세한 내용은 `/tmp/mslms_complete_schema.sql` 참조.
+
 - ✅ 로그인 후 환영 알림
 - ✅ 환경 변수 런타임 주입 (c.env)
 
