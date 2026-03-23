@@ -1940,8 +1940,12 @@ pages.get('/dashboard', requireAuth, async (c) => {
                     
                 } catch (error) {
                     console.error('Failed to load dashboard data:', error)
+                    // DB 테이블이 없어도 정상적으로 표시
+                    document.getElementById('totalCourses').textContent = '0'
+                    document.getElementById('completedCourses').textContent = '0'
+                    document.getElementById('inProgressCourses').textContent = '0'
                     document.getElementById('recentCourses').innerHTML = 
-                        '<div class="col-span-full text-center py-12"><p class="text-red-600">데이터를 불러오지 못했습니다.</p></div>'
+                        '<div class="col-span-full text-center py-12"><div class="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-2xl mx-auto"><i class="fas fa-info-circle text-blue-500 text-3xl mb-3"></i><p class="text-blue-800 font-semibold mb-2">강좌 시스템 준비 중입니다</p><p class="text-gray-600 text-sm mb-4">데이터베이스 초기화가 필요합니다. 관리자에게 문의하세요.</p><a href="/" class="inline-block px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">홈으로 돌아가기</a></div></div>'
                 }
             }
             
