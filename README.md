@@ -13,7 +13,7 @@
 
 ### ✅ **해결된 문제**
 
-#### **500 Internal Server Error 완전 해결** 🔧
+#### **1. 500 Internal Server Error 완전 해결** 🔧
 - ✅ **헤더/푸터 제거** - `getHeader()`, `getFooter()` 함수 호출 제거
 - ✅ **DB 의존성 제거** - enrollments, courses 등 DB 테이블 쿼리 제거
 - ✅ **순수 HTML 렌더링** - 서버 측에서 완전한 HTML 생성
@@ -28,6 +28,46 @@
 - ✅ 인라인 헤더/푸터 (직접 HTML 작성)
 - ✅ DB 쿼리 없음 (순수 환영 페이지)
 - ✅ 사용자 정보만 표시 (이름, 프로필 사진, 역할)
+
+#### **2. Axios 인터셉터 추가 (근본적인 해결)** 🚀
+- ✅ **자동 토큰 붙이기** - 모든 axios 요청에 자동으로 `Authorization` 헤더 추가
+- ✅ **401 자동 처리** - 인증 실패 시 자동으로 로그인 페이지로 리다이렉트
+- ✅ **코드 간소화** - 수동 헤더 추가 코드 제거
+- ✅ **일관된 인증** - 모든 API 요청에서 인증 상태 유지
+
+**추가된 코드:**
+```javascript
+// 요청 인터셉터: 모든 요청에 토큰 자동 추가
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('session_token') || sessionStorage.getItem('session_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  config.withCredentials = true;
+  return config;
+});
+
+// 응답 인터셉터: 401 에러 자동 처리
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('session_token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+```
+
+**개선 효과:**
+| Before | After |
+|--------|-------|
+| ❌ 매번 수동으로 헤더 추가 | ✅ 자동으로 토큰 붙음 |
+| ❌ 일부 API는 토큰 누락 | ✅ 모든 API에 토큰 포함 |
+| ❌ 로그인 상태 불일치 | ✅ 일관된 인증 상태 |
+| ❌ 401 에러 수동 처리 | ✅ 자동 로그인 페이지 이동 |
 
 ### ✅ **현재 완료된 기능**
 
