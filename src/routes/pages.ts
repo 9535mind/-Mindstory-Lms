@@ -1741,19 +1741,32 @@ pages.get('/courses', async (c) => {
  * 개인화 대시보드 (로그인 필수)
  */
 pages.get('/dashboard', requireAuth, async (c) => {
-  const user = c.get('user') as User
-  
-  // 사용자 이름의 첫 글자 (아바타 기본 이미지용)
-  const initial = user.name.charAt(0).toUpperCase()
-  
-  // 프로필 이미지 또는 기본 이미지
-  const avatarHtml = user.profile_image_url
-    ? `<img src="${user.profile_image_url}" alt="${user.name}" class="w-24 h-24 rounded-full object-cover shadow-lg">`
-    : `<div class="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
-         ${initial}
-       </div>`
-  
-  return c.html(`
+  try {
+    const user = c.get('user') as User
+    
+    // 안전한 사용자 정보 확인
+    if (!user || !user.name) {
+      console.error('[DASHBOARD] User data is invalid:', user)
+      return c.redirect('/login')
+    }
+    
+    console.log('[DASHBOARD] Rendering for user:', user.email, user.name)
+    
+    // 사용자 이름의 첫 글자 (아바타 기본 이미지용)
+    const initial = user.name.charAt(0).toUpperCase()
+    
+    // 프로필 이미지 또는 기본 이미지 (안전하게 처리)
+    const profileImageUrl = user.profile_image_url || ''
+    const userName = user.name || '사용자'
+    const userRole = user.role || 'student'
+    
+    const avatarHtml = profileImageUrl
+      ? `<img src="${profileImageUrl}" alt="${userName}" class="w-24 h-24 rounded-full object-cover shadow-lg">`
+      : `<div class="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
+           ${initial}
+         </div>`
+    
+    return c.html(`
     <!DOCTYPE html>
     <html lang="ko">
     <head>
@@ -1786,7 +1799,7 @@ pages.get('/dashboard', requireAuth, async (c) => {
                         ${avatarHtml}
                         <div>
                             <h1 class="text-4xl md:text-5xl font-bold mb-3">
-                                안녕하세요, ${user.name}님! 👋
+                                안녕하세요, ${userName}님! 👋
                             </h1>
                             <p class="text-xl md:text-2xl text-indigo-100">
                                 미래를 만나실 준비 되셨나요?
@@ -1796,7 +1809,7 @@ pages.get('/dashboard', requireAuth, async (c) => {
                     <div class="text-center md:text-right">
                         <p class="text-indigo-200 text-sm mb-2">회원 유형</p>
                         <span class="inline-block px-4 py-2 bg-white/20 rounded-full text-white font-semibold">
-                            ${user.role === 'admin' ? '👑 관리자' : '🎓 수강생'}
+                            ${userRole === 'admin' ? '👑 관리자' : '🎓 수강생'}
                         </span>
                     </div>
                 </div>
@@ -1955,6 +1968,37 @@ pages.get('/dashboard', requireAuth, async (c) => {
     </body>
     </html>
   `)
+  } catch (error) {
+    console.error('[DASHBOARD] Error rendering dashboard:', error)
+    return c.html(`
+      <!DOCTYPE html>
+      <html lang="ko">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>오류 - 대시보드</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+      </head>
+      <body class="bg-gray-50 flex items-center justify-center min-h-screen">
+          <div class="max-w-md mx-auto text-center p-8">
+              <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+                  <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                  <h1 class="text-2xl font-bold text-gray-800 mb-4">대시보드 로딩 오류</h1>
+                  <p class="text-gray-600 mb-6">대시보드를 불러오는 중 문제가 발생했습니다.</p>
+                  <div class="space-y-3">
+                      <a href="/login" class="block w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                          다시 로그인
+                      </a>
+                      <a href="/" class="block w-full px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                          홈으로 이동
+                      </a>
+                  </div>
+              </div>
+          </div>
+      </body>
+      </html>
+    `, 500)
+  }
 })
 
 export default pages
