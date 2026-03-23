@@ -1766,6 +1766,10 @@ pages.get('/dashboard', requireAuth, async (c) => {
            ${initial}
          </div>`
     
+    // 헤더와 푸터를 미리 생성
+    const header = getHeader()
+    const footer = getFooter()
+    
     return c.html(`
     <!DOCTYPE html>
     <html lang="ko">
@@ -1789,7 +1793,7 @@ pages.get('/dashboard', requireAuth, async (c) => {
         </style>
     </head>
     <body class="bg-gray-50">
-        ${getHeader()}
+        ${header}
         
         <!-- 환영 섹션 -->
         <div class="welcome-card text-white py-16 px-4 fade-in">
@@ -1903,7 +1907,7 @@ pages.get('/dashboard', requireAuth, async (c) => {
             </div>
         </div>
         
-        ${getFooter()}
+        ${footer}
         
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script>
