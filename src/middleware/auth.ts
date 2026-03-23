@@ -22,7 +22,7 @@ export async function requireAuth(c: Context<{ Bindings: Bindings }>, next: Next
   // 세션 확인
   const session = await DB.prepare(`
     SELECT s.*, u.* 
-    FROM sessions s
+    FROM user_sessions s
     JOIN users u ON s.user_id = u.id
     WHERE s.session_token = ? 
     AND s.expires_at > datetime('now')
@@ -58,7 +58,7 @@ export async function requireAuthAPI(c: Context<{ Bindings: Bindings }>, next: N
   
   const session = await DB.prepare(`
     SELECT s.*, u.* 
-    FROM sessions s
+    FROM user_sessions s
     JOIN users u ON s.user_id = u.id
     WHERE s.session_token = ? 
     AND s.expires_at > datetime('now')
@@ -85,7 +85,7 @@ export async function optionalAuth(c: Context<{ Bindings: Bindings }>, next: Nex
     
     const session = await DB.prepare(`
       SELECT s.*, u.* 
-      FROM sessions s
+      FROM user_sessions s
       JOIN users u ON s.user_id = u.id
       WHERE s.session_token = ? 
       AND s.expires_at > datetime('now')
@@ -114,7 +114,7 @@ export async function requireAdmin(c: Context<{ Bindings: Bindings }>, next: Nex
   
   const session = await DB.prepare(`
     SELECT s.*, u.* 
-    FROM sessions s
+    FROM user_sessions s
     JOIN users u ON s.user_id = u.id
     WHERE s.session_token = ? 
     AND s.expires_at > datetime('now')
