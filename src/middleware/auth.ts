@@ -4,6 +4,7 @@
  */
 
 import { Context, Next } from 'hono'
+import { getCookie, setCookie } from 'hono/cookie'
 import { Bindings, User } from '../types/database'
 
 /**
@@ -11,7 +12,7 @@ import { Bindings, User } from '../types/database'
  */
 export async function requireAuth(c: Context<{ Bindings: Bindings }>, next: Next) {
   try {
-    const sessionToken = c.req.cookie('session_token')
+    const sessionToken = getCookie(c, 'session_token')
     
     if (!sessionToken) {
       console.log('[AUTH] No session token found, redirecting to login')
@@ -46,7 +47,11 @@ export async function requireAuth(c: Context<{ Bindings: Bindings }>, next: Next
     if (!session) {
       console.log('[AUTH] Invalid or expired session, redirecting to login')
       // 만료된 쿠키 삭제
-      c.header('Set-Cookie', 'session_token=; Path=/; HttpOnly; Max-Age=0')
+      setCookie(c, 'session_token', '', {
+        path: '/',
+        httpOnly: true,
+        maxAge: 0
+      })
       return c.redirect('/login')
     }
     
@@ -74,7 +79,7 @@ export async function requireAuth(c: Context<{ Bindings: Bindings }>, next: Next
  * 옵션: 로그인한 사용자만 API 접근 가능
  */
 export async function requireAuthAPI(c: Context<{ Bindings: Bindings }>, next: Next) {
-  const sessionToken = c.req.cookie('session_token')
+  const sessionToken = getCookie(c, 'session_token')
   
   if (!sessionToken) {
     return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
@@ -104,7 +109,7 @@ export async function requireAuthAPI(c: Context<{ Bindings: Bindings }>, next: N
  * 옵션: 로그인 정보가 있으면 사용자 정보 추가, 없으면 그냥 진행
  */
 export async function optionalAuth(c: Context<{ Bindings: Bindings }>, next: Next) {
-  const sessionToken = c.req.cookie('session_token')
+  const sessionToken = getCookie(c, 'session_token')
   
   if (sessionToken) {
     const { DB } = c.env
@@ -130,7 +135,7 @@ export async function optionalAuth(c: Context<{ Bindings: Bindings }>, next: Nex
  * 관리자만 접근 가능
  */
 export async function requireAdmin(c: Context<{ Bindings: Bindings }>, next: Next) {
-  const sessionToken = c.req.cookie('session_token')
+  const sessionToken = getCookie(c, 'session_token')
   
   if (!sessionToken) {
     return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
