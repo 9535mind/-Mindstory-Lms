@@ -60,7 +60,7 @@ landing.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         
         <!-- Custom Scripts -->
-        <script src="/static/js/auth.js?v=20260327-2"></script>
+        <script src="/static/js/auth.js?v=20260328-1"></script>
         <script src="/static/js/utils.js?v=20260327-2"></script>
         <!-- Popup removed: Phase 2 cleanup -->
         <!-- <script src="/static/js/popup.js?v=20260101"></script> -->

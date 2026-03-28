@@ -146,6 +146,13 @@ async function syncUserSession() {
 
 // 헤더 업데이트 (로그인 상태 표시)
 async function updateHeader() {
+  const path = (window.location.pathname || '').replace(/\/$/, '') || '/'
+  // /login 은 페이지 인라인 스크립트가 이미 /api/auth/me 로 세션을 검사함.
+  // 여기서 syncUserSession()까지 돌리면 동일 요청이 2번 나가 콘솔에 401·로그가 반복됨.
+  if (path === '/login') {
+    return
+  }
+
   const authButtons = document.getElementById('headerAuthButtons')
   const userMenu = document.getElementById('headerUserMenu')
   const userName = document.getElementById('headerUserName')

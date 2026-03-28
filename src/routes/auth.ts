@@ -166,8 +166,11 @@ auth.post('/login', async (c) => {
       return c.json(errorResponse('이메일 또는 비밀번호가 일치하지 않습니다.'), 401)
     }
 
-    // 소셜 로그인 사용자 확인
-    if (user.social_provider) {
+    const hash = user.password_hash
+    const hasPassword = hash != null && hash !== ''
+
+    // 소셜만 연동되고 비밀번호가 없는 계정만 이메일 로그인 차단
+    if (user.social_provider && !hasPassword) {
       const providerName = user.social_provider === 'google' ? 'Google' : 
                           user.social_provider === 'kakao' ? '카카오' : user.social_provider
       return c.json(errorResponse(
@@ -175,8 +178,7 @@ auth.post('/login', async (c) => {
       ), 400)
     }
 
-    // 비밀번호 검증 (소셜 전용 계정은 위에서 차단됨)
-    const hash = user.password_hash
+    // 비밀번호 검증
     if (hash == null || hash === '') {
       return c.json(errorResponse('이메일 또는 비밀번호가 일치하지 않습니다.'), 401)
     }

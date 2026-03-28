@@ -69,8 +69,8 @@ const getCommonHead = (title: string) => `
     <link rel="stylesheet" href="/static/css/app.css" />
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-    <script src="/static/js/auth.js?v=20260327-2"></script>
-    <script src="/static/js/utils.js?v=20260327-2"></script>
+    <script src="/static/js/auth.js?v=20260328-1"></script>
+    <script src="/static/js/utils.js?v=20260328-1"></script>
     <style>
         /* 모바일 최적화 - 폰트 크기 및 터치 영역 개선 */
         @media (max-width: 768px) {
