@@ -21,6 +21,11 @@ export function sessionCookieDomain(c: Context): string | undefined {
   if (h === 'mindstory.kr' || h.endsWith('.mindstory.kr')) {
     return '.mindstory.kr'
   }
+  // Cloudflare Pages: {hash}.{project}.pages.dev — 호스트마다 쿠키가 갈라져 /api/auth/me 가 401 → 관제탑 깜빡임
+  // project.pages.dev 로 Domain 을 맞추면 동일 프로젝트의 모든 프리뷰·프로덕션 별칭 호스트가 세션 공유
+  if (h === 'mslms.pages.dev' || h.endsWith('.mslms.pages.dev')) {
+    return 'mslms.pages.dev'
+  }
   return undefined
 }
 
