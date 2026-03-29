@@ -58,16 +58,28 @@ const app = new Hono<{ Bindings: Bindings }>()
 app.use('*', logger())
 
 // 구 Pages 호스트·www → 공식 apex (세션 쿠키 Domain=mindstory.kr 과 방문 호스트 통일)
+// - Chrome fetch/XHR: 302 리다이렉트 시 POST→GET 으로 바뀌어 로그인 등이 깨질 수 있음 → API(/api/*)는 리다이렉트하지 않음
+// - CORS preflight(OPTIONS)가 302/308 을 타면 브라우저마다 실패하기 쉬움 → /api/* 는 호스트 그대로 처리
+// - 페이지·정적 리다이렉트는 308(메서드·본문 유지)로 통일 (Edge는 관대해도 Chrome 정합성)
 app.use('*', async (c, next) => {
   const raw = c.req.header('x-forwarded-host') || c.req.header('host') || ''
   const host = raw.split(',')[0].trim().split(':')[0]
+  const url = new URL(c.req.url)
+  const isApi = url.pathname.startsWith('/api/')
+
   if (LEGACY_PAGES_HOSTNAMES.includes(host)) {
-    const url = new URL(c.req.url)
-    return c.redirect(`${SITE_PUBLIC_ORIGIN}${url.pathname}${url.search}`, 302)
+    if (isApi) {
+      await next()
+      return
+    }
+    return c.redirect(`${SITE_PUBLIC_ORIGIN}${url.pathname}${url.search}`, 308)
   }
   if (host === 'www.mindstory.kr') {
-    const url = new URL(c.req.url)
-    return c.redirect(`${SITE_PUBLIC_ORIGIN}${url.pathname}${url.search}`, 302)
+    if (isApi) {
+      await next()
+      return
+    }
+    return c.redirect(`${SITE_PUBLIC_ORIGIN}${url.pathname}${url.search}`, 308)
   }
   await next()
 })
