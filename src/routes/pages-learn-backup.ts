@@ -5,6 +5,7 @@
 
 import { Hono } from 'hono'
 import type { Bindings } from '../types/database'
+import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -27,7 +28,6 @@ app.get('/courses/:courseId/learn', async (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="https://embed.cloudflarestream.com/embed/sdk.latest.js"></script>
         <script src="/static/js/auth.js"></script>
-        <script src="/static/js/content-protection.js"></script>
         <style>
             .lesson-item.active {
                 background-color: #EBF8FF;
@@ -101,7 +101,7 @@ app.get('/courses/:courseId/learn', async (c) => {
                 }
             }
         </style>
-        <script src="/static/js/content-protection.js"></script>
+        <script src="/static/js/content-protection.js${STATIC_JS_CACHE_QUERY}"></script>
     </head>
     <body class="bg-gray-50">
         <!-- 헤더 -->
@@ -899,8 +899,7 @@ app.get('/courses/:courseId/learn', async (c) => {
         </script>
         
         <!-- 보안 시스템 -->
-        <script src="/static/js/security.js"></script>
-        <script src="/static/js/content-protection.js"></script>
+        <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>
     </html>
   `)

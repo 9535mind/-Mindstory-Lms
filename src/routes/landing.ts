@@ -17,6 +17,7 @@ import {
   siteFooterLegalBlockHtml,
   siteOrganizationJsonLdScriptHtml,
 } from '../utils/site-footer-legal'
+import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 
 const landing = new Hono<{ Bindings: Bindings }>()
 
@@ -60,10 +61,8 @@ landing.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         
         <!-- Custom Scripts -->
-        <script src="/static/js/auth.js?v=20260328-1"></script>
+        <script src="/static/js/auth.js?v=20260328-2"></script>
         <script src="/static/js/utils.js?v=20260327-2"></script>
-        <!-- Popup removed: Phase 2 cleanup -->
-        <!-- <script src="/static/js/popup.js?v=20260101"></script> -->
         
         <style>
             /* 2026 웹 트렌드 디자인 시스템 */
@@ -269,7 +268,7 @@ landing.get('/', (c) => {
                 line-height: 1.7;
             }
         </style>
-        <script src="/static/js/content-protection.js"></script>
+        <script src="/static/js/content-protection.js${STATIC_JS_CACHE_QUERY}"></script>
     </head>
     <body>
         <!-- 헤더 -->
@@ -798,9 +797,6 @@ landing.get('/', (c) => {
                 loadCourses()
                 updateHeader()
                 
-                // 팝업 제거 (Phase 2 cleanup)
-                // PopupManager.loadPopups('home')
-                
                 // 히어로 이미지 슬라이더
                 initHeroSlider()
             })
@@ -820,8 +816,7 @@ landing.get('/', (c) => {
                 setInterval(nextSlide, 5000)
             }
         </script>
-        <script src="/static/js/security.js"></script>
-        <script src="/static/js/content-protection.js"></script>
+        <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>
     </html>
   `)

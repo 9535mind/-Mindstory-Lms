@@ -17,8 +17,11 @@ import {
   formatDate,
   addDays,
   SQL_SESSION_EXPIRED,
+  getCurrentUser,
+  formatSessionExpiresAtForDb,
 } from '../utils/helpers'
 import { requireAuth } from '../middleware/auth'
+import { ensureListedAdminRole, isListedAdminEmail } from '../utils/admin-emails'
 
 const auth = new Hono<{ Bindings: Bindings }>()
 
@@ -101,6 +104,8 @@ auth.post('/register', async (c) => {
       }
     }
 
+    await ensureListedAdminRole(DB, email, userId)
+
     // 자동 로그인을 위한 세션 토큰 생성
     const sessionToken = generateSessionToken()
     const expiresAt = addDays(new Date(), 30)
@@ -109,7 +114,7 @@ auth.post('/register', async (c) => {
     const regSession = await DB.prepare(`
       INSERT INTO sessions (user_id, session_token, expires_at)
       VALUES (?, ?, ?)
-    `).bind(userId, sessionToken, expiresAt.toISOString()).run()
+    `).bind(userId, sessionToken, formatSessionExpiresAtForDb(expiresAt)).run()
     if (!regSession.success) {
       console.error('[auth/register] sessions INSERT failed:', regSession)
       return c.json(errorResponse('세션을 저장하지 못했습니다. 잠시 후 다시 시도해주세요.'), 500)
@@ -117,12 +122,13 @@ auth.post('/register', async (c) => {
 
     applySessionCookie(c, sessionToken, 30 * 24 * 60 * 60)
 
+    const regRole = isListedAdminEmail(email) ? 'admin' : 'student'
     return c.json(successResponse({
       user: {
         id: userId,
         email,
         name,
-        role: 'student'
+        role: regRole
       },
       expires_at: expiresAt.toISOString(),
       password_change_required: false
@@ -150,7 +156,7 @@ auth.post('/login', async (c) => {
     const { DB } = c.env
 
     // 사용자 조회 (simplified for basic schema)
-    const user = await DB.prepare(`
+    let user = await DB.prepare(`
       SELECT * FROM users 
       WHERE email = ? 
       AND deleted_at IS NULL
@@ -181,6 +187,11 @@ auth.post('/login', async (c) => {
       return c.json(errorResponse('이메일 또는 비밀번호가 일치하지 않습니다.'), 401)
     }
 
+    await ensureListedAdminRole(DB, user.email, user.id)
+    if (isListedAdminEmail(user.email)) {
+      user = { ...user, role: 'admin' }
+    }
+
     // Generate session token
     const sessionToken = generateSessionToken()
     
@@ -199,7 +210,7 @@ auth.post('/login', async (c) => {
       INSERT INTO sessions (
         user_id, session_token, expires_at
       ) VALUES (?, ?, ?)
-    `).bind(user.id, sessionToken, expiresAt.toISOString()).run()
+    `).bind(user.id, sessionToken, formatSessionExpiresAtForDb(expiresAt)).run()
     if (!insSession.success) {
       console.error('[auth/login] sessions INSERT failed:', insSession)
       return c.json(errorResponse('세션을 저장하지 못했습니다. 잠시 후 다시 시도해주세요.'), 500)
@@ -214,7 +225,7 @@ auth.post('/login', async (c) => {
     return c.json(successResponse({
       user: userWithoutPassword,
       expires_at: expiresAt.toISOString(),
-      password_change_required: passwordChangeRequired
+      password_change_required: passwordChangeRequired,
     }, '로그인되었습니다.'))
 
   } catch (error) {
@@ -236,7 +247,11 @@ auth.post('/logout', requireAuth, async (c) => {
     if (!sessionToken) {
       const cookieHeader = c.req.header('Cookie')
       const match = cookieHeader?.match(/(?:^|;\s*)session_token=([^;]+)/)
-      sessionToken = match?.[1] || null
+      let v = match?.[1]?.trim() || null
+      if (v && ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'")))) {
+        v = v.slice(1, -1)
+      }
+      sessionToken = v
     }
     if (sessionToken) {
       try {
@@ -244,6 +259,7 @@ auth.post('/logout', requireAuth, async (c) => {
       } catch {
         /* ignore malformed encoding */
       }
+      sessionToken = sessionToken.trim()
     }
 
     const { DB } = c.env
@@ -273,15 +289,20 @@ auth.post('/logout', requireAuth, async (c) => {
 /**
  * GET /api/auth/me
  * 현재 로그인한 사용자 정보 조회
+ * 비로그인 시 401 대신 200 + data: null — 브라우저 콘솔에 GET /me 가 매번 빨간 실패로 찍이는 문제 완화, 의미도 "세션 없음"에 맞음.
  */
-auth.get('/me', requireAuth, async (c) => {
+const ME_NO_STORE = { 'Cache-Control': 'private, no-store, must-revalidate' as const }
+
+auth.get('/me', async (c) => {
   try {
-    const user = c.get('user')
+    const user = await getCurrentUser(c)
+    if (!user) {
+      return c.json(successResponse(null), 200, ME_NO_STORE)
+    }
     const u = user as Record<string, unknown>
     const { password_hash: _h, password: _p, ...userWithoutPassword } = u
 
-    return c.json(successResponse(userWithoutPassword))
-
+    return c.json(successResponse(userWithoutPassword), 200, ME_NO_STORE)
   } catch (error) {
     console.error('Get user error:', error)
     return c.json(errorResponse('서버 오류가 발생했습니다.'), 500)

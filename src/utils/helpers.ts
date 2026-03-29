@@ -28,9 +28,22 @@ export function errorResponse(error: string, message?: string): ApiResponse {
   }
 }
 
-/** SQLite: expires_at 에 toISOString() 저장 시 datetime('now') 와 문자열 비교가 어긋날 수 있음 */
-export const SQL_SESSION_S_VALID = `julianday(s.expires_at) > julianday('now')`
-export const SQL_SESSION_EXPIRED = `julianday(expires_at) < julianday('now')`
+/**
+ * 세션 만료 — datetime 파싱이 NULL 이 되는 저장 형식이 있으면 julianday 로 보완(로그인 직후 /me 실패 방지)
+ */
+export const SQL_SESSION_S_VALID = `(
+  datetime(rtrim(replace(s.expires_at, 'T', ' '), 'Z')) > datetime('now')
+  OR (julianday(s.expires_at) IS NOT NULL AND julianday(s.expires_at) > julianday('now'))
+)`
+export const SQL_SESSION_EXPIRED = `(
+  datetime(rtrim(replace(expires_at, 'T', ' '), 'Z')) < datetime('now')
+  OR (julianday(expires_at) IS NOT NULL AND julianday(expires_at) < julianday('now'))
+)`
+
+/** sessions.expires_at 저장용 UTC (SQLite datetime 과 직접 비교 안정) */
+export function formatSessionExpiresAtForDb(date: Date): string {
+  return date.toISOString().slice(0, 19).replace('T', ' ')
+}
 
 export { hashPassword, verifyPassword } from './password'
 
@@ -121,7 +134,13 @@ export async function getCurrentUser(c: Context) {
   let cookieTokenFallback: string | null = null
   if (!cookieToken && cookieHeader) {
     const match = cookieHeader.match(/(?:^|;\s*)session_token=([^;]+)/)
-    if (match) cookieTokenFallback = match[1]
+    if (match) {
+      let v = match[1].trim()
+      if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+        v = v.slice(1, -1)
+      }
+      cookieTokenFallback = v
+    }
   }
 
   const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : authHeader
@@ -135,6 +154,10 @@ export async function getCurrentUser(c: Context) {
     }
   }
   
+  if (!sessionToken) {
+    return null
+  }
+  sessionToken = sessionToken.trim()
   if (!sessionToken) {
     return null
   }

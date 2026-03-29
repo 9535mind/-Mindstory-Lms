@@ -4,6 +4,7 @@
  */
 
 import { Hono } from 'hono'
+import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 import type { Bindings } from '../types/database'
 import { siteFooterLegalBlockHtml } from '../utils/site-footer-legal'
 
@@ -29,7 +30,7 @@ app.get('/courses/:id', async (c) => {
         <script src="https://cdn.iamport.kr/js/iamport.payment-1.2.0.js"></script>
         <script src="/static/js/auth.js"></script>
         <script src="/static/js/utils.js"></script>
-        <script src="/static/js/content-protection.js"></script>
+        <script src="/static/js/content-protection.js${STATIC_JS_CACHE_QUERY}"></script>
     </head>
     <body class="bg-gray-50">
         <!-- 헤더 -->
@@ -541,8 +542,7 @@ app.get('/courses/:id', async (c) => {
         </script>
         
         <!-- 보안 시스템 -->
-        <script src="/static/js/security.js"></script>
-        <script src="/static/js/content-protection.js"></script>
+        <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>
     </html>
   `)

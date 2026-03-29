@@ -6,6 +6,7 @@
  */
 
 import { Hono } from 'hono'
+import { STATIC_JS_CACHE_QUERY } from '../../utils/static-js-cache-bust'
 
 const app = new Hono()
 
@@ -180,7 +181,7 @@ app.get('/payment/checkout/:courseId', (c) => {
             // 페이지 로드
             init()
         </script>
-        <script src="/static/js/security.js"></script>
+        <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>
     </html>
   `)
@@ -254,7 +255,7 @@ app.get('/payment/success', (c) => {
             // 페이지 로드 시 실행
             confirmPayment()
         </script>
-        <script src="/static/js/security.js"></script>
+        <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>
     </html>
   `)
@@ -307,7 +308,7 @@ app.get('/payment/fail', (c) => {
                 document.getElementById('errorMessage').textContent = decodeURIComponent(errorMessage)
             }
         </script>
-        <script src="/static/js/security.js"></script>
+        <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>
     </html>
   `)

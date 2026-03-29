@@ -5,6 +5,7 @@
 
 import { Hono } from 'hono'
 import type { Bindings } from '../types/database'
+import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -395,7 +396,7 @@ app.get('/admin/analytics', (c) => {
             loadCourseList();
         });
         </script>
-        <script src="/static/js/security.js"></script>
+        <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>
     </html>
   `)

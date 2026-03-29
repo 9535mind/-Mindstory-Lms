@@ -27,6 +27,10 @@ const PROGRESS_UPDATE_INTERVAL = 5000; // 5초마다 진도 업데이트
 
 if (typeof axios !== 'undefined') {
     axios.defaults.withCredentials = true;
+    axios.interceptors.request.use(function (cfg) {
+        cfg.withCredentials = true;
+        return cfg;
+    });
 }
 
 // courseId는 HTML에서 window.COURSE_ID로 전달됨
@@ -925,7 +929,7 @@ function showError(message) {
  */
 async function getCurrentUser() {
     try {
-        const response = await axios.get('/api/auth/me');
+        const response = await axios.get('/api/auth/me', { withCredentials: true });
         
         // API 응답 구조 검증
         if (response.data && response.data.success === false) {

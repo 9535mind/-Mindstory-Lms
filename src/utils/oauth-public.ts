@@ -5,6 +5,9 @@ import { Context } from 'hono'
 
 export const SITE_PUBLIC_ORIGIN = 'https://mindstory.kr'
 
+/** 구글/카카오 콜백 직후 이동 — apex 고정 + oauth_sync 로 프론트에서 /me 짧은 재시도 */
+export const OAUTH_SUCCESS_LANDING_URL = `${SITE_PUBLIC_ORIGIN}/?oauth_sync=1`
+
 /** 구 Cloudflare Pages 기본 호스트 북마크 → 공식 도메인으로 302 */
 export const LEGACY_PAGES_HOSTNAMES: readonly string[] = [
   'mslms.pages.dev',

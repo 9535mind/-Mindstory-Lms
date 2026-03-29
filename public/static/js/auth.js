@@ -2,8 +2,14 @@
  * 인증 관련 공통 함수
  */
 
-// Axios 전역 설정: Cookie 자동 전송 활성화
+// Axios 전역 설정: Cookie 자동 전송 활성화 (동일 출처 세션 쿠키 → /api/*)
 axios.defaults.withCredentials = true;
+if (typeof axios !== 'undefined' && axios.interceptors) {
+  axios.interceptors.request.use(function (config) {
+    config.withCredentials = true;
+    return config;
+  });
+}
 
 // AuthManager 클래스 (HttpOnly 쿠키 기반)
 class AuthManager {
@@ -59,7 +65,7 @@ function clearSessionToken() {
 // 로그아웃
 async function logout() {
   try {
-    await axios.post('/api/auth/logout', {});
+    await axios.post('/api/auth/logout', {}, { withCredentials: true });
   } catch (error) {
     console.error('Logout error:', error);
   }
@@ -71,7 +77,7 @@ async function logout() {
 // 현재 사용자 정보 가져오기 (리다이렉트 제거)
 async function getCurrentUser() {
   try {
-    const response = await axios.get('/api/auth/me');
+    const response = await axios.get('/api/auth/me', { withCredentials: true });
     
     if (response.data.success) {
       return response.data.data;
@@ -104,7 +110,8 @@ async function requireAdmin() {
 async function apiRequest(method, url, data = null) {
   const config = {
     method,
-    url
+    url,
+    withCredentials: true,
   };
 
   if (data) {
@@ -135,7 +142,22 @@ async function apiRequest(method, url, data = null) {
 
 // 서버 세션 쿠키 기준으로 localStorage 동기화
 async function syncUserSession() {
-  const serverUser = await getCurrentUser()
+  const params = new URLSearchParams(window.location.search || '')
+  const oauthLanding = params.get('oauth_sync') === '1'
+  if (oauthLanding) {
+    const pathOnly = window.location.pathname + (window.location.hash || '')
+    window.history.replaceState({}, '', pathOnly)
+  }
+
+  let serverUser = await getCurrentUser()
+  if (!serverUser && oauthLanding) {
+    const gaps = [200, 350, 500]
+    for (let j = 0; j < gaps.length && !serverUser; j++) {
+      await new Promise(function (resolve) { setTimeout(resolve, gaps[j]) })
+      serverUser = await getCurrentUser()
+    }
+  }
+
   if (serverUser) {
     AuthManager.saveSession(serverUser)
     return serverUser
@@ -189,7 +211,7 @@ async function updateHeader() {
 // 로그아웃 처리
 async function handleLogout() {
   try {
-    await axios.post('/api/auth/logout', {})
+    await axios.post('/api/auth/logout', {}, { withCredentials: true })
   } catch (error) {
     console.error('Logout error:', error)
   }

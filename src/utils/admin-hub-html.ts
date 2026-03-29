@@ -2,6 +2,8 @@
  * 마인드스토리 원격평생교육원 — 중앙 관제탑 (단일 관리자 셸)
  * /admin/dashboard 에서만 로드, 다른 /admin/* 는 여기로 리다이렉트
  */
+import { STATIC_JS_CACHE_QUERY } from './static-js-cache-bust'
+
 export function adminHubPageHtml(): string {
   return `<!DOCTYPE html>
 <html lang="ko">
@@ -535,7 +537,7 @@ export function adminHubPageHtml(): string {
   <script src="/static/js/utils.js"></script>
   <script src="/static/js/admin-hub.js"></script>
   <script src="/static/js/admin-isbn.js"></script>
-  <script src="/static/js/security.js"></script>
+  <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
 </body>
 </html>`
 }

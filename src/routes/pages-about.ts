@@ -6,6 +6,7 @@
 
 import { Hono } from 'hono'
 import { siteFooterLegalBlockHtml } from '../utils/site-footer-legal'
+import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 
 const app = new Hono()
 
@@ -184,7 +185,7 @@ app.get('/about', (c) => {
             // 헤더 업데이트
             updateHeader();
         </script>
-        <script src="/static/js/security.js"></script>
+        <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>
     </html>
   `)

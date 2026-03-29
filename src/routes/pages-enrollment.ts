@@ -165,7 +165,7 @@ pagesEnrollment.get('/enrollment', optionalAuth, async (c) => {
                     <a href="/my-courses" class="text-gray-700 hover:text-indigo-600">내 강의실</a>
                 </nav>
                 <div>
-                    <a href="/my" class="text-gray-700 hover:text-indigo-600">
+                    <a href="/my-profile" class="text-gray-700 hover:text-indigo-600" title="내 정보">
                         <i class="fas fa-user-circle text-2xl"></i>
                     </a>
                 </div>

@@ -9,6 +9,7 @@
 import { Hono } from 'hono'
 import { adminHubPageHtml } from '../utils/admin-hub-html'
 import { Bindings } from '../types/database'
+import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 
 const pagesAdmin = new Hono<{ Bindings: Bindings }>()
 
@@ -1248,7 +1249,7 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/js/auth.js"></script>
         <script src="/static/js/admin-lessons.js"></script>
-        <script src="/static/js/security.js"></script>
+        <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>
     </html>
   `)
@@ -1520,7 +1521,7 @@ pagesAdmin.get('/users/:userId/classroom', async (c) => {
                 return date.toLocaleDateString('ko-KR');
             }
         </script>
-        <script src="/static/js/security.js"></script>
+        <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>
     </html>
   `)
@@ -1845,7 +1846,7 @@ pagesAdmin.get('/users/:userId', async (c) => {
                 document.getElementById('passwordModal').remove();
             }
         </script>
-        <script src="/static/js/security.js"></script>
+        <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>
     </html>
   `)

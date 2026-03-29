@@ -12,12 +12,15 @@ import {
   addDays,
   hashPassword,
   SQL_SESSION_EXPIRED,
+  formatSessionExpiresAtForDb,
 } from '../utils/helpers'
 import { applySessionCookie } from '../utils/session-cookie'
+import { ensureListedAdminRole } from '../utils/admin-emails'
 import {
   envRedirectUriHostname,
   GOOGLE_OAUTH_REDIRECT_URI,
   isLocalDevHostname,
+  OAUTH_SUCCESS_LANDING_URL,
   requestHostname,
   SITE_PUBLIC_ORIGIN,
 } from '../utils/oauth-public'
@@ -352,6 +355,8 @@ authGoogle.get('/callback', async (c) => {
       
       user = newUser
     }
+
+    await ensureListedAdminRole(DB, googleUser.email, userId)
     
     // 4. 기존 세션 삭제 (만료된 세션 정리)
     await DB.prepare(`
@@ -368,7 +373,7 @@ authGoogle.get('/callback', async (c) => {
       INSERT INTO sessions (
         user_id, session_token, expires_at
       ) VALUES (?, ?, ?)
-    `).bind(userId, sessionToken, expiresAt.toISOString()).run()
+    `).bind(userId, sessionToken, formatSessionExpiresAtForDb(expiresAt)).run()
     if (!googleIns.success) {
       console.error('[GOOGLE_CALLBACK] sessions INSERT failed:', googleIns)
       throw new Error('세션을 저장하지 못했습니다.')
@@ -381,9 +386,8 @@ authGoogle.get('/callback', async (c) => {
     applySessionCookie(c, sessionToken, 7 * 24 * 60 * 60)
     console.log('[GOOGLE_CALLBACK] Session cookie set successfully')
 
-    // HTML+alert+location 이동은 일부 환경에서 Set-Cookie 적용 전에 JS가 도는 느낌을 주고,
-    // 다음 요청(/api/auth/me)이 401 → 로그인 화면으로 되돌아가는 현상이 있음. 302 로 쿠키와 리다이렉트를 한 응답으로 맞춤.
-    return c.redirect('/', 302)
+    // 상대 경로 / 대신 apex 절대 URL — www/비www 혼선 시에도 쿠키 Domain=mindstory.kr 과 방문 호스트 정합
+    return c.redirect(OAUTH_SUCCESS_LANDING_URL, 302)
     
   } catch (error) {
     console.error('[GOOGLE_CALLBACK] ===== ERROR OCCURRED =====')

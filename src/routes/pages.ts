@@ -69,7 +69,7 @@ const getCommonHead = (title: string) => `
     <link rel="stylesheet" href="/static/css/app.css" />
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-    <script src="/static/js/auth.js?v=20260328-1"></script>
+    <script src="/static/js/auth.js?v=20260328-2"></script>
     <script src="/static/js/utils.js?v=20260328-1"></script>
     <style>
         /* 모바일 최적화 - 폰트 크기 및 터치 영역 개선 */
@@ -279,6 +279,28 @@ pages.get('/login', (c) => {
             return t
         }
 
+        function sleepMs(ms) {
+            return new Promise(function (resolve) { setTimeout(resolve, ms) })
+        }
+
+        /** POST 로그인 직후 Set-Cookie 가 한 박자 늦을 때 대비 — /me 재시도 */
+        async function verifySessionAfterLogin() {
+            const gaps = [0, 120, 280, 520, 900, 1500]
+            let lastErr = null
+            for (let i = 0; i < gaps.length; i++) {
+                if (gaps[i] > 0) await sleepMs(gaps[i])
+                try {
+                    const verify = await axios.get('/api/auth/me', { withCredentials: true, timeout: 12000 })
+                    if (verify.data && verify.data.success && verify.data.data != null) {
+                        return verify
+                    }
+                } catch (e) {
+                    lastErr = e
+                }
+            }
+            throw lastErr || new Error('session verify failed')
+        }
+
         let loginSessionCheckAbort = null
         /** 로그인 폼 제출~리다이렉트 전까지 true — 늦게 도착하는 초기 /me 401 이 saveSession 을 지우지 않게 함 */
         let loginFlowActive = false
@@ -298,7 +320,7 @@ pages.get('/login', (c) => {
             try {
                 const response = await axios.get('/api/auth/me', { timeout: 3000, withCredentials: true, signal })
 
-                if (response.data && response.data.success) {
+                if (response.data && response.data.success && response.data.data) {
                     console.log('✅ Server session valid, redirecting...')
                     const urlParams = new URLSearchParams(window.location.search)
                     const redirect = safeRedirectPath(urlParams.get('redirect')) || '/'
@@ -350,28 +372,22 @@ pages.get('/login', (c) => {
                 const response = await axios.post('/api/auth/login', { email, password }, { withCredentials: true })
 
                 if (response.data.success) {
-                    // Set-Cookie 반영 후 서버 세션 확인 — 성공 토스트 후 곧바로 관리자 화면에서 인증 실패 나는 현상 방지
                     let verify
                     try {
-                        verify = await axios.get('/api/auth/me', { withCredentials: true, timeout: 8000 })
+                        verify = await verifySessionAfterLogin()
                     } catch (verr) {
                         loginFlowActive = false
                         showToast('세션이 브라우저에 저장되지 않았습니다. 쿠키 차단·시크릿 모드·다른 주소(www/비www)를 확인해주세요.', 'error')
                         return
                     }
-                    if (!verify.data || !verify.data.success) {
-                        loginFlowActive = false
-                        showToast('서버 세션을 확인하지 못했습니다. 잠시 후 다시 로그인해주세요.', 'error')
-                        return
-                    }
-
-                    AuthManager.saveSession(response.data.data.user)
+                    const serverUser = verify.data.data
+                    AuthManager.saveSession(serverUser)
                     showToast('로그인되었습니다.', 'success')
 
                     if (response.data.data.password_change_required) {
                         showToast('임시 비밀번호입니다. 새 비밀번호로 변경해주세요.', 'warning')
                         setTimeout(() => {
-                            window.location.href = '/my'
+                            window.location.href = '/my-profile'
                         }, 400)
                         return
                     }
@@ -383,8 +399,7 @@ pages.get('/login', (c) => {
                         if (redirect) {
                             window.location.href = redirect
                         } else {
-                            const user = response.data.data.user
-                            if (user.role !== 'student') {
+                            if (serverUser.role !== 'student') {
                                 window.location.href = '/admin/dashboard'
                             } else {
                                 window.location.href = '/'

@@ -11,10 +11,11 @@ import { successResponse, errorResponse } from '../utils/helpers'
 const app = new Hono<{ Bindings: Bindings }>()
 
 /**
- * POST /api/security/log
+ * POST /api/security/record
  * 클라이언트 보안 이벤트 기록 (로그인 여부 무관)
+ * 경로에 'log' 미사용 — 일부 브라우저·조직 정책이 URL의 log 를 차단하는 문제 회피
  */
-app.post('/log', optionalAuth, async (c) => {
+app.post('/record', optionalAuth, async (c) => {
   try {
     const user = c.get('user') as { id?: number } | undefined
     const body = await c.req.json<{
@@ -41,7 +42,7 @@ app.post('/log', optionalAuth, async (c) => {
 
     return c.json(successResponse(null))
   } catch (error) {
-    console.error('Security log error:', error)
+    console.error('Security record error:', error)
     return c.json(errorResponse('서버 오류가 발생했습니다.'), 500)
   }
 })

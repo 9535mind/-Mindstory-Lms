@@ -247,7 +247,7 @@ function logSecurityEvent(eventType, details = null) {
     if (now - lastSecurityLogAt < 3000) return;
     lastSecurityLogAt = now;
 
-    fetch('/api/security/log', {
+    fetch('/api/security/record', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

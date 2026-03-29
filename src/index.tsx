@@ -57,11 +57,15 @@ const app = new Hono<{ Bindings: Bindings }>()
 // 미들웨어
 app.use('*', logger())
 
-// 구 Pages 기본 호스트로 들어온 트래픽은 공식 도메인(https://mindstory.kr)으로 보냄
+// 구 Pages 호스트·www → 공식 apex (세션 쿠키 Domain=mindstory.kr 과 방문 호스트 통일)
 app.use('*', async (c, next) => {
   const raw = c.req.header('x-forwarded-host') || c.req.header('host') || ''
   const host = raw.split(',')[0].trim().split(':')[0]
   if (LEGACY_PAGES_HOSTNAMES.includes(host)) {
+    const url = new URL(c.req.url)
+    return c.redirect(`${SITE_PUBLIC_ORIGIN}${url.pathname}${url.search}`, 302)
+  }
+  if (host === 'www.mindstory.kr') {
     const url = new URL(c.req.url)
     return c.redirect(`${SITE_PUBLIC_ORIGIN}${url.pathname}${url.search}`, 302)
   }
@@ -138,6 +142,11 @@ app.use('/api/health', lenientRateLimiter)
 // 정적 파일 서빙 (Cloudflare Pages용 - root 제거)
 app.use('/static/*', serveStatic())
 app.use('/uploads/*', serveStatic()) // 업로드된 파일 서빙
+
+// 레거시 팝업·배너 API 무력화 — DB/관리자에 저장된 HTML·iframe 광고 자동 배포 차단 (다른 라우트보다 우선)
+app.get('/api/popups/active', (c) => c.json({ success: true, data: [] }))
+app.post('/api/popups/:id/view', (c) => c.json({ success: true }))
+app.post('/api/popups/:id/click', (c) => c.json({ success: true }))
 
 // API 라우트
 app.route('/api/auth', auth)

@@ -4,8 +4,12 @@
 
 import { Hono } from 'hono'
 import { Bindings } from '../types/database'
+import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 
 const pagesMy = new Hono<{ Bindings: Bindings }>()
+
+/** 예전 링크·로그인 리다이렉트 호환: 단독 HTML 라우트 없이 /my-profile 로 통일 */
+pagesMy.get('/my', (c) => c.redirect('/my-profile', 302))
 
 const getHeader = (currentPage = '') => `
 <header class="bg-white shadow-sm sticky top-0 z-40">
@@ -44,7 +48,7 @@ pagesMy.get('/my-courses-legacy', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/js/auth.js"></script>
         <script src="/static/js/utils.js"></script>
-        <script src="/static/js/content-protection.js"></script>
+        <script src="/static/js/content-protection.js${STATIC_JS_CACHE_QUERY}"></script>
     </head>
     <body class="bg-gray-50">
         ${getHeader('courses')}
@@ -222,7 +226,7 @@ pagesMy.get('/my-courses-legacy', (c) => {
             // 페이지 로드 시 수강 중 과정 로드
             loadCourses('active')
         </script>
-        <script src="/static/js/security.js"></script>
+        <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>
     </html>
   `)
@@ -386,7 +390,7 @@ pagesMy.get('/my-profile', (c) => {
                         withCredentials: true
                     });
 
-                    if (response.data.success) {
+                    if (response.data.success && response.data.data) {
                         currentUser = response.data.data;
                         document.getElementById('email').value = currentUser.email || '';
                         document.getElementById('name').value = currentUser.name || '';
@@ -397,6 +401,9 @@ pagesMy.get('/my-profile', (c) => {
                         if (currentUser.social_provider) {
                             document.getElementById('passwordSection').style.display = 'none';
                         }
+                    } else {
+                        alert('로그인이 필요합니다.');
+                        window.location.href = '/login';
                     }
                 } catch (error) {
                     console.error('프로필 로드 실패:', error);
@@ -559,7 +566,7 @@ pagesMy.get('/my-profile', (c) => {
             // 페이지 로드
             loadUserProfile();
         </script>
-        <script src="/static/js/security.js"></script>
+        <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>
     </html>
   `)

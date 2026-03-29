@@ -39,22 +39,30 @@ export function sessionCookieDomain(c: Context): string | undefined {
   return undefined
 }
 
+/**
+ * session_token — HttpOnly, Secure(HTTPS·공개 호스트), SameSite=Lax, Path=/, Max-Age
+ * Domain 은 mindstory.kr / mslms.pages.dev 만 명시(호스트 전용 쿠키는 로그인 루프 유발 가능)
+ */
 export function applySessionCookie(c: Context, token: string, maxAgeSeconds: number) {
   const domain = sessionCookieDomain(c)
+  const secure = isSecureCookieRequest(c)
   setCookie(c, 'session_token', token, {
     path: '/',
     httpOnly: true,
-    secure: isSecureCookieRequest(c),
+    secure,
     sameSite: 'Lax',
-    maxAge: maxAgeSeconds,
+    maxAge: Math.floor(maxAgeSeconds),
     ...(domain ? { domain } : {}),
   })
 }
 
 export function clearSessionCookie(c: Context) {
   const domain = sessionCookieDomain(c)
+  const secure = isSecureCookieRequest(c)
   deleteCookie(c, 'session_token', {
     path: '/',
+    secure,
+    sameSite: 'Lax',
     ...(domain ? { domain } : {}),
   })
 }

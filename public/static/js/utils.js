@@ -349,6 +349,14 @@ async function requireAdmin() {
         return user
       }
 
+      // GET /api/auth/me 는 비로그인 시 200 + data: null (콘솔 401 스팸 방지)
+      const emptySession = response.success === true && (response.data === null || response.data === undefined)
+      if (emptySession) {
+        alert('로그인이 필요합니다. 다시 로그인해주세요.')
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search)
+        return null
+      }
+
       const is429 = st === 429 || msg.includes('너무 많') || msg.includes('요청이 너무')
       const is401 = st === 401 || msg.includes('로그인이 필요') || msg.includes('Unauthorized') || msg.includes('401')
       const isNet = st === 0

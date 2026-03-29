@@ -11,12 +11,15 @@ import {
   generateSessionToken,
   addDays,
   SQL_SESSION_EXPIRED,
+  formatSessionExpiresAtForDb,
 } from '../utils/helpers'
 import { applySessionCookie } from '../utils/session-cookie'
+import { ensureListedAdminRole } from '../utils/admin-emails'
 import {
   envRedirectUriHostname,
   isLocalDevHostname,
   KAKAO_OAUTH_REDIRECT_URI,
+  OAUTH_SUCCESS_LANDING_URL,
   requestHostname,
   SITE_PUBLIC_ORIGIN,
 } from '../utils/oauth-public'
@@ -461,6 +464,8 @@ authKakao.get('/callback', async (c) => {
       
       user = newUser
     }
+
+    await ensureListedAdminRole(DB, user.email, userId)
     
     // 4. 기존 세션 삭제 (만료된 세션 정리)
     await DB.prepare(`
@@ -477,7 +482,7 @@ authKakao.get('/callback', async (c) => {
       INSERT INTO sessions (
         user_id, session_token, expires_at
       ) VALUES (?, ?, ?)
-    `).bind(userId, sessionToken, expiresAt.toISOString()).run()
+    `).bind(userId, sessionToken, formatSessionExpiresAtForDb(expiresAt)).run()
     if (!kakaoIns.success) {
       console.error('[KAKAO_CALLBACK] sessions INSERT failed:', kakaoIns)
       throw new Error('세션을 저장하지 못했습니다.')
@@ -492,7 +497,7 @@ authKakao.get('/callback', async (c) => {
     applySessionCookie(c, sessionToken, 7 * 24 * 60 * 60)
     console.log('[KAKAO_CALLBACK] Session cookie set successfully')
 
-    return c.redirect('/', 302)
+    return c.redirect(OAUTH_SUCCESS_LANDING_URL, 302)
     
   } catch (error) {
     console.error('[KAKAO_CALLBACK] ===== ERROR OCCURRED =====')
