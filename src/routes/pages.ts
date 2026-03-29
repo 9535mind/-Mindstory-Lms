@@ -5,24 +5,31 @@
 import { Hono } from 'hono'
 import { Bindings } from '../types/database'
 import { siteFooterLegalBlockHtml } from '../utils/site-footer-legal'
+import {
+  siteHeaderNavCoursesGlassStyles,
+  siteNavCoursesAccordionMobile,
+  siteNavCoursesDropdownDesktop,
+  siteNavMobileToggleScript,
+} from '../utils/site-header-courses-nav'
 
 const pages = new Hono<{ Bindings: Bindings }>()
 
 // 공통 헤더/푸터 컴포넌트
 const getHeader = () => `
-<header class="bg-white shadow-sm sticky top-0 z-40">
+<header class="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-40 border-b border-gray-100/80">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-4">
-            <div class="flex items-center">
-                <a href="/" class="text-xl md:text-2xl font-bold text-indigo-600 whitespace-nowrap">
+        <div class="flex justify-between items-center py-4 gap-2">
+            <div class="flex items-center gap-2 min-w-0 flex-1 md:flex-initial">
+                <button type="button" id="pagesMobileNavToggle" class="md:hidden shrink-0 inline-flex items-center justify-center w-11 h-11 rounded-xl border border-gray-200/80 bg-white/80 text-gray-700 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40" aria-label="메뉴 열기" aria-expanded="false" aria-controls="pagesMobileNavPanel">
+                    <i class="fas fa-bars text-lg" aria-hidden="true"></i>
+                </button>
+                <a href="/" class="text-lg sm:text-xl md:text-2xl font-bold text-indigo-600 whitespace-nowrap truncate min-w-0">
                     마인드스토리 원격 평생교육원
                 </a>
             </div>
-            <nav class="hidden md:flex space-x-6 items-center flex-wrap">
+            <nav class="hidden md:flex space-x-6 items-center flex-wrap text-base" aria-label="주 메뉴">
                 <a href="/" class="text-gray-700 hover:text-indigo-600">홈</a>
-                <a href="/courses/classic" class="text-classic-sage font-semibold hover:underline">Classic</a>
-                <a href="/courses/next" class="text-next-accent font-semibold hover:underline">Next</a>
-                <a href="/#courses" class="text-gray-700 hover:text-indigo-600">과정 안내</a>
+                ${siteNavCoursesDropdownDesktop()}
                 <a href="/my-courses" class="text-gray-700 hover:text-indigo-600">내 강의실</a>
                 
                 <!-- 관리자 모드 전환 버튼 -->
@@ -34,15 +41,22 @@ const getHeader = () => `
                     </a>
                 </div>
             </nav>
-            <div id="headerAuthButtons" class="flex items-center space-x-4">
+            <div id="headerAuthButtons" class="flex items-center space-x-2 sm:space-x-4 shrink-0">
                 <!-- 모바일: 헤더 로그인/회원가입 버튼 숨김 (하단 통합) -->
                 <a href="/login" class="hidden md:block text-gray-700 hover:text-indigo-600">로그인</a>
                 <a href="/register" class="hidden md:block bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">회원가입</a>
             </div>
-            <div id="headerUserMenu" class="flex items-center space-x-4" style="display:none">
+            <div id="headerUserMenu" class="flex items-center space-x-4 shrink-0" style="display:none">
                 <span class="text-gray-700" id="headerUserName"></span>
                 <button onclick="handleLogout()" class="text-gray-700 hover:text-indigo-600">로그아웃</button>
             </div>
+        </div>
+        <div id="pagesMobileNavPanel" class="hidden md:hidden border-t border-gray-200/70 bg-white/88 backdrop-blur-lg" role="navigation" aria-label="모바일 메뉴">
+            <nav class="py-3 px-1 flex flex-col gap-2">
+                <a href="/" class="px-3 py-2.5 rounded-xl text-gray-800 hover:bg-white/80 font-medium border border-transparent hover:border-gray-200/50">홈</a>
+                ${siteNavCoursesAccordionMobile()}
+                <a href="/my-courses" class="px-3 py-2.5 rounded-xl text-gray-800 hover:bg-white/80 font-medium border border-transparent hover:border-gray-200/50">내 강의실</a>
+            </nav>
         </div>
     </div>
 </header>
@@ -136,6 +150,7 @@ const getCommonHead = (title: string) => `
             }
         }
     </style>
+    ${siteHeaderNavCoursesGlassStyles()}
 </head>
 <body class="bg-gray-50">
 `
@@ -145,6 +160,7 @@ const getCommonFoot = () => `
   // 헤더 업데이트 (로그인 상태 및 관리자 링크 자동 처리)
   document.addEventListener('DOMContentLoaded', () => {
     updateHeader()
+    ${siteNavMobileToggleScript('pagesMobileNavToggle', 'pagesMobileNavPanel')}
   })
 </script>
 </body>

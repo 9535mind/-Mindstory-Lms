@@ -196,10 +196,11 @@ async function updateHeader() {
     if (userMenu) userMenu.style.display = 'flex'
     if (userName) userName.textContent = user.name + ' 님'
     
-    // 로그인 사용자에게 관리자 페이지 진입 버튼은 항상 노출
-    // 실제 접근 권한은 서버(/admin, /api/admin)에서 최종 검증한다.
+    // 관리자 모드 링크는 role === 'admin' 일 때만 노출 (학생에게 버튼만 보이고 막히는 혼선 방지)
     if (adminLink) adminLink.style.display = 'none'
-    if (adminModeSwitch) adminModeSwitch.style.display = 'flex'
+    if (adminModeSwitch) {
+      adminModeSwitch.style.display = user.role === 'admin' ? 'flex' : 'none'
+    }
   } else {
     if (authButtons) authButtons.style.display = 'flex'
     if (userMenu) userMenu.style.display = 'none'

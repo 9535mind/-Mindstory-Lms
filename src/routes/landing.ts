@@ -18,6 +18,12 @@ import {
   siteOrganizationJsonLdScriptHtml,
 } from '../utils/site-footer-legal'
 import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
+import {
+  siteHeaderNavCoursesGlassStyles,
+  siteNavCoursesAccordionMobile,
+  siteNavCoursesDropdownDesktop,
+  siteNavMobileToggleScript,
+} from '../utils/site-header-courses-nav'
 
 const landing = new Hono<{ Bindings: Bindings }>()
 
@@ -268,26 +274,25 @@ landing.get('/', (c) => {
                 line-height: 1.7;
             }
         </style>
+        ${siteHeaderNavCoursesGlassStyles()}
         <script src="/static/js/content-protection.js${STATIC_JS_CACHE_QUERY}"></script>
     </head>
     <body>
         <!-- 헤더 -->
         <header class="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-4">
-                    <div class="flex items-center">
-                        <a href="/" class="text-2xl md:text-3xl font-bold" style="color: var(--color-primary);">
+                <div class="flex justify-between items-center py-4 gap-3">
+                    <div class="flex items-center gap-2 min-w-0 flex-1 md:flex-initial">
+                        <button type="button" id="landingMobileNavToggle" class="md:hidden shrink-0 inline-flex items-center justify-center w-11 h-11 rounded-xl border border-gray-200/80 bg-white/70 text-gray-700 hover:bg-white/95 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40" aria-label="메뉴 열기" aria-expanded="false" aria-controls="landingMobileNavPanel">
+                            <i class="fas fa-bars text-lg" aria-hidden="true"></i>
+                        </button>
+                        <a href="/" class="text-xl sm:text-2xl md:text-3xl font-bold truncate min-w-0" style="color: var(--color-primary);">
                             마인드스토리 원격평생교육원
                         </a>
                     </div>
-                    <nav class="hidden md:flex space-x-6 lg:space-x-8 items-center text-lg flex-wrap">
+                    <nav class="hidden md:flex space-x-6 lg:space-x-8 items-center text-lg flex-wrap" aria-label="주 메뉴">
                         <a href="/" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200 font-medium">홈</a>
-                        <div class="flex items-center gap-3 text-base">
-                            <a href="/courses/classic" class="text-classic-sage hover:underline font-semibold">Classic</a>
-                            <span class="text-gray-300">|</span>
-                            <a href="/courses/next" class="text-next-accent hover:underline font-semibold">Next</a>
-                        </div>
-                        <a href="#courses" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200 font-medium">과정 안내</a>
+                        ${siteNavCoursesDropdownDesktop()}
                         <a href="/enrollment" class="text-indigo-600 hover:text-indigo-700 transition-colors duration-200 font-bold">
                             <i class="fas fa-graduation-cap mr-1"></i>
                             수강신청
@@ -311,6 +316,16 @@ landing.get('/', (c) => {
                         <span class="text-gray-700 font-medium" id="headerUserName"></span>
                         <button onclick="handleLogout()" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200">로그아웃</button>
                     </div>
+                </div>
+                <div id="landingMobileNavPanel" class="hidden md:hidden border-t border-gray-200/60 bg-white/88 backdrop-blur-lg" role="navigation" aria-label="모바일 메뉴">
+                    <nav class="py-3 px-2 sm:px-0 flex flex-col gap-2 max-w-7xl mx-auto">
+                        <a href="/" class="px-3 py-2.5 rounded-xl text-gray-800 hover:bg-white/70 font-medium border border-transparent hover:border-gray-200/50 transition-colors">홈</a>
+                        ${siteNavCoursesAccordionMobile()}
+                        <a href="/enrollment" class="px-3 py-2.5 rounded-xl text-indigo-600 font-bold hover:bg-indigo-50/80 border border-indigo-100/60 transition-colors">
+                            <i class="fas fa-graduation-cap mr-2"></i>수강신청
+                        </a>
+                        <a href="/my-courses" class="px-3 py-2.5 rounded-xl text-gray-800 hover:bg-white/70 font-medium border border-transparent hover:border-gray-200/50 transition-colors">내 강의실</a>
+                    </nav>
                 </div>
             </div>
         </header>
@@ -796,7 +811,7 @@ landing.get('/', (c) => {
             document.addEventListener('DOMContentLoaded', () => {
                 loadCourses()
                 updateHeader()
-                
+                ${siteNavMobileToggleScript('landingMobileNavToggle', 'landingMobileNavPanel')}
                 // 히어로 이미지 슬라이더
                 initHeroSlider()
             })
