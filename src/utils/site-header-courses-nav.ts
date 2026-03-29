@@ -224,7 +224,7 @@ export function siteHeaderFullMarkup(opts: SiteHeaderOptions): string {
       <button type="button" onclick="handleLogout()" class="w-full px-4 py-3 rounded-xl text-left text-gray-700 font-medium border border-slate-200/60 hover:bg-white/60">로그아웃</button>
     </div>`
 
-  return `<header class="sticky top-0 z-50 shadow-sm shadow-slate-900/5">
+  return `<header class="sticky top-0 z-50 shadow-sm shadow-slate-900/5" data-ms-header="two-tier" data-ms-header-rev="20260328">
   <!-- 데스크톱 1단: 유틸 -->
   <div class="site-header-util-bar hidden md:block">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-end items-center gap-4 py-2 text-sm">
