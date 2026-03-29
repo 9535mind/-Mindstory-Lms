@@ -16,7 +16,13 @@ const publicDir = join(root, 'public')
 const ROUTES = {
   version: 1,
   include: ['/*'],
-  exclude: ['/uploads/*', '/static/*', '/pg-business-info.html', '/build.txt'],
+  exclude: [
+    '/uploads/*',
+    '/static/*',
+    '/pg-business-info.html',
+    '/build.txt',
+    '/google7186e759c88da5d4.html',
+  ],
 }
 
 if (!existsSync(dist)) {

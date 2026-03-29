@@ -1,5 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
+  // 프로덕션 Pages 프로젝트는 오직 "mslms" 하나만 사용합니다 (npm run deploy / deploy.sh).
+  // Git 저장소를 Cloudflare에 연결했다면 CLI 배포와 이중 빌드되지 않도록 Builds 설정을 확인하세요.
+  // *.hash.mslms.pages.dev 미리보기가 쌓이면 Dashboard → mslms → Settings → Builds에서 Preview deployments를 제한하세요.
   "name": "mslms",
   "compatibility_date": "2025-12-27",
   "pages_build_output_dir": "./dist",
