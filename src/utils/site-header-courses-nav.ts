@@ -137,7 +137,7 @@ a.admin-magic-pencil:focus-visible {
   position: absolute;
   left: 0;
   width: 100%;
-  min-width: 15.5rem;
+  min-width: 16.5rem;
   top: 100%;
   height: 0.625rem;
   z-index: 59;
@@ -149,7 +149,7 @@ a.admin-magic-pencil:focus-visible {
   pointer-events: auto;
 }
 .site-nav-dd-panel {
-  min-width: 15.5rem;
+  min-width: 16.5rem;
   position: absolute;
   left: 0;
   top: calc(100% + 0.625rem);
@@ -209,6 +209,66 @@ a.admin-magic-pencil:focus-visible {
   margin-top: 0.2rem;
   line-height: 1.35;
 }
+.site-nav-dd-link--row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.site-nav-dd-ico {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+.site-nav-dd-ico--classic {
+  background: rgba(16, 185, 129, 0.12);
+  color: rgb(5 150 105);
+}
+.site-nav-dd-ico--next {
+  background: rgba(37, 99, 235, 0.12);
+  color: rgb(37 99 235);
+}
+.site-nav-dd-ico--consortium {
+  background: rgba(79, 70, 229, 0.12);
+  color: rgb(67 56 202);
+}
+.site-nav-dd-link-body { min-width: 0; flex: 1; }
+@media (min-width: 1024px) {
+  .site-nav-dd-panel--cards .site-nav-titanium-inner {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.25rem;
+    min-width: 42rem;
+    padding: 0.5rem;
+  }
+  .site-nav-dd-panel--cards .site-nav-dd-link--row {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    border-bottom: none;
+    border-right: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.5rem;
+    padding: 1rem 0.65rem;
+    min-height: 7.25rem;
+    justify-content: flex-start;
+  }
+  .site-nav-dd-panel--cards .site-nav-dd-link--row:nth-of-type(3) {
+    border-right: none;
+  }
+  .site-nav-dd-panel--cards .site-nav-dd-link--summary {
+    grid-column: 1 / -1;
+    border-top: 1px solid rgba(148, 163, 184, 0.32);
+    margin-top: 0.15rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: none;
+    border-right: none;
+  }
+}
 .site-nav-m-acc[open] .site-nav-m-acc-icon { transform: rotate(180deg); }
 .site-nav-m-acc-titanium .site-nav-titanium-outer { margin-top: 0.25rem; }
 .site-nav-m-acc-titanium .site-nav-dd-link:last-child { border-bottom: none; }
@@ -254,17 +314,32 @@ function navCoursesDropdownDesktop(): string {
     과정 안내
     <i class="site-nav-dd-chevron fas fa-chevron-down text-[0.65rem] opacity-55" aria-hidden="true"></i>
   </button>
-  <div id="site-nav-dd-panel" role="menu" aria-label="과정 안내 하위 메뉴" class="site-nav-dd-panel">
+  <div id="site-nav-dd-panel" role="menu" aria-label="과정 안내 하위 메뉴" class="site-nav-dd-panel site-nav-dd-panel--cards">
     <div class="site-nav-titanium-outer site-nav-dd-tremor">
       <div class="site-nav-titanium-inner py-1">
-        <a href="/courses/classic" role="menuitem" class="site-nav-dd-link text-classic-sage font-semibold">
-          Classic<span class="site-nav-dd-desc">마인드스토리 전통 입문 과정</span>
+        <a href="/courses/classic" role="menuitem" class="site-nav-dd-link site-nav-dd-link--row text-classic-sage font-semibold">
+          <span class="site-nav-dd-ico site-nav-dd-ico--classic" aria-hidden="true"><i class="fas fa-book-open"></i></span>
+          <span class="site-nav-dd-link-body">
+            <span class="block">Classic</span>
+            <span class="site-nav-dd-desc">마인드스토리 전통 입문 과정</span>
+          </span>
         </a>
-        <a href="/courses/next" role="menuitem" class="site-nav-dd-link text-next-accent font-semibold">
-          Next<span class="site-nav-dd-desc">심화 마스터 과정</span>
+        <a href="/courses/next" role="menuitem" class="site-nav-dd-link site-nav-dd-link--row text-next-accent font-semibold">
+          <span class="site-nav-dd-ico site-nav-dd-ico--next" aria-hidden="true"><i class="fas fa-rocket"></i></span>
+          <span class="site-nav-dd-link-body">
+            <span class="block">Next</span>
+            <span class="site-nav-dd-desc">심화 마스터 과정</span>
+          </span>
         </a>
-        <a href="/#courses" role="menuitem" class="site-nav-dd-link text-sm text-gray-700 font-medium border-t border-slate-200/40">
-          전체 과정 보기<span class="site-nav-dd-desc">랜딩 과정 섹션으로 이동</span>
+        <a href="/courses/consortium" role="menuitem" class="site-nav-dd-link site-nav-dd-link--row text-indigo-700 font-semibold">
+          <span class="site-nav-dd-ico site-nav-dd-ico--consortium" aria-hidden="true"><i class="fas fa-handshake"></i></span>
+          <span class="site-nav-dd-link-body">
+            <span class="block">Consortium</span>
+            <span class="site-nav-dd-desc">기업 및 기관 공동훈련 과정<span class="block mt-1 font-normal text-[0.65rem] leading-snug text-slate-600/95">협약 기업 임직원 및 기관 단체 수강생을 위한 전용 맞춤형 교육 서비스</span></span>
+          </span>
+        </a>
+        <a href="/#signature-lineup" role="menuitem" class="site-nav-dd-link site-nav-dd-link--summary border-t border-slate-200/50 text-sm text-gray-700 font-medium">
+          전체 과정 보기<span class="site-nav-dd-desc">시그니처 라인업·추천 과정 섹션으로 이동</span>
         </a>
       </div>
     </div>
@@ -282,9 +357,23 @@ function navDrawerCoursesAccordion(): string {
   <div class="px-2 pb-3 border-t border-slate-200/40">
     <div class="site-nav-titanium-outer mt-2">
       <div class="site-nav-titanium-inner flex flex-col py-1">
-        <a href="/courses/classic" class="site-nav-dd-link text-classic-sage font-semibold">Classic<span class="site-nav-dd-desc">마인드스토리 전통 입문 과정</span></a>
-        <a href="/courses/next" class="site-nav-dd-link text-next-accent font-semibold">Next<span class="site-nav-dd-desc">심화 마스터 과정</span></a>
-        <a href="/#courses" class="site-nav-dd-link text-sm text-gray-700 font-medium">전체 과정 보기</a>
+        <a href="/courses/classic" class="site-nav-dd-link site-nav-dd-link--row text-classic-sage font-semibold">
+          <span class="site-nav-dd-ico site-nav-dd-ico--classic" aria-hidden="true"><i class="fas fa-book-open"></i></span>
+          <span class="site-nav-dd-link-body"><span class="block">Classic</span><span class="site-nav-dd-desc">마인드스토리 전통 입문 과정</span></span>
+        </a>
+        <a href="/courses/next" class="site-nav-dd-link site-nav-dd-link--row text-next-accent font-semibold">
+          <span class="site-nav-dd-ico site-nav-dd-ico--next" aria-hidden="true"><i class="fas fa-rocket"></i></span>
+          <span class="site-nav-dd-link-body"><span class="block">Next</span><span class="site-nav-dd-desc">심화 마스터 과정</span></span>
+        </a>
+        <a href="/courses/consortium" class="site-nav-dd-link site-nav-dd-link--row text-indigo-700 font-semibold">
+          <span class="site-nav-dd-ico site-nav-dd-ico--consortium" aria-hidden="true"><i class="fas fa-handshake"></i></span>
+          <span class="site-nav-dd-link-body">
+            <span class="block">Consortium</span>
+            <span class="site-nav-dd-desc">기업 및 기관 공동훈련 과정</span>
+            <span class="site-nav-dd-desc mt-0.5 text-[0.65rem] leading-snug">협약 기업 임직원 및 기관 단체 수강생을 위한 전용 맞춤형 교육 서비스</span>
+          </span>
+        </a>
+        <a href="/#signature-lineup" class="site-nav-dd-link text-sm text-gray-700 font-medium">전체 과정 보기<span class="site-nav-dd-desc">시그니처 라인업으로 이동</span></a>
       </div>
     </div>
   </div>

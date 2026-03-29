@@ -92,6 +92,12 @@ landing.get('/', async (c) => {
                 --color-text: #111827;
                 --color-text-secondary: #6B7280;
                 --color-border: #E5E7EB;
+                /* Elegant Spring — 차분한 세이지 & 아이보리 */
+                --spring-ivory: #fdfbf7;
+                --spring-ivory-deep: #f7f3eb;
+                --spring-sage: #8a9b8e;
+                --spring-sage-soft: rgba(138, 155, 142, 0.14);
+                --spring-rose-dust: rgba(184, 155, 152, 0.12);
             }
             
             * {
@@ -99,9 +105,84 @@ landing.get('/', async (c) => {
             }
             
             body {
-                background: var(--color-background);
+                background: linear-gradient(180deg, #ffffff 0%, var(--spring-ivory) 38%, var(--spring-ivory-deep) 100%);
                 color: var(--color-text);
                 line-height: 1.7;
+            }
+
+            .landing-spring-mid {
+                position: relative;
+                overflow-x: clip;
+                background: linear-gradient(180deg,
+                    rgba(255, 255, 255, 0.65) 0%,
+                    var(--spring-ivory) 22%,
+                    var(--spring-ivory-deep) 88%,
+                    rgba(255, 255, 255, 0.5) 100%);
+            }
+            .landing-spring-botanical {
+                position: absolute;
+                pointer-events: none;
+                z-index: 0;
+                color: var(--spring-sage);
+            }
+            .landing-spring-botanical svg {
+                width: 100%;
+                height: auto;
+                display: block;
+            }
+            .landing-spring-botanical--br {
+                right: -4%;
+                bottom: 6%;
+                width: min(46vw, 440px);
+                max-height: 52vh;
+                opacity: 0.1;
+            }
+            .landing-spring-botanical--tl {
+                left: -6%;
+                top: 12%;
+                width: min(36vw, 320px);
+                max-height: 40vh;
+                opacity: 0.06;
+                transform: rotate(12deg);
+            }
+            @media (max-width: 768px) {
+                .landing-spring-botanical--tl { display: none; }
+                .landing-spring-botanical--br {
+                    opacity: 0.055;
+                    width: min(78vw, 360px);
+                    bottom: 2%;
+                }
+            }
+            .landing-spring-mid > section {
+                position: relative;
+                z-index: 1;
+            }
+
+            .spring-hero-btn {
+                transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s ease, background 0.35s ease;
+            }
+            .spring-hero-btn:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 14px 36px rgba(255, 255, 255, 0.22), 0 0 32px rgba(167, 192, 170, 0.35);
+            }
+
+            .spring-light-cta {
+                transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s ease, background 0.35s ease;
+            }
+            .spring-light-cta:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12), 0 0 28px rgba(138, 155, 142, 0.2);
+            }
+
+            .spring-lineup-card {
+                transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.55s ease !important;
+            }
+            .spring-lineup-card:hover {
+                transform: translateY(-10px) !important;
+                box-shadow:
+                    0 28px 56px -14px rgba(138, 155, 142, 0.18),
+                    0 0 0 1px rgba(138, 155, 142, 0.1),
+                    0 0 48px rgba(253, 251, 247, 0.9) !important;
             }
             
             /* 모바일 최적화 - 폰트 크기 조정 */
@@ -193,17 +274,20 @@ landing.get('/', async (c) => {
             
             /* Glassmorphism */
             .glass-card {
-                background: rgba(255, 255, 255, 0.7);
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-                border: 1px solid rgba(255, 255, 255, 0.3);
-                transition: all 0.3s ease;
+                background: rgba(255, 255, 255, 0.78);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border: 1px solid rgba(255, 255, 255, 0.45);
+                transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s ease, border-color 0.4s ease;
             }
             
             .glass-card:hover {
-                border-color: var(--color-primary);
-                box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
-                transform: translateY(-4px);
+                border-color: rgba(138, 155, 142, 0.38);
+                box-shadow:
+                    0 20px 50px -12px rgba(138, 155, 142, 0.16),
+                    0 0 0 1px rgba(184, 155, 152, 0.1),
+                    0 0 36px rgba(138, 155, 142, 0.08);
+                transform: translateY(-8px);
             }
             
             /* Bento Grid */
@@ -256,14 +340,16 @@ landing.get('/', async (c) => {
                 border-radius: 12px;
                 font-weight: 600;
                 box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
-                transition: all 0.3s ease;
+                transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s ease, background 0.35s ease;
                 display: inline-block;
             }
             
             .cta-button:hover {
                 background: var(--color-primary-hover);
-                box-shadow: 0 6px 24px rgba(99, 102, 241, 0.4);
-                transform: translateY(-2px);
+                box-shadow:
+                    0 14px 36px rgba(99, 102, 241, 0.38),
+                    0 0 28px rgba(138, 155, 142, 0.22);
+                transform: translateY(-5px);
             }
             
             /* Review Card */
@@ -275,6 +361,11 @@ landing.get('/', async (c) => {
                 min-width: 300px;
                 margin-right: 1.5rem;
                 display: inline-block;
+                transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease;
+            }
+            .review-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 14px 28px rgba(138, 155, 142, 0.12), 0 0 0 1px rgba(184, 155, 152, 0.08);
             }
             
             /* Typography */
@@ -323,7 +414,7 @@ landing.get('/', async (c) => {
                             <i class="fas fa-graduation-cap mr-3"></i>
                             수강신청 하기
                         </a>
-                        <button onclick="scrollToCourses()" class="bg-white/20 backdrop-blur-sm text-white px-10 py-4 rounded-xl text-xl font-semibold hover:bg-white/30 transition-all duration-300">
+                        <button type="button" onclick="scrollToCourses()" class="spring-hero-btn bg-white/20 backdrop-blur-sm text-white px-10 py-4 rounded-xl text-xl font-semibold hover:bg-white/30">
                             <i class="fas fa-book-open mr-2"></i>
                             과정 둘러보기
                         </button>
@@ -332,13 +423,37 @@ landing.get('/', async (c) => {
             </div>
         </section>
 
+        <div class="landing-spring-mid">
+            <div class="landing-spring-botanical landing-spring-botanical--tl" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 240" fill="none" stroke="currentColor" stroke-width="0.85" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 200 C60 140 100 100 160 72 M160 72 C200 48 232 36 258 28" />
+                    <path d="M100 120 C118 88 108 56 92 36 M118 108 C142 82 168 76 198 68" opacity="0.85" />
+                    <ellipse cx="198" cy="52" rx="14" ry="6" transform="rotate(-32 198 52)" />
+                    <ellipse cx="128" cy="94" rx="16" ry="7" transform="rotate(-58 128 94)" />
+                    <ellipse cx="72" cy="152" rx="12" ry="5" transform="rotate(18 72 152)" />
+                    <path d="M160 72 L168 88 M142 98 L152 112 M88 138 L96 154" opacity="0.7" stroke-width="0.55" />
+                </svg>
+            </div>
+            <div class="landing-spring-botanical landing-spring-botanical--br" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 300" fill="none" stroke="currentColor" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M24 268 Q120 200 188 132 T332 36" />
+                    <path d="M188 132 Q228 96 268 88 M160 168 Q128 118 88 108 M220 176 Q260 150 304 148" opacity="0.9" />
+                    <ellipse cx="268" cy="76" rx="22" ry="9" transform="rotate(-42 268 76)" />
+                    <ellipse cx="118" cy="124" rx="20" ry="8" transform="rotate(24 118 124)" />
+                    <ellipse cx="300" cy="156" rx="16" ry="7" transform="rotate(-12 300 156)" />
+                    <path d="M88 108 L78 92 M304 148 L318 162 M268 88 L276 104" opacity="0.65" stroke-width="0.55" />
+                    <path d="M332 36 Q300 52 276 64" opacity="0.5" stroke-width="0.55" />
+                </svg>
+            </div>
+
         <!-- MINDSTORY 시그니처 라인업 -->
-        <section class="py-20 bg-white border-y border-gray-100">
+        <section id="signature-lineup" class="py-20 border-y border-stone-200/45 bg-transparent scroll-mt-24">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-4">MINDSTORY 시그니처 라인업</h2>
+                <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-2">MINDSTORY 시그니처 라인업</h2>
+                <div class="w-14 h-0.5 rounded-full bg-[#8a9b8e]/35 mx-auto mb-4" aria-hidden="true"></div>
                 <p class="text-center text-gray-600 text-lg mb-12 max-w-3xl mx-auto">Classic · Next · 공동훈련(NCS) 세 가지 로드맵으로 목표와 수준에 맞는 학습을 설계합니다.</p>
                 <div class="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:items-stretch">
-                    <div class="group relative flex h-full min-h-[300px] rounded-3xl border border-yellow-900/10 bg-gradient-to-br from-white via-slate-50 to-slate-100 shadow-lg backdrop-blur-md transition-all duration-300 hover:-translate-y-[5px] hover:shadow-xl hover:shadow-[0_20px_25px_-5px_rgba(0,0,0,0.06),0_32px_64px_-12px_rgba(113,63,18,0.1),0_48px_96px_-24px_rgba(6,78,59,0.08)]">
+                    <div class="spring-lineup-card group relative flex h-full min-h-[300px] rounded-3xl border border-yellow-900/10 bg-gradient-to-br from-white via-slate-50 to-slate-100 shadow-lg backdrop-blur-md">
                         <a href="/courses/classic" class="absolute inset-0 z-0 rounded-3xl" aria-label="MindStory Classic 강좌 목록으로 이동"></a>
                         <div class="relative z-10 flex h-full min-h-[300px] flex-1 flex-col p-8 sm:p-10 pointer-events-none">
                             <span class="text-xs font-bold text-classic-sage tracking-widest uppercase">FUNDAMENTAL COURSE</span>
@@ -351,7 +466,7 @@ landing.get('/', async (c) => {
                             <span class="mt-6 inline-flex items-center rounded-full border border-amber-900/25 bg-emerald-50/90 px-5 py-2 text-sm font-semibold text-classic-forest shadow-sm transition-all duration-300 group-hover:border-classic-sage group-hover:bg-classic-sage group-hover:text-white group-hover:shadow-md pointer-events-none sm:px-6">Classic 강좌 보기 <i class="fas fa-arrow-right ml-2 text-xs transition-transform group-hover:translate-x-1"></i></span>
                         </div>
                     </div>
-                    <div class="group relative flex h-full min-h-[300px] rounded-3xl border border-slate-300 bg-gradient-to-br from-white via-slate-50 to-slate-100 shadow-lg backdrop-blur-md transition-all duration-300 hover:-translate-y-[5px] hover:shadow-xl hover:shadow-[0_20px_25px_-5px_rgba(0,0,0,0.06),0_32px_64px_-12px_rgba(51,65,85,0.12),0_48px_96px_-24px_rgba(30,64,175,0.09)]">
+                    <div class="spring-lineup-card group relative flex h-full min-h-[300px] rounded-3xl border border-slate-300 bg-gradient-to-br from-white via-slate-50 to-slate-100 shadow-lg backdrop-blur-md">
                         <a href="/courses/next" class="absolute inset-0 z-0 rounded-3xl" aria-label="MindStory Next 강좌 목록으로 이동"></a>
                         <div class="relative z-10 flex h-full min-h-[300px] flex-1 flex-col p-8 sm:p-10 pointer-events-none">
                             <span class="text-xs font-bold text-next-accent tracking-widest uppercase">ADVANCED MASTER</span>
@@ -364,8 +479,8 @@ landing.get('/', async (c) => {
                             <span class="mt-6 inline-flex items-center rounded-full border border-slate-400/55 bg-blue-50/90 px-5 py-2 text-sm font-semibold text-next-ink shadow-sm transition-all duration-300 group-hover:border-next-accent group-hover:bg-next-accent group-hover:text-white group-hover:shadow-md pointer-events-none sm:px-6">Next 강좌 보기 <i class="fas fa-arrow-right ml-2 text-xs transition-transform group-hover:translate-x-1"></i></span>
                         </div>
                     </div>
-                    <div class="group relative flex h-full min-h-[300px] rounded-3xl border border-indigo-300/50 bg-gradient-to-br from-white via-slate-50 to-indigo-50/50 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-400/25 backdrop-blur-md transition-all duration-300 hover:-translate-y-[5px] hover:shadow-xl hover:shadow-[0_0_0_1px_rgba(99,102,241,0.2),0_20px_50px_-12px_rgba(67,56,202,0.28),0_12px_40px_-8px_rgba(59,130,246,0.15)]">
-                        <a href="/community" class="absolute inset-0 z-0 rounded-3xl" aria-label="공동훈련 협약 및 서류 안내 — 공지·FAQ로 이동"></a>
+                    <div class="spring-lineup-card group relative flex h-full min-h-[300px] rounded-3xl border border-indigo-300/50 bg-gradient-to-br from-white via-slate-50 to-indigo-50/50 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-400/25 backdrop-blur-md">
+                        <a href="/courses/consortium" class="absolute inset-0 z-0 rounded-3xl" aria-label="Consortium 공동훈련 안내 페이지로 이동"></a>
                         <div class="relative z-10 flex h-full min-h-[300px] flex-1 flex-col p-8 sm:p-10 pointer-events-none">
                             <span class="text-xs font-bold tracking-widest text-indigo-700 uppercase">NCS 직업훈련</span>
                             <div class="relative mt-3 pr-7" data-ms-magic-pencil-wrap data-ms-pencil-href="/admin/dashboard#courses" data-ms-pencil-label="랜딩 시그니처 공동훈련 제목 편집 (교육·강좌)">
@@ -384,11 +499,12 @@ landing.get('/', async (c) => {
         <!-- 주요 특징 (Bento Grid - 8개 카드) -->
         <section class="py-24">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold text-center mb-6">왜 마인드스토리인가요?</h2>
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold text-center mb-2">왜 마인드스토리인가요?</h2>
+                <div class="w-16 h-0.5 rounded-full bg-[#8a9b8e]/30 mx-auto mb-5" aria-hidden="true"></div>
                 <p class="text-center text-gray-600 text-xl md:text-2xl mb-20">전문가와 함께하는 특별한 학습 경험</p>
                 
                 <div class="bento-grid">
-                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                    <div class="glass-card rounded-2xl p-10 text-center">
                         <div class="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center mx-auto mb-6">
                             <i class="fas fa-video text-4xl text-white"></i>
                         </div>
@@ -399,7 +515,7 @@ landing.get('/', async (c) => {
                         </p>
                     </div>
                     
-                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                    <div class="glass-card rounded-2xl p-10 text-center">
                         <div class="w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center mx-auto mb-6">
                             <i class="fas fa-award text-4xl text-white"></i>
                         </div>
@@ -410,7 +526,7 @@ landing.get('/', async (c) => {
                         </p>
                     </div>
                     
-                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                    <div class="glass-card rounded-2xl p-10 text-center">
                         <div class="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center mx-auto mb-6">
                             <i class="fas fa-chalkboard-teacher text-4xl text-white"></i>
                         </div>
@@ -421,7 +537,7 @@ landing.get('/', async (c) => {
                         </p>
                     </div>
                     
-                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                    <div class="glass-card rounded-2xl p-10 text-center">
                         <div class="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center mx-auto mb-6">
                             <i class="fas fa-redo text-4xl text-white"></i>
                         </div>
@@ -432,7 +548,7 @@ landing.get('/', async (c) => {
                         </p>
                     </div>
                     
-                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                    <div class="glass-card rounded-2xl p-10 text-center">
                         <div class="w-24 h-24 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center mx-auto mb-6">
                             <i class="fas fa-certificate text-4xl text-white"></i>
                         </div>
@@ -443,7 +559,7 @@ landing.get('/', async (c) => {
                         </p>
                     </div>
                     
-                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                    <div class="glass-card rounded-2xl p-10 text-center">
                         <div class="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center mx-auto mb-6">
                             <i class="fas fa-comments text-4xl text-white"></i>
                         </div>
@@ -454,7 +570,7 @@ landing.get('/', async (c) => {
                         </p>
                     </div>
                     
-                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                    <div class="glass-card rounded-2xl p-10 text-center">
                         <div class="w-24 h-24 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center mx-auto mb-6">
                             <i class="fas fa-headset text-4xl text-white"></i>
                         </div>
@@ -465,7 +581,7 @@ landing.get('/', async (c) => {
                         </p>
                     </div>
                     
-                    <div class="glass-card rounded-2xl p-10 text-center hover:scale-105 transition-transform duration-300">
+                    <div class="glass-card rounded-2xl p-10 text-center">
                         <div class="w-24 h-24 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center mx-auto mb-6">
                             <i class="fas fa-clock text-4xl text-white"></i>
                         </div>
@@ -480,10 +596,11 @@ landing.get('/', async (c) => {
         </section>
 
         <!-- 과정 목록 -->
-        <section id="courses" class="py-20 bg-gradient-to-b from-white to-gray-50">
+        <section id="courses" class="py-20 bg-gradient-to-b from-transparent via-[#faf7f1]/90 to-[#f5f0e8]/95">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center mb-16">
-                    <h2 class="text-4xl md:text-5xl font-bold mb-4">추천 과정</h2>
+                    <h2 class="text-4xl md:text-5xl font-bold mb-2">추천 과정</h2>
+                    <div class="w-14 h-0.5 rounded-full bg-[#8a9b8e]/32 mx-auto mb-4" aria-hidden="true"></div>
                     <p class="text-xl text-gray-600">전문가와 함께 시작하는 성장의 여정</p>
                 </div>
                 <div id="courseList" class="bento-grid">
@@ -494,6 +611,8 @@ landing.get('/', async (c) => {
                 </div>
             </div>
         </section>
+
+        </div>
         
         <!-- 마인드스토리 교육 소개 섹션 -->
         <section class="py-20 bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-700">
@@ -554,7 +673,7 @@ landing.get('/', async (c) => {
                             </div>
                         </div>
                         
-                        <a href="#courses" class="inline-flex items-center bg-white text-purple-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-100 transition-all duration-300 shadow-xl">
+                        <a href="#courses" class="spring-light-cta inline-flex items-center bg-white text-purple-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-100 shadow-xl">
                             <i class="fas fa-arrow-right mr-2"></i>
                             과정 자세히 보기
                         </a>
@@ -564,7 +683,7 @@ landing.get('/', async (c) => {
         </section>
         
         <!-- 수강후기 섹션 (Marquee) -->
-        <section class="py-20 bg-gradient-to-r from-indigo-50 to-purple-50">
+        <section class="py-20 bg-gradient-to-r from-[#f4f1eb] via-[#faf7f2] to-[#f2ebe6]">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <h2 class="text-4xl md:text-5xl font-bold text-center mb-16">수강생 후기</h2>
                 
@@ -761,7 +880,7 @@ landing.get('/', async (c) => {
                     }
                     
                     courseList.innerHTML = courses.map(course => \`
-                        <div class="glass-card rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer" onclick="viewCourse(\${course.id})">
+                        <div class="glass-card rounded-2xl overflow-hidden cursor-pointer" onclick="viewCourse(\${course.id})">
                             <div class="h-56 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center relative overflow-hidden">
                                 <div class="absolute inset-0 bg-black/20"></div>
                                 <i class="fas fa-book-open text-7xl text-white opacity-40 relative z-10"></i>

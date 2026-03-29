@@ -1,6 +1,6 @@
 /**
- * MINDSTORY Classic / Next 강좌 목록 (브랜드별 테마)
- * /courses/classic, /courses/next — pages의 /courses/:id 보다 먼저 등록할 것
+ * MINDSTORY Classic / Next / Consortium (브랜드별 테마)
+ * /courses/classic, /courses/next, /courses/consortium — pages의 /courses/:id 보다 먼저 등록할 것
  */
 
 import { Context, Hono } from 'hono'
@@ -160,6 +160,58 @@ app.get('/courses/next', async (c) => {
         }
       })()
     </script>
+  </main>`,
+    ),
+  )
+})
+
+app.get('/courses/consortium', async (c) => {
+  return c.html(
+    await shell(
+      c,
+      'MindStory Consortium',
+      'bg-gradient-to-b from-white via-slate-50 to-indigo-50/40',
+      `
+  <main class="max-w-7xl mx-auto px-4 py-12">
+    <div class="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+      <div class="flex gap-4 min-w-0">
+        <div class="shrink-0 w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-2xl shadow-sm ring-1 ring-indigo-200/60" aria-hidden="true">
+          <i class="fas fa-handshake"></i>
+        </div>
+        <div class="min-w-0">
+          <span class="text-indigo-700 font-semibold text-sm tracking-widest uppercase">Consortium</span>
+          <h1 class="text-3xl md:text-4xl font-bold text-indigo-950 mt-2 tracking-tight">기업 및 기관 공동훈련 과정</h1>
+          <p class="text-slate-700 mt-3 max-w-2xl leading-relaxed">협약 기업 임직원 및 기관 단체 수강생을 위한 전용 맞춤형 교육 서비스입니다. 산업인력공단 협약·NCS 직업훈련 등은 공지 및 담당 창구 안내를 따릅니다.</p>
+        </div>
+      </div>
+      <div class="rounded-xl bg-white/90 border border-indigo-200/60 px-4 py-2 text-xs text-indigo-900/80 shadow-sm shrink-0 ring-1 ring-indigo-100">공동훈련 · 맞춤 운영</div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div class="rounded-2xl border border-indigo-200/50 bg-white/80 backdrop-blur-sm p-6 shadow-sm">
+        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-3"><i class="fas fa-building"></i></div>
+        <h2 class="font-bold text-indigo-950">협약·단체</h2>
+        <p class="text-sm text-slate-600 mt-2 leading-relaxed">기업·기관 단위 도입 및 교육 일정은 별도 협의로 진행됩니다.</p>
+      </div>
+      <div class="rounded-2xl border border-indigo-200/50 bg-white/80 backdrop-blur-sm p-6 shadow-sm">
+        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-3"><i class="fas fa-clipboard-check"></i></div>
+        <h2 class="font-bold text-indigo-950">출석·수료</h2>
+        <p class="text-sm text-slate-600 mt-2 leading-relaxed">mOTP 등 본인 인증 출석, 진도·평가 기준은 과정 공지를 확인해 주세요.</p>
+      </div>
+      <div class="rounded-2xl border border-indigo-200/50 bg-white/80 backdrop-blur-sm p-6 shadow-sm">
+        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-3"><i class="fas fa-circle-question"></i></div>
+        <h2 class="font-bold text-indigo-950">문의</h2>
+        <p class="text-sm text-slate-600 mt-2 leading-relaxed">서류·일정 문의는 공지·FAQ와 고객 안내 채널을 이용해 주세요.</p>
+      </div>
+    </div>
+    <div class="rounded-2xl border border-indigo-300/40 bg-white/90 p-8 text-center shadow-md ring-1 ring-indigo-100/80">
+      <p class="text-slate-700 mb-6">Classic·Next 강좌 목록은 각 카탈로그에서 확인하실 수 있습니다. 공동훈련 관련 공지는 커뮤니티에서 업데이트됩니다.</p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center flex-wrap">
+        <a href="/community" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 text-white px-6 py-3 font-semibold hover:bg-indigo-700 transition shadow-sm">공지 · FAQ 보기</a>
+        <a href="/#signature-lineup" class="inline-flex items-center justify-center rounded-xl border border-indigo-300 bg-indigo-50/90 text-indigo-900 px-6 py-3 font-semibold hover:bg-indigo-100 transition">시그니처 라인업으로</a>
+        <a href="/courses/classic" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-800 px-6 py-3 font-semibold hover:bg-slate-50 transition">Classic 강좌</a>
+        <a href="/courses/next" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-800 px-6 py-3 font-semibold hover:bg-slate-50 transition">Next 강좌</a>
+      </div>
+    </div>
   </main>`,
     ),
   )
