@@ -178,6 +178,11 @@ export function siteHeaderFullMarkup(opts: SiteHeaderOptions): string {
       ? `<a href="/courses" class="text-slate-600 hover:text-indigo-600 transition-colors duration-200 font-medium text-sm">전체</a>`
       : ''
 
+  const communityGnbDesktop =
+    opts.variant === 'brand'
+      ? `<a href="/community" class="text-slate-600 hover:text-indigo-600 text-sm font-medium">공지 · FAQ</a>`
+      : `<a href="/community" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200 font-medium">공지 · FAQ</a>`
+
   const desktopGnbExtras =
     (showEnroll
       ? enrollmentLink(
@@ -185,7 +190,8 @@ export function siteHeaderFullMarkup(opts: SiteHeaderOptions): string {
         )
       : '') +
     coursesAllLink +
-    `<a href="/my-courses" class="${opts.variant === 'brand' ? 'text-slate-600 hover:text-indigo-600 text-sm font-medium' : 'text-gray-700 hover:text-indigo-600 transition-colors duration-200 font-medium'}">내 강의실</a>`
+    `<a href="/my-courses" class="${opts.variant === 'brand' ? 'text-slate-600 hover:text-indigo-600 text-sm font-medium' : 'text-gray-700 hover:text-indigo-600 transition-colors duration-200 font-medium'}">내 강의실</a>` +
+    communityGnbDesktop
 
   const drawerEnrollment = showEnroll
     ? `<a href="/enrollment" class="px-4 py-3 rounded-xl text-indigo-600 font-bold hover:bg-indigo-50/70 border border-indigo-100/50 transition-all"><i class="fas fa-graduation-cap mr-2"></i>수강신청</a>`
@@ -202,6 +208,7 @@ export function siteHeaderFullMarkup(opts: SiteHeaderOptions): string {
     drawerEnrollment +
     drawerCoursesAll +
     `<a href="/my-courses" class="px-4 py-3 rounded-xl text-gray-800 font-medium hover:bg-white/50 border border-transparent hover:border-slate-200/50 transition-all">내 강의실</a>
+    <a href="/community" class="px-4 py-3 rounded-xl text-gray-800 font-medium hover:bg-white/50 border border-transparent hover:border-slate-200/50 transition-all"><i class="fas fa-bullhorn mr-2 text-indigo-500" aria-hidden="true"></i>공지 · FAQ</a>
     <div class="my-4 border-t border-slate-200/50"></div>
     <div id="mHeaderAuthButtons" class="flex flex-col gap-2 px-1">
       <a href="/login" class="px-4 py-3 rounded-xl text-center text-gray-700 font-medium border border-slate-200/60 hover:bg-white/60">로그인</a>

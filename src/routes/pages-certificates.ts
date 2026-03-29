@@ -8,6 +8,11 @@ import { Hono } from 'hono'
 import { getCookie } from 'hono/cookie'
 import type { Bindings } from '../types/database'
 import { SQL_SESSION_S_VALID } from '../utils/helpers'
+import {
+  siteFloatingQuickMenuMarkup,
+  siteFloatingQuickMenuScript,
+  siteFloatingQuickMenuStyles,
+} from '../utils/site-floating-quick-menu'
 import { siteFooterLegalBlockHtml } from '../utils/site-footer-legal'
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -136,6 +141,8 @@ app.get('/certificates/:number', async (c) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>수료증 확인 - ${esc(certificate.certificate_number)}</title>
   <link rel="stylesheet" href="/static/css/app.css" />
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+  ${siteFloatingQuickMenuStyles()}
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
   <header class="bg-white border-b border-gray-200">
@@ -177,6 +184,8 @@ app.get('/certificates/:number', async (c) => {
             <p class="mt-6 text-center text-xs text-gray-600">© 마인드스토리 원격평생교육원</p>
     </div>
   </footer>
+  ${siteFloatingQuickMenuMarkup()}
+  <script>${siteFloatingQuickMenuScript()}</script>
 </body>
 </html>`)
   } catch (e) {

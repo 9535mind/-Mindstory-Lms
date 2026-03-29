@@ -5,6 +5,11 @@
 import { Hono } from 'hono'
 import { Bindings } from '../types/database'
 import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
+import {
+  siteFloatingQuickMenuMarkup,
+  siteFloatingQuickMenuScript,
+  siteFloatingQuickMenuStyles,
+} from '../utils/site-floating-quick-menu'
 
 const pagesMy = new Hono<{ Bindings: Bindings }>()
 
@@ -20,6 +25,7 @@ const getHeader = (currentPage = '') => `
                 <a href="/#courses" class="text-gray-700 hover:text-indigo-600">과정 안내</a>
                 <a href="/my-courses" class="${currentPage === 'courses' ? 'text-indigo-600 font-semibold' : 'text-gray-700 hover:text-indigo-600'}">내 강의실</a>
                 <a href="/my-profile" class="${currentPage === 'profile' ? 'text-indigo-600 font-semibold' : 'text-gray-700 hover:text-indigo-600'}">내 정보</a>
+                <a href="/community" class="text-gray-700 hover:text-indigo-600">공지 · FAQ</a>
             </nav>
             <div class="flex items-center space-x-4">
                 <span class="text-gray-700" id="userName"></span>
@@ -49,6 +55,7 @@ pagesMy.get('/my-courses-legacy', (c) => {
         <script src="/static/js/auth.js"></script>
         <script src="/static/js/utils.js"></script>
         <script src="/static/js/content-protection.js${STATIC_JS_CACHE_QUERY}"></script>
+        ${siteFloatingQuickMenuStyles()}
     </head>
     <body class="bg-gray-50">
         ${getHeader('courses')}
@@ -85,8 +92,10 @@ pagesMy.get('/my-courses-legacy', (c) => {
                 <!-- 동적으로 로드 -->
             </div>
         </div>
+        ${siteFloatingQuickMenuMarkup()}
         
         <script>
+            ${siteFloatingQuickMenuScript()}
             // 로그인 확인
             if (!AuthManager.isLoggedIn()) {
                 window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname)
@@ -250,6 +259,7 @@ pagesMy.get('/my-profile', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/js/auth.js"></script>
         <script src="/static/js/utils.js"></script>
+        ${siteFloatingQuickMenuStyles()}
     </head>
     <body class="bg-gray-50">
         ${getHeader('profile')}
@@ -380,7 +390,10 @@ pagesMy.get('/my-profile', (c) => {
             </div>
         </div>
 
+        ${siteFloatingQuickMenuMarkup()}
+
         <script>
+            ${siteFloatingQuickMenuScript()}
             let currentUser = null;
 
             // 페이지 로드 시 사용자 정보 로드

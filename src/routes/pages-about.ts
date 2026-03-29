@@ -5,6 +5,11 @@
  */
 
 import { Hono } from 'hono'
+import {
+  siteFloatingQuickMenuMarkup,
+  siteFloatingQuickMenuScript,
+  siteFloatingQuickMenuStyles,
+} from '../utils/site-floating-quick-menu'
 import { siteFooterLegalBlockHtml } from '../utils/site-footer-legal'
 import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 
@@ -26,6 +31,7 @@ app.get('/about', (c) => {
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/js/auth.js"></script>
+        ${siteFloatingQuickMenuStyles()}
     </head>
     <body class="bg-gray-50">
         <!-- 헤더 -->
@@ -39,6 +45,7 @@ app.get('/about', (c) => {
                         <a href="/" class="text-gray-700 hover:text-indigo-600">홈</a>
                         <a href="/about" class="text-indigo-600 font-semibold">교육원 소개</a>
                         <a href="/#courses" class="text-gray-700 hover:text-indigo-600">과정 안내</a>
+                        <a href="/community" class="text-gray-700 hover:text-indigo-600">공지 · FAQ</a>
                         <a href="/my-courses" class="text-gray-700 hover:text-indigo-600">내 강의실</a>
                     </nav>
                     <div id="headerAuthButtons" class="flex items-center space-x-4">
@@ -180,10 +187,12 @@ app.get('/about', (c) => {
                 </p>
             </div>
         </footer>
+        ${siteFloatingQuickMenuMarkup()}
 
         <script>
             // 헤더 업데이트
             updateHeader();
+            ${siteFloatingQuickMenuScript()}
         </script>
         <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
     </body>

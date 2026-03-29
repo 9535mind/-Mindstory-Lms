@@ -6,6 +6,11 @@
 import { Hono } from 'hono'
 import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 import type { Bindings } from '../types/database'
+import {
+  siteFloatingQuickMenuMarkup,
+  siteFloatingQuickMenuScript,
+  siteFloatingQuickMenuStyles,
+} from '../utils/site-floating-quick-menu'
 import { siteFooterLegalBlockHtml } from '../utils/site-footer-legal'
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -31,6 +36,7 @@ app.get('/courses/:id', async (c) => {
         <script src="/static/js/auth.js"></script>
         <script src="/static/js/utils.js"></script>
         <script src="/static/js/content-protection.js${STATIC_JS_CACHE_QUERY}"></script>
+        ${siteFloatingQuickMenuStyles()}
     </head>
     <body class="bg-gray-50">
         <!-- 헤더 -->
@@ -167,8 +173,10 @@ app.get('/courses/:id', async (c) => {
                 ${siteFooterLegalBlockHtml()}
             </div>
         </footer>
+        ${siteFloatingQuickMenuMarkup()}
 
         <script>
+            ${siteFloatingQuickMenuScript()}
             const courseId = ${courseId};
             let courseData = null;
             let lessonsData = [];

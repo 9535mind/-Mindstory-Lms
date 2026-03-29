@@ -11,6 +11,11 @@ import {
   SITE_INTERNET_DOMAIN,
   siteFooterLegalBlockHtml,
 } from '../utils/site-footer-legal'
+import {
+  siteFloatingQuickMenuMarkup,
+  siteFloatingQuickMenuScript,
+  siteFloatingQuickMenuStyles,
+} from '../utils/site-floating-quick-menu'
 
 const app = new Hono()
 
@@ -58,6 +63,8 @@ function pgBusinessInfoHtml() {
       <p class="mt-4 text-xs text-gray-500">동일 내용(Clean URL): <a href="/pg-business-info" class="text-indigo-600 underline">/pg-business-info</a></p>
     </div>
   </main>
+  ${siteFloatingQuickMenuMarkup()}
+  <script>${siteFloatingQuickMenuScript()}</script>
 </body>
 </html>
   `
@@ -100,6 +107,7 @@ function layout(title: string, active: NavKey, body: string, options?: { docMeta
     <title>${title} - 마인드스토리 원격평생교육원</title>
     <link rel="stylesheet" href="/static/css/app.css" />
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    ${siteFloatingQuickMenuStyles()}
     <style>
       /* 본문 가독성 보장 */
       .legal-body h2 { font-size: 1.125rem; font-weight: 700; color: #111827; margin-top: 2rem; margin-bottom: 0.5rem; }
@@ -125,6 +133,7 @@ function layout(title: string, active: NavKey, body: string, options?: { docMeta
                 <a href="/terms" class="${navClass(active, 'terms')}">이용약관</a>
                 <a href="/privacy" class="${navClass(active, 'privacy')}">개인정보처리방침</a>
                 <a href="/refund" class="${navClass(active, 'refund')}">환불규정</a>
+                <a href="/community" class="text-gray-600 hover:text-indigo-600">공지 · FAQ</a>
             </nav>
         </div>
     </header>
@@ -148,6 +157,8 @@ function layout(title: string, active: NavKey, body: string, options?: { docMeta
             <p class="mt-4 text-center text-xs text-gray-600">본 문서는 일반적인 온라인 교육·전자상거래 관행에 맞추어 작성되었습니다. 세부 사항은 법률 자문을 권장합니다.</p>
         </div>
     </footer>
+    ${siteFloatingQuickMenuMarkup()}
+    <script>${siteFloatingQuickMenuScript()}</script>
 </body>
 </html>`
 }

@@ -3,7 +3,7 @@
  */
 
 /** 배포 반영 확인: 홈 페이지 소스 검색 또는 GET /api/health 의 footerRevision 참고 */
-export const FOOTER_HTML_REVISION = '20260328-community-link-v1'
+export const FOOTER_HTML_REVISION = '20260328-floating-nav-rollout-v1'
 
 export const SITE_BUSINESS = {
   companyName: '(주)마인드스토리',
@@ -21,7 +21,10 @@ export const SITE_BUSINESS = {
 /** 고객센터 이메일 (푸터·약관 등 공통) */
 export const SITE_CONTACT_EMAIL = 'sanj2100@naver.com'
 
-/** 카카오톡 채널·오픈채팅 URL (플로팅 메뉴 등 — 실제 채널 주소로 교체) */
+/**
+ * 카카오톡 오픈채팅·채널 URL (`site-floating-quick-menu` 등).
+ * 운영 시 카카오 비즈니스에서 발급한 주소로 반드시 교체하세요. (현재 값은 예시·플레이스홀더입니다.)
+ */
 export const SITE_KAKAO_CHANNEL_URL = 'https://open.kakao.com/o/mindstory'
 
 /** 통신판매·PG 심사용 인터넷 도메인(표시 URL) */
@@ -44,6 +47,8 @@ const policyNavDark = () => `
                 <a href="/privacy" class="hover:text-white px-1 py-0.5 rounded transition-colors">개인정보처리방침</a>
                 <span class="text-gray-600 select-none" aria-hidden="true">|</span>
                 <a href="/refund" class="hover:text-white px-1 py-0.5 rounded transition-colors">환불규정</a>
+                <span class="text-gray-600 select-none" aria-hidden="true">|</span>
+                <a href="/community" class="hover:text-white px-1 py-0.5 rounded transition-colors">공지 · FAQ</a>
               </nav>`
 
 const ftcLinkDark = () => `

@@ -6,6 +6,11 @@
 import { Hono } from 'hono'
 import { Bindings } from '../types/database'
 import { optionalAuth } from '../middleware/auth'
+import {
+  siteFloatingQuickMenuMarkup,
+  siteFloatingQuickMenuScript,
+  siteFloatingQuickMenuStyles,
+} from '../utils/site-floating-quick-menu'
 import { siteFooterLegalBlockHtml } from '../utils/site-footer-legal'
 
 const pagesEnrollment = new Hono<{ Bindings: Bindings }>()
@@ -44,6 +49,7 @@ pagesEnrollment.get('/enrollment', optionalAuth, async (c) => {
         <!-- Custom Scripts -->
         <script src="/static/js/auth.js"></script>
         <script src="/static/js/utils.js"></script>
+        ${siteFloatingQuickMenuStyles()}
         
         <style>
             * {
@@ -236,8 +242,10 @@ pagesEnrollment.get('/enrollment', optionalAuth, async (c) => {
                 <p class="mt-8 pt-6 border-t border-gray-700 text-center text-xs text-gray-500">© 2026 (주)마인드스토리. All rights reserved.</p>
             </div>
         </footer>
+        ${siteFloatingQuickMenuMarkup()}
         
         <script>
+            ${siteFloatingQuickMenuScript()}
             const IS_ADMIN_FREEPASS = ${user.role === 'admin' ? 'true' : 'false'}
             let allCourses = []
             let enrolledCourseIds = []

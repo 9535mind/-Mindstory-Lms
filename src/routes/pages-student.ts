@@ -5,6 +5,11 @@
 
 import { Hono } from 'hono'
 import type { Bindings } from '../types/database'
+import {
+  siteFloatingQuickMenuMarkup,
+  siteFloatingQuickMenuScript,
+  siteFloatingQuickMenuStyles,
+} from '../utils/site-floating-quick-menu'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -24,6 +29,7 @@ app.get('/my-courses', (c) => {
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/js/auth.js"></script>
+        ${siteFloatingQuickMenuStyles()}
     </head>
     <body class="bg-gray-50">
         <!-- 헤더 -->
@@ -37,6 +43,7 @@ app.get('/my-courses', (c) => {
                     <nav class="flex items-center space-x-6">
                         <a href="/courses" class="text-gray-600 hover:text-gray-900">전체 강좌</a>
                         <a href="/my-courses" class="text-blue-600 font-semibold">내 강좌</a>
+                        <a href="/community" class="text-gray-600 hover:text-gray-900">공지 · FAQ</a>
                         <span id="headerUserName" class="text-gray-700"></span>
                         <button onclick="logout()" class="text-red-600 hover:text-red-700">
                             <i class="fas fa-sign-out-alt mr-1"></i>로그아웃
@@ -90,8 +97,10 @@ app.get('/my-courses', (c) => {
                 </div>
             </div>
         </main>
+        ${siteFloatingQuickMenuMarkup()}
 
         <script>
+        ${siteFloatingQuickMenuScript()}
         let allCourses = [];
         let currentFilter = 'all';
 
@@ -300,6 +309,7 @@ app.get('/courses/:courseId/lessons/:lessonId', (c) => {
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/js/auth.js"></script>
+        ${siteFloatingQuickMenuStyles()}
     </head>
     <body class="bg-gray-50">
         <!-- 헤더 -->
@@ -443,8 +453,10 @@ app.get('/courses/:courseId/lessons/:lessonId', (c) => {
                 </button>
             </div>
         </main>
+        ${siteFloatingQuickMenuMarkup()}
 
         <script>
+        ${siteFloatingQuickMenuScript()}
         const courseId = ${courseId};
         const lessonId = ${lessonId};
         let lessonData = null;

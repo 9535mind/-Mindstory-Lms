@@ -7,6 +7,11 @@
 
 import { Hono } from 'hono'
 import { sitePaymentFooterHtml } from '../utils/site-footer-legal'
+import {
+  siteFloatingQuickMenuMarkup,
+  siteFloatingQuickMenuScript,
+  siteFloatingQuickMenuStyles,
+} from '../utils/site-floating-quick-menu'
 import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 
 const app = new Hono()
@@ -31,6 +36,7 @@ app.get('/payment/checkout/:courseId', (c) => {
         <script src="https://js.tosspayments.com/v1/payment-widget"></script>
         <script src="/static/js/auth.js"></script>
         <script src="/static/js/utils.js"></script>
+        ${siteFloatingQuickMenuStyles()}
     </head>
     <body class="bg-gray-50">
         <div class="max-w-4xl mx-auto px-4 py-8">
@@ -94,6 +100,8 @@ app.get('/payment/checkout/:courseId', (c) => {
         </div>
 
         ${sitePaymentFooterHtml()}
+        ${siteFloatingQuickMenuMarkup()}
+        <script>${siteFloatingQuickMenuScript()}</script>
 
         <script>
             const courseId = ${courseId}
@@ -206,6 +214,7 @@ app.get('/success', (c) => {
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/js/utils.js"></script>
+        ${siteFloatingQuickMenuStyles()}
     </head>
     <body class="bg-gray-50">
         <div class="max-w-2xl mx-auto px-4 py-16">
@@ -222,6 +231,8 @@ app.get('/success', (c) => {
         </div>
 
         ${sitePaymentFooterHtml()}
+        ${siteFloatingQuickMenuMarkup()}
+        <script>${siteFloatingQuickMenuScript()}</script>
 
         <script>
             async function confirmPayment() {
@@ -280,6 +291,7 @@ app.get('/payment/fail', (c) => {
         <title>결제 실패 - 마인드스토리</title>
         <link rel="stylesheet" href="/static/css/app.css" />
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        ${siteFloatingQuickMenuStyles()}
     </head>
     <body class="bg-gray-50">
         <div class="max-w-2xl mx-auto px-4 py-16">
@@ -304,6 +316,8 @@ app.get('/payment/fail', (c) => {
         </div>
 
         ${sitePaymentFooterHtml()}
+        ${siteFloatingQuickMenuMarkup()}
+        <script>${siteFloatingQuickMenuScript()}</script>
 
         <script>
             // URL 파라미터에서 에러 메시지 가져오기

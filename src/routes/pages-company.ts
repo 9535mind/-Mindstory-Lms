@@ -10,6 +10,11 @@ import {
   SITE_FTC_BUSINESS_DETAIL_URL,
   SITE_INTERNET_DOMAIN,
 } from '../utils/site-footer-legal'
+import {
+  siteFloatingQuickMenuMarkup,
+  siteFloatingQuickMenuScript,
+  siteFloatingQuickMenuStyles,
+} from '../utils/site-floating-quick-menu'
 
 const app = new Hono()
 
@@ -24,12 +29,17 @@ app.get('/company', (c) => {
     <title>사업자 정보 - 마인드스토리 원격평생교육원</title>
     <meta name="description" content="${b.companyName} 사업자등록번호 ${b.bizNo}, 유선전화 ${b.tel}, ${b.address}">
     <link rel="stylesheet" href="/static/css/app.css" />
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    ${siteFloatingQuickMenuStyles()}
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen">
     <header class="bg-white border-b border-gray-200 shadow-sm">
-        <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div class="max-w-3xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-2">
             <a href="/" class="text-lg font-bold text-indigo-600">마인드스토리 원격평생교육원</a>
-            <a href="/" class="text-sm text-gray-600 hover:text-indigo-600">홈</a>
+            <nav class="flex flex-wrap items-center gap-3 text-sm">
+              <a href="/" class="text-gray-600 hover:text-indigo-600">홈</a>
+              <a href="/community" class="text-gray-600 hover:text-indigo-600">공지 · FAQ</a>
+            </nav>
         </div>
     </header>
     <main class="max-w-3xl mx-auto px-4 py-10">
@@ -79,8 +89,12 @@ app.get('/company', (c) => {
             <a href="/privacy" class="text-indigo-600 hover:underline">개인정보처리방침</a>
             <span class="text-gray-300">·</span>
             <a href="/refund" class="text-indigo-600 hover:underline">환불규정</a>
+            <span class="text-gray-300">·</span>
+            <a href="/community" class="text-indigo-600 hover:underline">공지 · FAQ</a>
         </p>
     </main>
+    ${siteFloatingQuickMenuMarkup()}
+    <script>${siteFloatingQuickMenuScript()}</script>
 </body>
 </html>
   `)

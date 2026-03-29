@@ -7,6 +7,11 @@ import { Hono } from 'hono'
 import { getCookie } from 'hono/cookie'
 import type { Bindings } from '../types/database'
 import { SQL_SESSION_S_VALID } from '../utils/helpers'
+import {
+  siteFloatingQuickMenuMarkup,
+  siteFloatingQuickMenuScript,
+  siteFloatingQuickMenuStyles,
+} from '../utils/site-floating-quick-menu'
 import { siteFooterLegalBlockHtml } from '../utils/site-footer-legal'
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -208,9 +213,11 @@ app.get('/courses/:courseId/learn', async (c) => {
                 ${siteFooterLegalBlockHtml()}
             </div>
         </footer>
+        ${siteFloatingQuickMenuMarkup()}
 
         <!-- Course ID 전역 변수 설정 -->
         <script>
+            ${siteFloatingQuickMenuScript()}
         window.COURSE_ID = ${courseId};
         console.log('🎯 Course ID set:', window.COURSE_ID);
         </script>
