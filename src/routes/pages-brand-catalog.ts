@@ -7,10 +7,14 @@ import { Hono } from 'hono'
 import { Bindings } from '../types/database'
 import { siteFooterLegalBlockHtml } from '../utils/site-footer-legal'
 import {
+  siteFloatingQuickMenuMarkup,
+  siteFloatingQuickMenuScript,
+  siteFloatingQuickMenuStyles,
+} from '../utils/site-floating-quick-menu'
+import {
+  siteHeaderDrawerControlScript,
+  siteHeaderFullMarkup,
   siteHeaderNavCoursesGlassStyles,
-  siteNavCoursesAccordionMobile,
-  siteNavCoursesDropdownDesktop,
-  siteNavMobileToggleScript,
 } from '../utils/site-header-courses-nav'
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -28,41 +32,21 @@ function shell(title: string, bodyClass: string, inner: string): string {
   <script src="/static/js/auth.js"></script>
   <script src="/static/js/utils.js"></script>
   ${siteHeaderNavCoursesGlassStyles()}
+  ${siteFloatingQuickMenuStyles()}
 </head>
 <body class="${bodyClass} min-h-screen">
-  <header class="border-b border-black/5 bg-white/82 backdrop-blur-md sticky top-0 z-40 shadow-sm shadow-slate-900/5">
-    <div class="max-w-7xl mx-auto px-4 py-3">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2 min-w-0">
-          <button type="button" id="brandNavToggle" class="md:hidden shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200/80 bg-white/80 text-slate-700" aria-label="메뉴 열기" aria-expanded="false" aria-controls="brandNavPanel">
-            <i class="fas fa-bars"></i>
-          </button>
-          <a href="/" class="text-lg font-bold text-slate-800 truncate">마인드스토리</a>
-        </div>
-        <nav class="hidden md:flex flex-wrap items-center gap-4 text-sm font-medium" aria-label="주 메뉴">
-          ${siteNavCoursesDropdownDesktop()}
-          <a href="/courses" class="text-slate-600 hover:text-indigo-600">전체</a>
-          <a href="/my-courses" class="text-slate-600 hover:text-indigo-600">내 강의실</a>
-        </nav>
-      </div>
-      <div id="brandNavPanel" class="hidden md:hidden mt-3 pt-3 border-t border-slate-200/60" role="navigation">
-        <nav class="flex flex-col gap-2 text-sm">
-          ${siteNavCoursesAccordionMobile()}
-          <a href="/courses" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-white/70 border border-transparent hover:border-slate-200/50">전체</a>
-          <a href="/my-courses" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-white/70 border border-transparent hover:border-slate-200/50">내 강의실</a>
-        </nav>
-      </div>
-    </div>
-  </header>
+  ${siteHeaderFullMarkup({ variant: 'brand' })}
   ${inner}
   <footer class="mt-16 border-t border-black/10 py-10 bg-white/60">
     <div class="max-w-7xl mx-auto px-4 text-sm text-slate-600">
       ${siteFooterLegalBlockHtml()}
     </div>
   </footer>
+  ${siteFloatingQuickMenuMarkup()}
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      ${siteNavMobileToggleScript('brandNavToggle', 'brandNavPanel')}
+      ${siteHeaderDrawerControlScript('brand')}
+      ${siteFloatingQuickMenuScript()}
     })
   </script>
 </body>

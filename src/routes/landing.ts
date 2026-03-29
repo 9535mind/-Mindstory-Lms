@@ -19,10 +19,14 @@ import {
 } from '../utils/site-footer-legal'
 import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 import {
+  siteFloatingQuickMenuMarkup,
+  siteFloatingQuickMenuScript,
+  siteFloatingQuickMenuStyles,
+} from '../utils/site-floating-quick-menu'
+import {
+  siteHeaderDrawerControlScript,
+  siteHeaderFullMarkup,
   siteHeaderNavCoursesGlassStyles,
-  siteNavCoursesAccordionMobile,
-  siteNavCoursesDropdownDesktop,
-  siteNavMobileToggleScript,
 } from '../utils/site-header-courses-nav'
 
 const landing = new Hono<{ Bindings: Bindings }>()
@@ -275,60 +279,11 @@ landing.get('/', (c) => {
             }
         </style>
         ${siteHeaderNavCoursesGlassStyles()}
+        ${siteFloatingQuickMenuStyles()}
         <script src="/static/js/content-protection.js${STATIC_JS_CACHE_QUERY}"></script>
     </head>
     <body>
-        <!-- 헤더 -->
-        <header class="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-4 gap-3">
-                    <div class="flex items-center gap-2 min-w-0 flex-1 md:flex-initial">
-                        <button type="button" id="landingMobileNavToggle" class="md:hidden shrink-0 inline-flex items-center justify-center w-11 h-11 rounded-xl border border-gray-200/80 bg-white/70 text-gray-700 hover:bg-white/95 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40" aria-label="메뉴 열기" aria-expanded="false" aria-controls="landingMobileNavPanel">
-                            <i class="fas fa-bars text-lg" aria-hidden="true"></i>
-                        </button>
-                        <a href="/" class="text-xl sm:text-2xl md:text-3xl font-bold truncate min-w-0" style="color: var(--color-primary);">
-                            마인드스토리 원격평생교육원
-                        </a>
-                    </div>
-                    <nav class="hidden md:flex space-x-6 lg:space-x-8 items-center text-lg flex-wrap" aria-label="주 메뉴">
-                        <a href="/" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200 font-medium">홈</a>
-                        ${siteNavCoursesDropdownDesktop()}
-                        <a href="/enrollment" class="text-indigo-600 hover:text-indigo-700 transition-colors duration-200 font-bold">
-                            <i class="fas fa-graduation-cap mr-1"></i>
-                            수강신청
-                        </a>
-                        <a href="/my-courses" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200 font-medium">내 강의실</a>
-                        
-                        <!-- 관리자 모드 전환 버튼 -->
-                        <div id="adminModeSwitch" class="flex items-center space-x-2" style="display:none">
-                            <span class="text-gray-400">|</span>
-                            <a href="/admin/dashboard" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition-colors duration-200">
-                                <i class="fas fa-user-shield mr-1"></i>
-                                관리자 모드
-                            </a>
-                        </div>
-                    </nav>
-                    <div id="headerAuthButtons" class="flex items-center space-x-4">
-                        <a href="/login" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200 text-lg font-medium">로그인</a>
-                        <a href="/register" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-200 text-lg font-semibold">회원가입</a>
-                    </div>
-                    <div id="headerUserMenu" class="flex items-center space-x-4" style="display:none">
-                        <span class="text-gray-700 font-medium" id="headerUserName"></span>
-                        <button onclick="handleLogout()" class="text-gray-700 hover:text-indigo-600 transition-colors duration-200">로그아웃</button>
-                    </div>
-                </div>
-                <div id="landingMobileNavPanel" class="hidden md:hidden border-t border-gray-200/60 bg-white/88 backdrop-blur-lg" role="navigation" aria-label="모바일 메뉴">
-                    <nav class="py-3 px-2 sm:px-0 flex flex-col gap-2 max-w-7xl mx-auto">
-                        <a href="/" class="px-3 py-2.5 rounded-xl text-gray-800 hover:bg-white/70 font-medium border border-transparent hover:border-gray-200/50 transition-colors">홈</a>
-                        ${siteNavCoursesAccordionMobile()}
-                        <a href="/enrollment" class="px-3 py-2.5 rounded-xl text-indigo-600 font-bold hover:bg-indigo-50/80 border border-indigo-100/60 transition-colors">
-                            <i class="fas fa-graduation-cap mr-2"></i>수강신청
-                        </a>
-                        <a href="/my-courses" class="px-3 py-2.5 rounded-xl text-gray-800 hover:bg-white/70 font-medium border border-transparent hover:border-gray-200/50 transition-colors">내 강의실</a>
-                    </nav>
-                </div>
-            </div>
-        </header>
+        ${siteHeaderFullMarkup({ variant: 'landing', showEnrollment: true })}
 
         <!-- 히어로 섹션 -->
         <section class="hero-section text-white py-20 md:py-24">
@@ -753,6 +708,7 @@ landing.get('/', (c) => {
                 </p>
             </div>
         </footer>
+        ${siteFloatingQuickMenuMarkup()}
 
         <script>
             // 과정 목록 로드
@@ -811,7 +767,8 @@ landing.get('/', (c) => {
             document.addEventListener('DOMContentLoaded', () => {
                 loadCourses()
                 updateHeader()
-                ${siteNavMobileToggleScript('landingMobileNavToggle', 'landingMobileNavPanel')}
+                ${siteHeaderDrawerControlScript('landing')}
+                ${siteFloatingQuickMenuScript()}
                 // 히어로 이미지 슬라이더
                 initHeroSlider()
             })

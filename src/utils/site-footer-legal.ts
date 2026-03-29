@@ -3,7 +3,7 @@
  */
 
 /** 배포 반영 확인: 홈 페이지 소스 검색 또는 GET /api/health 의 footerRevision 참고 */
-export const FOOTER_HTML_REVISION = '20260327-3col-ftc-line-v1'
+export const FOOTER_HTML_REVISION = '20260328-community-link-v1'
 
 export const SITE_BUSINESS = {
   companyName: '(주)마인드스토리',
@@ -20,6 +20,9 @@ export const SITE_BUSINESS = {
 
 /** 고객센터 이메일 (푸터·약관 등 공통) */
 export const SITE_CONTACT_EMAIL = 'sanj2100@naver.com'
+
+/** 카카오톡 채널·오픈채팅 URL (플로팅 메뉴 등 — 실제 채널 주소로 교체) */
+export const SITE_KAKAO_CHANNEL_URL = 'https://open.kakao.com/o/mindstory'
 
 /** 통신판매·PG 심사용 인터넷 도메인(표시 URL) */
 export const SITE_INTERNET_DOMAIN = 'https://mindstory.kr'
@@ -83,6 +86,7 @@ function siteFooterMarketingColumns(variant: 'dark' | 'light'): string {
               <li><a href="/privacy" class="${linkSub}">개인정보처리방침</a></li>
               <li><a href="/refund" class="${linkSub}">환불규정</a></li>
               <li><a href="/company" class="${linkAccent}">사업자정보 (상세)</a></li>
+              <li><a href="/community" class="${linkAccent}">공지사항 · FAQ</a></li>
             </ul>
           </div>
           <div>
@@ -144,6 +148,8 @@ export const siteFooterLegalBlockLightHtml = () => {
                 <a href="/privacy" class="text-indigo-600 hover:underline px-1 py-0.5">개인정보처리방침</a>
                 <span class="text-gray-300 select-none" aria-hidden="true">|</span>
                 <a href="/refund" class="text-indigo-600 hover:underline px-1 py-0.5">환불규정</a>
+                <span class="text-gray-300 select-none" aria-hidden="true">|</span>
+                <a href="/community" class="text-indigo-600 hover:underline px-1 py-0.5">공지 · FAQ</a>
               </nav>
               ${naverBlogLinkLight()}
               <a href="${SITE_FTC_BUSINESS_DETAIL_URL}" target="_blank" rel="noopener noreferrer" class="text-[11px] sm:text-sm text-gray-600 hover:text-gray-900 shrink-0 text-center sm:text-right whitespace-nowrap font-semibold">

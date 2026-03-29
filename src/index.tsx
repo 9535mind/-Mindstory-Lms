@@ -42,6 +42,7 @@ import analytics from './routes/analytics'
 import pagesAnalytics from './routes/pages-analytics'
 import pagesCourseDetail from './routes/pages-course-detail'
 import pagesCompany from './routes/pages-company'
+import pagesCommunity from './routes/pages-community'
 import pagesLegal from './routes/pages-legal'
 import pagesCertificates from './routes/pages-certificates'
 import pagesEnrollment from './routes/pages-enrollment'  // 수강신청 페이지
@@ -213,6 +214,7 @@ app.route('/', landing)  // 신규 랜딩 페이지 (Phase 3)
 app.route('/', pagesLegal) // /terms, /privacy, /refund
 app.route('/', pagesCertificates) // /certificates, /certificates/:number
 app.route('/', pagesCompany)
+app.route('/', pagesCommunity) // /community — 공지 · FAQ
 app.route('/', pagesBrandCatalog) // /courses/classic, /courses/next (/:id보다 우선)
 app.route('/', pages)
 app.route('/', pagesAbout)

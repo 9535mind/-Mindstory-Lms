@@ -180,6 +180,10 @@ async function updateHeader() {
   const userName = document.getElementById('headerUserName')
   const adminLink = document.getElementById('adminLink')
   const adminModeSwitch = document.getElementById('adminModeSwitch')
+  const mAuthButtons = document.getElementById('mHeaderAuthButtons')
+  const mUserMenu = document.getElementById('mHeaderUserMenu')
+  const mUserName = document.getElementById('mHeaderUserName')
+  const mAdminSwitch = document.getElementById('mAdminModeSwitch')
 
   // 먼저 로컬 정보를 보여주고, 서버 세션으로 최종 동기화
   let user = AuthManager.getUser()
@@ -201,11 +205,20 @@ async function updateHeader() {
     if (adminModeSwitch) {
       adminModeSwitch.style.display = user.role === 'admin' ? 'flex' : 'none'
     }
+
+    if (mAuthButtons) mAuthButtons.style.display = 'none'
+    if (mUserMenu) mUserMenu.style.display = 'flex'
+    if (mUserName) mUserName.textContent = user.name + ' 님'
+    if (mAdminSwitch) mAdminSwitch.style.display = user.role === 'admin' ? 'block' : 'none'
   } else {
     if (authButtons) authButtons.style.display = 'flex'
     if (userMenu) userMenu.style.display = 'none'
     if (adminLink) adminLink.style.display = 'none'
     if (adminModeSwitch) adminModeSwitch.style.display = 'none'
+
+    if (mAuthButtons) mAuthButtons.style.display = 'flex'
+    if (mUserMenu) mUserMenu.style.display = 'none'
+    if (mAdminSwitch) mAdminSwitch.style.display = 'none'
   }
 }
 
