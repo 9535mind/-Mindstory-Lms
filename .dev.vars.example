@@ -1,3 +1,4 @@
-# 로컬 Worker 바인딩용 — 복사: copy .dev.vars.example .dev.vars 후 값 입력
-# 또는 루트에 .env 에 OPENAI_API_KEY 만 두고 `npm run dev` / `npm run dev:sandbox` 시 자동으로 .dev.vars 에 병합됩니다.
+# 로컬 Worker 바인딩 — git 미추적(.dev.vars). `npm run dev` 시 .env 의 OPENAI_* 가 여기로 병합될 수 있음.
 OPENAI_API_KEY=
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4o

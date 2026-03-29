@@ -12,10 +12,12 @@ export type Bindings = {
   APIVIDEO_BASE_URL?: string; // api.video base URL
   GEMINI_API_KEY?: string;   // Gemini API key
   GEMINI_BASE_URL?: string;  // Gemini API base URL
-  /** MindStory LMS AI 비서 (OpenAI Chat Completions) */
-  OPENAI_API_KEY?: string;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
+  /** MindStory LMS AI 비서 (OpenAI Chat Completions) — 시크릿, 코드에 넣지 말 것 */
+  OPENAI_API_KEY?: string;
   /** 기본 https://api.openai.com/v1 */
-  OPENAI_BASE_URL?: string;https://api.openai.com/v1
+  OPENAI_BASE_URL?: string;
+  /** 기본 gpt-4o */
+  OPENAI_MODEL?: string;
   TOSS_SECRET_KEY?: string;  // Toss Payments secret key
   /** PortOne(구 아임포트) — https://admin.portone.io */
   PORTONE_IMP_KEY?: string;
