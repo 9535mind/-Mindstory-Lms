@@ -19,6 +19,14 @@ const MAX_SLICE = 1200
 const DEFAULT_OPENAI_BASE = 'https://api.openai.com/v1'
 const DEFAULT_OPENAI_MODEL = 'gpt-4o'
 
+/** 호스트만 넣은 값(https://api.openai.com)도 허용 — Chat Completions는 /v1 기준 */
+function normalizeOpenAIBase(raw: string): string {
+  const b = raw.replace(/\/$/, '')
+  if (!b) return DEFAULT_OPENAI_BASE
+  if (/\/v\d+(\/|$)/.test(b)) return b
+  return `${b}/v1`
+}
+
 type ChatRole = 'user' | 'assistant'
 
 interface ChatTurn {
@@ -41,7 +49,7 @@ aiChat.post('/chat', async (c) => {
     )
   }
 
-  const base = (c.env.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE).replace(/\/$/, '')
+  const base = normalizeOpenAIBase(c.env.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE).replace(/\/$/, '')
   const model = (c.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL).trim() || DEFAULT_OPENAI_MODEL
 
   let body: {
