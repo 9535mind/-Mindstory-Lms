@@ -218,8 +218,8 @@ app.route('/api/security', security)  // 보안 이벤트 로깅
 app.route('/api/digital-books', digitalBooks) // Next 디지털 도서·ISBN
 
 // 구버전 북마크(정적 파일·.html 링크 → Clean URL)
-app.get('/admin-users.html', (c) => c.redirect('/admin/dashboard#members', 302))
-app.get('/admin-users', (c) => c.redirect('/admin/dashboard#members', 302))
+app.get('/admin-users.html', (c) => c.redirect('/admin/members', 302))
+app.get('/admin-users', (c) => c.redirect('/admin/members', 302))
 app.get('/pg-business-info.html', (c) => c.redirect('/pg-business-info', 302))
 
 // 페이지 라우트 (약관·개인정보·환불은 다른 / 라우터보다 먼저 등록)

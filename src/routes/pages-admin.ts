@@ -8,6 +8,7 @@
 
 import { Hono } from 'hono'
 import { adminHubPageHtml } from '../utils/admin-hub-html'
+import { adminMembersPageHtml } from '../utils/admin-members-page-html'
 import { Bindings } from '../types/database'
 import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 import { requireAdmin } from '../middleware/auth'
@@ -40,12 +41,20 @@ pagesAdmin.get('/dashboard', async (c) => {
   return c.html(adminHubPageHtml())
 })
 
+/**
+ * GET /admin/members
+ * 전체 회원 관리 (목록·필터·상세 슬라이드 패널)
+ */
+pagesAdmin.get('/members', requireAdmin, async (c) => {
+  return c.html(adminMembersPageHtml())
+})
+
 pagesAdmin.get('/courses', (c) => {
   return c.redirect('/admin/dashboard#courses')
 })
 
 pagesAdmin.get('/users', (c) => {
-  return c.redirect('/admin/dashboard#members')
+  return c.redirect('/admin/members', 302)
 })
 
 /**
@@ -105,7 +114,7 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                 <a href="/admin/dashboard" class="text-purple-700 font-semibold hover:underline"><i class="fas fa-satellite-dish mr-1"></i>관제탑</a>
                 <span class="text-gray-300 hidden sm:inline">|</span>
                 <a href="/admin/dashboard#courses" class="text-gray-600 hover:text-purple-700 hover:underline">교육 · 강좌</a>
-                <a href="/admin/dashboard#members" class="text-gray-600 hover:text-purple-700 hover:underline">회원</a>
+                <a href="/admin/members" class="text-gray-600 hover:text-purple-700 hover:underline">회원</a>
                 <a href="/admin/dashboard#payments" class="text-gray-600 hover:text-purple-700 hover:underline">결제</a>
                 <a href="/admin/dashboard#isbn" class="text-gray-600 hover:text-purple-700 hover:underline">ISBN</a>
                 <a href="/admin/dashboard#settings" class="text-gray-600 hover:text-purple-700 hover:underline">설정</a>

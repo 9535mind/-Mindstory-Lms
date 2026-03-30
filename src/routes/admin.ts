@@ -160,53 +160,90 @@ admin.get('/dashboard/pulse', requireAdmin, async (c) => {
   }
 })
 
-// 전체 회원 목록 (검색: ?q=이메일·이름 부분일치)
+function mapUserListRow(r: Record<string, unknown>) {
+  const role = String(r.role ?? '')
+  const company = String(r.company_name ?? '').trim()
+  let segment = 'general'
+  let segment_label = '일반'
+  if (role === 'admin') {
+    segment = 'admin'
+    segment_label = '관리자'
+  } else if (role === 'instructor' || role === 'teacher') {
+    segment = 'instructor'
+    segment_label = '강사'
+  } else if (company) {
+    segment = 'b2b'
+    segment_label = 'B2B'
+  }
+  const status_label = role === 'admin' ? '관리자' : '정상'
+  return { ...r, segment, segment_label, status_label }
+}
+
+// 전체 회원 목록 — 검색(?q 이름·이메일·연락처), 구분(?type all|general|b2b|instructor), 페이지네이션, 기본 limit 50
 admin.get('/users', requireAdmin, async (c) => {
   const { DB } = c.env
-  const page = parseInt(c.req.query('page') || '1')
-  const limit = parseInt(c.req.query('limit') || '20')
+  const page = Math.max(1, parseInt(c.req.query('page') || '1', 10) || 1)
+  let limit = parseInt(c.req.query('limit') || '50', 10) || 50
+  limit = Math.min(Math.max(limit, 1), 100)
   const offset = (page - 1) * limit
   const q = (c.req.query('q') || '').trim()
-  const like = q ? `%${q.replace(/%/g, '\\%')}%` : ''
+  const type = (c.req.query('type') || 'all').toLowerCase()
 
-  const whereSearch = q
-    ? `AND (email LIKE ? ESCAPE '\\' OR name LIKE ? ESCAPE '\\')`
-    : ''
+  const conditions: string[] = ['u.deleted_at IS NULL']
+  const binds: (string | number)[] = []
 
-  const [users, total] = await Promise.all([
-    q
-      ? DB.prepare(`
-      SELECT id, email, name, phone, role, created_at
-      FROM users
-      WHERE deleted_at IS NULL ${whereSearch}
-      ORDER BY created_at DESC
-      LIMIT ? OFFSET ?
-    `).bind(like, like, limit, offset).all()
-      : DB.prepare(`
-      SELECT id, email, name, phone, role, created_at
-      FROM users
-      WHERE deleted_at IS NULL
-      ORDER BY created_at DESC
-      LIMIT ? OFFSET ?
-    `).bind(limit, offset).all(),
-    q
-      ? DB.prepare(`
-      SELECT COUNT(*) as count FROM users
-      WHERE deleted_at IS NULL ${whereSearch}
-    `).bind(like, like).first()
-      : DB.prepare(`SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL`).first(),
-  ])
+  if (q) {
+    const like = `%${q.replace(/%/g, '\\%')}%`
+    conditions.push(
+      `(u.email LIKE ? ESCAPE '\\' OR u.name LIKE ? ESCAPE '\\' OR IFNULL(u.phone,'') LIKE ? ESCAPE '\\')`,
+    )
+    binds.push(like, like, like)
+  }
 
-  return c.json({
-    success: true,
-    data: users.results,
-    pagination: {
-      page,
-      limit,
-      total: total?.count || 0,
-      totalPages: Math.ceil((total?.count || 0) / limit)
-    }
-  })
+  if (type === 'general') {
+    conditions.push(`u.role = 'student' AND (u.company_name IS NULL OR TRIM(IFNULL(u.company_name,'')) = '')`)
+  } else if (type === 'b2b') {
+    conditions.push(`u.company_name IS NOT NULL AND TRIM(u.company_name) != ''`)
+  } else if (type === 'instructor') {
+    conditions.push(`u.role IN ('instructor','teacher')`)
+  }
+
+  const whereSql = conditions.join(' AND ')
+
+  const listSql = `
+    SELECT u.id, u.email, u.name, u.phone, u.role, u.created_at,
+      COALESCE(u.company_name, '') AS company_name,
+      (SELECT MAX(s.created_at) FROM sessions s WHERE s.user_id = u.id) AS last_access_at
+    FROM users u
+    WHERE ${whereSql}
+    ORDER BY u.created_at DESC
+    LIMIT ? OFFSET ?
+  `
+  const countSql = `SELECT COUNT(*) as count FROM users u WHERE ${whereSql}`
+
+  try {
+    const listBinds = [...binds, limit, offset]
+    const [users, total] = await Promise.all([
+      DB.prepare(listSql).bind(...listBinds).all(),
+      DB.prepare(countSql).bind(...binds).first<{ count: number }>(),
+    ])
+    const rows = (users.results ?? []) as Record<string, unknown>[]
+    const data = rows.map(mapUserListRow)
+    const totalCount = Number(total?.count ?? 0)
+    return c.json({
+      success: true,
+      data,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.max(1, Math.ceil(totalCount / limit)),
+      },
+    })
+  } catch (error) {
+    console.error('Admin users list error:', error)
+    return c.json(errorResponse('회원 목록 조회 실패 (스키마·마이그레이션 확인)'), 500)
+  }
 })
 
 // 전체 수강 신청 관리
@@ -742,8 +779,9 @@ admin.get('/users/:userId', requireAdmin, async (c) => {
     // 회원 기본 정보
     const user = await DB.prepare(`
       SELECT id, email, name, phone, phone_verified, birth_date, role, status,
-             terms_agreed, privacy_agreed, marketing_agreed, 
-             created_at, updated_at, last_login_at
+             terms_agreed, privacy_agreed, marketing_agreed,
+             created_at, updated_at, last_login_at,
+             COALESCE(company_name, '') AS company_name
       FROM users
       WHERE id = ?
     `).bind(userId).first()

@@ -131,6 +131,10 @@ function updateGnbActiveState(tab) {
 
 function applyHashRoute() {
   const raw = (location.hash || '#dashboard').replace(/^#/, '') || 'dashboard'
+  if (raw === 'members') {
+    location.replace('/admin/members')
+    return
+  }
   const tab = HUB_VALID_PANELS.has(raw) ? raw : 'dashboard'
   updateGnbActiveState(tab)
   document.querySelectorAll('.hub-panel').forEach((p) => p.classList.add('hidden'))
@@ -180,9 +184,10 @@ async function loadDashboardPulse() {
 const HUB_KPI_HELP = {
   users: {
     title: '총 회원수',
-    body: '탈퇴·삭제 처리되지 않은 회원 계정 수입니다. 회원 탭에서 목록 검색·상세 관리를 할 수 있습니다.',
+    body: '탈퇴·삭제 처리되지 않은 회원 계정 수입니다. 회원 관리 페이지에서 목록 검색·상세 관리를 할 수 있습니다.',
     tab: 'members',
-    tabLabel: '회원 탭으로 이동',
+    tabLabel: '회원 관리 페이지로 이동',
+    membersHref: '/admin/members',
     valueId: 'statTotalUsers',
   },
   courses: {
@@ -213,7 +218,8 @@ const HUB_PULSE_HELP = {
     title: '오늘의 신규 가입자',
     body: '오늘 00:00 이후 가입이 완료된 회원 수입니다.',
     tab: 'members',
-    tabLabel: '회원 탭으로 이동',
+    tabLabel: '회원 관리 페이지로 이동',
+    membersHref: '/admin/members',
     valueId: 'pulseSignup',
   },
   payment: {
@@ -251,7 +257,11 @@ function openHubKpiModal(cfg) {
     goBtn.textContent = cfg.tabLabel || '관련 탭으로 이동'
     goBtn.onclick = () => {
       closeHubKpiModal()
-      location.hash = cfg.tab
+      if (cfg.membersHref) {
+        location.href = cfg.membersHref
+      } else {
+        location.hash = cfg.tab
+      }
     }
   } else {
     goBtn.classList.add('hidden')
@@ -573,8 +583,37 @@ function hubDashBadgeHtml(raw) {
   return '<span class="' + cls + '" title="' + escapeAttr(t) + '">' + escapeHtml(t) + '</span>'
 }
 
-function hubDashRenderCell(colName, cell) {
+/** 명단에서 회원명으로 취급해 상세 패널로 연결할 열 이름 */
+function hubMemberColumnIsLink(colName) {
+  return /^(이름|신청자|결제자|입금자|회원|대상자)$/.test(String(colName || '').trim())
+}
+
+function hubMemberDemoUserId(tableKind, sectionIndex, rowIndex) {
+  let s = 'demo-user-' + tableKind + '-r' + rowIndex
+  if (sectionIndex !== undefined && sectionIndex !== null) s += '-s' + sectionIndex
+  return s.replace(/[^a-zA-Z0-9_-]/g, '_')
+}
+
+function hubDashRenderCell(colName, cell, ctx) {
   if (hubDashColumnIsBadge(colName)) return hubDashBadgeHtml(cell)
+  if (ctx && ctx.kind && hubMemberColumnIsLink(colName)) {
+    const userId = hubMemberDemoUserId(ctx.kind, ctx.sectionIndex, ctx.rowIndex)
+    const inner = escapeHtml(String(cell))
+    let attrs =
+      'href="#" class="member-detail-trigger text-indigo-600 hover:text-indigo-800 hover:underline font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 rounded" '
+    attrs +=
+      'data-user-id="' +
+      escapeAttr(userId) +
+      '" data-table-kind="' +
+      escapeAttr(ctx.kind) +
+      '" data-row-index="' +
+      ctx.rowIndex +
+      '"'
+    if (ctx.sectionIndex !== undefined && ctx.sectionIndex !== null) {
+      attrs += ' data-section-index="' + ctx.sectionIndex + '"'
+    }
+    return '<a ' + attrs + '>' + inner + '</a>'
+  }
   return escapeHtml(String(cell))
 }
 
@@ -776,10 +815,11 @@ function hubDashboardDetailRenderTableRows(cols, rows, defaultActionLabel, ctx) 
   const dataCols = cols.filter((c) => c !== '처리')
   return (rows || [])
     .map((cells, idx) => {
+      const cellCtx = { kind, sectionIndex, rowIndex: idx }
       const tds = dataCols
         .map((colName, i) => {
           const cell = cells[i] != null ? cells[i] : ''
-          return '<td class="p-3 align-middle text-slate-800">' + hubDashRenderCell(colName, cell) + '</td>'
+          return '<td class="p-3 align-middle text-slate-800">' + hubDashRenderCell(colName, cell, cellCtx) + '</td>'
         })
         .join('')
       const actionTd = hubDashboardDetailRenderActionTd(kind, sectionIndex, idx, cells, dataCols, defaultActionLabel)
@@ -800,10 +840,11 @@ function hubDashboardDetailRenderQaSectionRows(cols, rows, sectionIndex, default
   const colSpan = cols.length
   return (rows || [])
     .map((cells, idx) => {
+      const cellCtx = { kind: 'dash-urgent-queue', sectionIndex, rowIndex: idx }
       const tds = dataCols
         .map((colName, i) => {
           const cell = cells[i] != null ? cells[i] : ''
-          return '<td class="p-3 align-middle text-slate-800">' + hubDashRenderCell(colName, cell) + '</td>'
+          return '<td class="p-3 align-middle text-slate-800">' + hubDashRenderCell(colName, cell, cellCtx) + '</td>'
         })
         .join('')
       const actionTd = hubDashboardDetailRenderActionTd('dash-urgent-queue', sectionIndex, idx, cells, dataCols, defaultAct)
@@ -951,6 +992,7 @@ window.openHubDashboardDetailModal = openHubDashboardDetailModal
 window.updateDashboardKpi = updateDashboardKpi
 
 function closeHubDashboardDetailModal() {
+  closeHubMemberDetailPanel()
   const modal = document.getElementById('hubDashboardDetailModal')
   const sectionsWrap = document.getElementById('hubDashboardDetailSectionsWrap')
   if (sectionsWrap) sectionsWrap.innerHTML = ''
@@ -966,6 +1008,73 @@ function closeHubDashboardDetailModal() {
 }
 
 window.closeHubDashboardDetailModal = closeHubDashboardDetailModal
+
+/** 명단 행 기반 데모 회원 프로필 (API 연동 전) */
+function hubBuildMockMemberProfile(userId, tableKind, rowIndex, sectionIndex, displayName) {
+  const tables = getHubDashboardDemoTables()
+  const t = tables[tableKind]
+  let row = null
+  if (t && t.layout === 'sections' && t.sections && sectionIndex != null && !Number.isNaN(sectionIndex)) {
+    const sec = t.sections[sectionIndex]
+    row = sec && sec.rows ? sec.rows[rowIndex] : null
+  } else if (t && t.rows) {
+    row = t.rows[rowIndex]
+  }
+
+  let memberType = '일반'
+  let company = ''
+  let typeTagClass = 'bg-slate-100 text-slate-700 ring-1 ring-slate-500/15'
+  if (tableKind === 'dash-new-signups' && row && String(row[1] || '') === 'B2B') {
+    memberType = 'B2B'
+    company = String(row[2] || '—')
+    typeTagClass = 'bg-violet-100 text-violet-900 ring-1 ring-violet-500/20'
+  } else if (tableKind === 'dash-action-b2b') {
+    memberType = '강사'
+    company = '(주)에듀테크'
+    typeTagClass = 'bg-amber-100 text-amber-900 ring-1 ring-amber-500/25'
+  } else if (tableKind === 'dash-urgent-queue' && sectionIndex === 1) {
+    memberType = 'B2B'
+    company = '(주)에듀테크'
+    typeTagClass = 'bg-violet-100 text-violet-900 ring-1 ring-violet-500/20'
+  }
+
+  const accountStatus = rowIndex % 5 === 0 ? '승인 대기' : rowIndex % 7 === 0 ? '정지' : '정상'
+  const n = rowIndex + 1
+  const email = 'user' + n + '@demo.mindstory.kr'
+  const phone = '010-' + String(2000 + (rowIndex % 8000)).padStart(4, '0') + '-' + String(1000 + (rowIndex % 9000)).padStart(4, '0')
+  const courses = [
+    { title: 'MindStory Classic · 진로캠프', progress: Math.min(100, 28 + ((rowIndex * 13) % 72)) },
+    { title: 'MindStory Next · 실전 심화', progress: Math.min(100, 10 + ((rowIndex * 7) % 40)) },
+  ]
+
+  return {
+    userId,
+    displayName: displayName || '회원',
+    email,
+    phone,
+    joinedAt: '2026-02-' + String(1 + (rowIndex % 26)).padStart(2, '0') + ' 10:' + String((rowIndex * 3) % 60).padStart(2, '0'),
+    lastAccess: '2026-03-30 ' + String(9 + (rowIndex % 10)).padStart(2, '0') + ':' + String((rowIndex * 5) % 60).padStart(2, '0'),
+    memberType,
+    company,
+    typeTagClass,
+    accountStatus,
+    courses,
+    paymentRecent: '₩150,000 · 카드 · 2026-03-29 14:22',
+    paymentTotal: '₩' + (280000 + rowIndex * 15000).toLocaleString('ko-KR'),
+  }
+}
+
+function openHubMemberDetailPanel(userId, tableKind, rowIndex, sectionIndex, displayName) {
+  const profile = hubBuildMockMemberProfile(userId, tableKind, rowIndex, sectionIndex, displayName)
+  if (typeof window.hubFillMemberDetailPanel === 'function') window.hubFillMemberDetailPanel(profile)
+  const title = document.getElementById('hubMemberDetailTitle')
+  if (title) title.textContent = profile.displayName + ' · 회원 상세'
+  const sub = document.getElementById('hubMemberDetailSubtitle')
+  if (sub) sub.textContent = '데모 프로필 · API 연동 시 실데이터로 대체됩니다.'
+  if (typeof window.hubMemberDetailRunOpenAnimation === 'function') window.hubMemberDetailRunOpenAnimation()
+}
+
+window.openHubMemberDetailPanel = openHubMemberDetailPanel
 
 function hubNavigateDashboardThenOpenModal(kind) {
   if (!kind) return
@@ -1194,7 +1303,7 @@ async function loadDashboardSideLists() {
 
 async function loadUsers() {
   const q = document.getElementById('userSearch')?.value?.trim() || ''
-  const qs = new URLSearchParams({ page: String(hubUserPage), limit: '20' })
+  const qs = new URLSearchParams({ page: String(hubUserPage), limit: '50' })
   if (q) qs.set('q', q)
   const res = await apiRequest('GET', '/api/admin/users?' + qs.toString())
   const tbody = document.getElementById('userTableBody')

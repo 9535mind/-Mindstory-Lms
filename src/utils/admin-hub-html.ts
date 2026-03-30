@@ -12,6 +12,7 @@ import {
   siteAiChatWidgetScript,
   siteAiChatWidgetStyles,
 } from './site-ai-chat-widget'
+import { adminHubMemberDetailPanelHtml } from './admin-hub-member-panel-html'
 
 export function adminHubPageHtml(): string {
   const dashboardMockPayload = getAdminDashboardMockInlinePayload()
@@ -118,7 +119,7 @@ export function adminHubPageHtml(): string {
           <details class="hub-ops-mobile-nested rounded-lg border border-white/10 bg-white/[0.04] overflow-hidden">
             <summary class="px-3 py-2.5 cursor-pointer text-sm font-medium text-indigo-100 flex justify-between items-center after:content-['▼'] after:text-[10px] after:text-indigo-300/90 open:after:rotate-180">회원 · B2B 관리</summary>
             <div class="pl-3 pr-2 pb-2 ml-3 border-l border-emerald-500/35 flex flex-col gap-0.5">
-              <a href="#members" data-hub-panel="members" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200 text-sm">회원 관리 페이지</a>
+              <a href="/admin/members" data-hub-panel="members" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200 text-sm">회원 관리 페이지</a>
               <button type="button" data-hub-dash-detail="dash-new-signups" class="hub-mobile-nav-link block w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200 text-sm">🆕 오늘 신규 가입 명단</button>
             </div>
           </details>
@@ -222,7 +223,7 @@ export function adminHubPageHtml(): string {
                 </button>
                 <div class="hub-ops-acc-panel hidden border-t border-white/5 bg-slate-900/50">
                   <div class="flex flex-col gap-0.5 py-1.5 pl-3 pr-2 ml-4 border-l-2 border-emerald-500/40">
-                    <a href="#members" data-hub-panel="members" class="block rounded-md px-3 py-1.5 text-slate-200 hover:bg-indigo-600/85 text-[13px]">회원 관리 페이지</a>
+                    <a href="/admin/members" data-hub-panel="members" class="block rounded-md px-3 py-1.5 text-slate-200 hover:bg-indigo-600/85 text-[13px]">회원 관리 페이지</a>
                     <button type="button" data-hub-dash-detail="dash-new-signups" class="block w-full text-left rounded-md px-3 py-1.5 text-slate-200 hover:bg-indigo-600/85 text-[13px]">🆕 오늘 신규 가입 명단</button>
                   </div>
                 </div>
@@ -489,7 +490,7 @@ export function adminHubPageHtml(): string {
     <section id="panel-b2b" class="hub-panel hidden space-y-4">
       <div class="bg-white rounded-xl shadow border border-slate-200 p-6 text-sm text-slate-600 leading-relaxed">
         <h2 class="text-lg font-bold text-slate-800 mb-2"><i class="fas fa-building text-indigo-500 mr-2"></i>회원 · B2B</h2>
-        <p>소속 기관별 수강생 그룹화·통계는 이 영역에 연결할 예정입니다. 현재는 <a href="#members" class="text-indigo-600 underline">회원 탭</a>에서 개별 계정을 관리할 수 있습니다.</p>
+        <p>소속 기관별 수강생 그룹화·통계는 이 영역에 연결할 예정입니다. 현재는 <a href="/admin/members" class="text-indigo-600 underline">회원 관리 페이지</a>에서 개별 계정을 관리할 수 있습니다.</p>
       </div>
     </section>
 
@@ -729,6 +730,7 @@ export function adminHubPageHtml(): string {
     </div>
   </div>
 
+${adminHubMemberDetailPanelHtml()}
   ${siteAiChatWidgetMarkup()}
   <script>${siteAiChatWidgetScript()}</script>
 
@@ -736,7 +738,8 @@ export function adminHubPageHtml(): string {
   <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
   <script src="/static/js/auth.js?v=20260329-admin-name"></script>
   <script src="/static/js/utils.js"></script>
-  <script src="/static/js/admin-hub.js?v=20260330-ops-accordion"></script>
+  <script src="/static/js/admin-hub-member-panel.js?v=20260330-members-page"></script>
+  <script src="/static/js/admin-hub.js?v=20260330-members-page"></script>
   <script src="/static/js/admin-isbn.js"></script>
   <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
 </body>
