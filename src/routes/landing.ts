@@ -943,11 +943,11 @@ landing.get('/', async (c) => {
                 window.viewCourse = viewCourse
 
                 function bootLandingMind() {
-                    void loadLandingFeaturedCourses()
+                    void window.loadLandingFeaturedCourses();
                     ${siteHeaderDrawerControlScript('landing')}
-                    ${siteFloatingQuickMenuScript()}
-                    ${siteAiChatWidgetScript()}
-                    initHeroSlider()
+                    ;${siteFloatingQuickMenuScript()}
+                    ;${siteAiChatWidgetScript()}
+                    initHeroSlider();
                 }
 
                 if (document.readyState === 'loading') {
