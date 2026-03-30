@@ -115,6 +115,10 @@ export interface Course {
   isbn_enabled?: number;
   /** Classic 메인 노출 우선순위(관리자 트렌드 토글) */
   highlight_classic?: number;
+  /** 다음 기수 개강일 (ISO YYYY-MM-DD), 챗봇·안내용 */
+  next_cohort_start_date?: string | null;
+  /** 개강·반복 일정 자유 안내 문구 (DB) */
+  schedule_info?: string | null;
   created_at: string;
   updated_at: string;
 }

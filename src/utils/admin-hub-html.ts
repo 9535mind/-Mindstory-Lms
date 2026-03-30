@@ -27,6 +27,17 @@ export function adminHubPageHtml(): string {
   <link rel="stylesheet" href="/static/css/app.css" />
   <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
   ${siteAiChatWidgetStyles()}
+  <style id="hub-dash-live">
+    @keyframes hub-row-fade-out {
+      to { opacity: 0; transform: translateY(-8px); }
+    }
+    .hub-row-leaving {
+      animation: hub-row-fade-out 0.45s ease forwards;
+    }
+    .hub-qa-accordion:not(.hidden) {
+      animation: hub-row-fade-out 0.2s ease reverse;
+    }
+  </style>
   <style id="hub-gnb-titanium">
     /* 관제탑 데스크톱 서브 GNB — 다크 티타늄 (SaaS) */
     #hubDesktopGnb .hub-gnb-trigger {
@@ -67,6 +78,29 @@ export function adminHubPageHtml(): string {
     #hubDesktopGnb .hub-gnb-trigger--active .hub-gnb-chevron {
       opacity: 1;
     }
+    /* 운영 센터 — 중첩 아코디언 */
+    .hub-ops-acc-panel:not(.hidden) {
+      animation: hubOpsAccOpen 0.22s ease-out;
+    }
+    @keyframes hubOpsAccOpen {
+      from {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .hub-ops-mobile-nested > summary {
+      list-style: none;
+    }
+    .hub-ops-mobile-nested > summary::-webkit-details-marker {
+      display: none;
+    }
+    .hub-ops-mobile-nested[open] > summary .hub-ops-m-chev {
+      transform: rotate(180deg);
+    }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
@@ -79,16 +113,44 @@ export function adminHubPageHtml(): string {
     <div class="overflow-y-auto flex-1 p-2 text-sm" id="hubMobileAccordion">
       <details class="border-b border-white/10 group">
         <summary class="px-3 py-3 cursor-pointer font-medium text-indigo-100 list-none flex justify-between items-center after:content-['+'] after:text-indigo-300 group-open:after:content-['−'] [&::-webkit-details-marker]:hidden">운영 센터</summary>
-        <div class="pb-2 pl-2 flex flex-col gap-0.5">
+        <div class="pb-2 pl-2 flex flex-col gap-1">
           <a href="#dashboard" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200">대시보드</a>
-          <a href="#members" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200">회원 · B2B</a>
-          <a href="#enrollments" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200">수강신청</a>
-          <a href="#payments" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200">결제 · 매출</a>
-          <p class="px-3 pt-2 pb-0.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">대시보드 상세</p>
-          <button type="button" data-hub-dash-detail="dash-new-signups" class="hub-mobile-nav-link block w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200 text-sm">신규 가입 명단</button>
-          <button type="button" data-hub-dash-detail="dash-today-enrollments" class="hub-mobile-nav-link block w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200 text-sm">수강 신청 명단</button>
-          <button type="button" data-hub-dash-detail="dash-today-revenue" class="hub-mobile-nav-link block w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200 text-sm">결제 금액 내역</button>
-          <button type="button" data-hub-dash-detail="dash-urgent-queue" class="hub-mobile-nav-link block w-full text-left px-3 py-2 rounded-lg hover:bg-rose-900/30 text-rose-100 text-sm">즉시 처리 큐</button>
+          <details class="hub-ops-mobile-nested rounded-lg border border-white/10 bg-white/[0.04] overflow-hidden">
+            <summary class="px-3 py-2.5 cursor-pointer text-sm font-medium text-indigo-100 flex justify-between items-center after:content-['▼'] after:text-[10px] after:text-indigo-300/90 open:after:rotate-180">회원 · B2B 관리</summary>
+            <div class="pl-3 pr-2 pb-2 ml-3 border-l border-emerald-500/35 flex flex-col gap-0.5">
+              <a href="#members" data-hub-panel="members" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200 text-sm">회원 관리 페이지</a>
+              <button type="button" data-hub-dash-detail="dash-new-signups" class="hub-mobile-nav-link block w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200 text-sm">🆕 오늘 신규 가입 명단</button>
+            </div>
+          </details>
+          <details class="hub-ops-mobile-nested rounded-lg border border-white/10 bg-white/[0.04] overflow-hidden">
+            <summary class="px-3 py-2.5 cursor-pointer text-sm font-medium text-indigo-100 flex justify-between items-center list-none">
+              <span>수강신청</span>
+              <span class="hub-ops-m-chev text-[10px] text-indigo-300/90 transition-transform duration-200" aria-hidden="true">▼</span>
+            </summary>
+            <div class="pl-3 pr-2 pb-2 ml-3 border-l border-emerald-500/35 flex flex-col gap-0.5">
+              <a href="#enrollments" data-hub-panel="enrollments" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200 text-sm">수강신청 페이지</a>
+              <button type="button" data-hub-dash-detail="dash-today-enrollments" class="hub-mobile-nav-link block w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200 text-sm">🆕 오늘 수강 신청 명단</button>
+            </div>
+          </details>
+          <details class="hub-ops-mobile-nested rounded-lg border border-white/10 bg-white/[0.04] overflow-hidden">
+            <summary class="px-3 py-2.5 cursor-pointer text-sm font-medium text-indigo-100 flex justify-between items-center list-none">
+              <span>결제 · 매출</span>
+              <span class="hub-ops-m-chev text-[10px] text-indigo-300/90 transition-transform duration-200" aria-hidden="true">▼</span>
+            </summary>
+            <div class="pl-3 pr-2 pb-2 ml-3 border-l border-emerald-500/35 flex flex-col gap-0.5">
+              <a href="#payments" data-hub-panel="payments" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200 text-sm">결제 · 매출 페이지</a>
+              <button type="button" data-hub-dash-detail="dash-today-revenue" class="hub-mobile-nav-link block w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200 text-sm">🆕 오늘 결제 금액 내역</button>
+            </div>
+          </details>
+          <details class="hub-ops-mobile-nested rounded-lg border border-rose-500/25 bg-rose-950/20 overflow-hidden">
+            <summary class="px-3 py-2.5 cursor-pointer text-sm font-semibold text-rose-100 flex justify-between items-center list-none">
+              <span>업무 큐 / 즉시 처리</span>
+              <span class="hub-ops-m-chev text-[10px] text-rose-300/90 transition-transform duration-200" aria-hidden="true">▼</span>
+            </summary>
+            <div class="pl-3 pr-2 pb-2 ml-3 border-l border-rose-500/40 flex flex-col gap-0.5">
+              <button type="button" data-hub-dash-detail="dash-urgent-queue" class="hub-mobile-nav-link block w-full text-left px-3 py-2 rounded-lg hover:bg-rose-900/40 text-rose-50 text-sm">🚨 즉시 처리 필요 내역</button>
+            </div>
+          </details>
         </div>
       </details>
       <details class="border-b border-white/10 group">
@@ -150,18 +212,56 @@ export function adminHubPageHtml(): string {
               <i class="fas fa-chevron-down hub-gnb-chevron text-[10px] text-current opacity-80 transition-opacity duration-200" aria-hidden="true"></i>
             </span>
           </button>
-          <div class="absolute left-0 top-full pt-1 min-w-[14rem] opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-150 z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
-            <div class="rounded-xl bg-slate-800 border border-white/10 shadow-xl py-2 text-sm min-w-[15rem]">
-              <a href="#dashboard" data-hub-panel="dashboard" class="block px-4 py-2 text-slate-100 hover:bg-indigo-600/80">대시보드</a>
-              <a href="#members" data-hub-panel="members" class="block px-4 py-2 text-slate-100 hover:bg-indigo-600/80">회원 · B2B 관리</a>
-              <a href="#enrollments" data-hub-panel="enrollments" class="block px-4 py-2 text-slate-100 hover:bg-indigo-600/80">수강신청</a>
-              <a href="#payments" data-hub-panel="payments" class="block px-4 py-2 text-slate-100 hover:bg-indigo-600/80">결제 · 매출</a>
-              <div class="border-t border-white/10 my-1 mx-2" role="separator"></div>
-              <p class="px-4 pt-1 pb-0.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">대시보드 상세 (데모)</p>
-              <button type="button" data-hub-dash-detail="dash-new-signups" class="block w-full text-left px-4 py-2 text-slate-100 hover:bg-indigo-600/80">오늘 신규 가입 · 명단</button>
-              <button type="button" data-hub-dash-detail="dash-today-enrollments" class="block w-full text-left px-4 py-2 text-slate-100 hover:bg-indigo-600/80">오늘 수강 신청 · 명단</button>
-              <button type="button" data-hub-dash-detail="dash-today-revenue" class="block w-full text-left px-4 py-2 text-slate-100 hover:bg-indigo-600/80">오늘 결제 금액 · 내역</button>
-              <button type="button" data-hub-dash-detail="dash-urgent-queue" class="block w-full text-left px-4 py-2 text-rose-100 hover:bg-rose-900/50">즉시 처리 필요 · 큐</button>
+          <div class="absolute left-0 top-full pt-1 min-w-[16rem] opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-150 z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
+            <div class="rounded-xl bg-slate-800 border border-white/10 shadow-xl py-1.5 text-sm min-w-[17rem] max-w-[20rem]">
+              <a href="#dashboard" data-hub-panel="dashboard" class="block px-4 py-2 text-slate-100 hover:bg-indigo-600/80 rounded-t-lg">대시보드</a>
+              <div class="hub-ops-subgroup border-t border-white/10">
+                <button type="button" class="hub-ops-acc-trigger w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left text-slate-100 hover:bg-indigo-600/40 text-sm font-medium">
+                  <span>회원 · B2B 관리</span>
+                  <i class="fas fa-chevron-down hub-ops-chevron text-[10px] text-indigo-200/90 transition-transform duration-200 shrink-0" aria-hidden="true"></i>
+                </button>
+                <div class="hub-ops-acc-panel hidden border-t border-white/5 bg-slate-900/50">
+                  <div class="flex flex-col gap-0.5 py-1.5 pl-3 pr-2 ml-4 border-l-2 border-emerald-500/40">
+                    <a href="#members" data-hub-panel="members" class="block rounded-md px-3 py-1.5 text-slate-200 hover:bg-indigo-600/85 text-[13px]">회원 관리 페이지</a>
+                    <button type="button" data-hub-dash-detail="dash-new-signups" class="block w-full text-left rounded-md px-3 py-1.5 text-slate-200 hover:bg-indigo-600/85 text-[13px]">🆕 오늘 신규 가입 명단</button>
+                  </div>
+                </div>
+              </div>
+              <div class="hub-ops-subgroup border-t border-white/10">
+                <button type="button" class="hub-ops-acc-trigger w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left text-slate-100 hover:bg-indigo-600/40 text-sm font-medium">
+                  <span>수강신청</span>
+                  <i class="fas fa-chevron-down hub-ops-chevron text-[10px] text-indigo-200/90 transition-transform duration-200 shrink-0" aria-hidden="true"></i>
+                </button>
+                <div class="hub-ops-acc-panel hidden border-t border-white/5 bg-slate-900/50">
+                  <div class="flex flex-col gap-0.5 py-1.5 pl-3 pr-2 ml-4 border-l-2 border-emerald-500/40">
+                    <a href="#enrollments" data-hub-panel="enrollments" class="block rounded-md px-3 py-1.5 text-slate-200 hover:bg-indigo-600/85 text-[13px]">수강신청 페이지</a>
+                    <button type="button" data-hub-dash-detail="dash-today-enrollments" class="block w-full text-left rounded-md px-3 py-1.5 text-slate-200 hover:bg-indigo-600/85 text-[13px]">🆕 오늘 수강 신청 명단</button>
+                  </div>
+                </div>
+              </div>
+              <div class="hub-ops-subgroup border-t border-white/10">
+                <button type="button" class="hub-ops-acc-trigger w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left text-slate-100 hover:bg-indigo-600/40 text-sm font-medium">
+                  <span>결제 · 매출</span>
+                  <i class="fas fa-chevron-down hub-ops-chevron text-[10px] text-indigo-200/90 transition-transform duration-200 shrink-0" aria-hidden="true"></i>
+                </button>
+                <div class="hub-ops-acc-panel hidden border-t border-white/5 bg-slate-900/50">
+                  <div class="flex flex-col gap-0.5 py-1.5 pl-3 pr-2 ml-4 border-l-2 border-emerald-500/40">
+                    <a href="#payments" data-hub-panel="payments" class="block rounded-md px-3 py-1.5 text-slate-200 hover:bg-indigo-600/85 text-[13px]">결제 · 매출 페이지</a>
+                    <button type="button" data-hub-dash-detail="dash-today-revenue" class="block w-full text-left rounded-md px-3 py-1.5 text-slate-200 hover:bg-indigo-600/85 text-[13px]">🆕 오늘 결제 금액 내역</button>
+                  </div>
+                </div>
+              </div>
+              <div class="hub-ops-subgroup border-t border-white/10 rounded-b-lg overflow-hidden">
+                <button type="button" class="hub-ops-acc-trigger w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left text-rose-100 hover:bg-rose-900/35 text-sm font-semibold">
+                  <span>업무 큐 / 즉시 처리</span>
+                  <i class="fas fa-chevron-down hub-ops-chevron text-[10px] text-rose-200/90 transition-transform duration-200 shrink-0" aria-hidden="true"></i>
+                </button>
+                <div class="hub-ops-acc-panel hidden border-t border-rose-500/20 bg-rose-950/30">
+                  <div class="flex flex-col gap-0.5 py-1.5 pl-3 pr-2 ml-4 border-l-2 border-rose-400/50">
+                    <button type="button" data-hub-dash-detail="dash-urgent-queue" class="block w-full text-left rounded-md px-3 py-1.5 text-rose-50 hover:bg-rose-900/55 text-[13px]">🚨 즉시 처리 필요 내역</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -223,25 +323,25 @@ export function adminHubPageHtml(): string {
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <button type="button" data-hub-dash-detail="dash-new-signups" class="text-left bg-white rounded-xl border border-slate-200 shadow-sm p-5 w-full cursor-pointer transition hover:border-indigo-300 hover:ring-2 hover:ring-indigo-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
           <p class="text-sm font-medium text-slate-500">오늘 신규 가입</p>
-          <p class="text-3xl font-bold text-slate-900 mt-2 tabular-nums">12명</p>
-          <p class="text-xs text-slate-500 mt-2">B2B 승인 대기 1명</p>
+          <p id="hubKpiSignups" class="text-3xl font-bold text-slate-900 mt-2 tabular-nums transition-all duration-300">12명</p>
+          <p id="hubKpiSignupsB2bPending" class="text-xs text-slate-500 mt-2">B2B 승인 대기 1명</p>
           <p class="text-[11px] text-indigo-500 mt-2">클릭하여 상세 목록 (데모)</p>
         </button>
         <button type="button" data-hub-dash-detail="dash-today-enrollments" class="text-left bg-white rounded-xl border border-slate-200 shadow-sm p-5 w-full cursor-pointer transition hover:border-indigo-300 hover:ring-2 hover:ring-indigo-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
           <p class="text-sm font-medium text-slate-500">오늘 수강 신청</p>
-          <p class="text-3xl font-bold text-slate-900 mt-2 tabular-nums">18건</p>
+          <p id="hubKpiEnrollments" class="text-3xl font-bold text-slate-900 mt-2 tabular-nums transition-all duration-300">18건</p>
           <p class="text-xs text-slate-500 mt-2">Classic 12건 · Next 4건 · 메타인지 2건</p>
           <p class="text-[11px] text-indigo-500 mt-2">클릭하여 상세 목록 (데모)</p>
         </button>
         <button type="button" data-hub-dash-detail="dash-today-revenue" class="text-left bg-white rounded-xl border border-slate-200 shadow-sm p-5 w-full cursor-pointer transition hover:border-indigo-300 hover:ring-2 hover:ring-indigo-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
           <p class="text-sm font-medium text-slate-500">오늘 결제 금액</p>
-          <p class="text-3xl font-bold text-emerald-600 mt-2 tabular-nums">₩ 1,250,000</p>
+          <p id="hubKpiRevenue" class="text-3xl font-bold text-emerald-600 mt-2 tabular-nums transition-all duration-300">₩ 1,250,000</p>
           <p class="text-xs text-emerald-700/80 mt-2">전일 대비 ▲ 12%</p>
           <p class="text-[11px] text-indigo-500 mt-2">클릭하여 상세 목록 (데모)</p>
         </button>
         <button type="button" data-hub-dash-detail="dash-urgent-queue" class="text-left rounded-xl border border-rose-200/90 bg-rose-50 shadow-sm p-5 w-full ring-1 ring-rose-100/80 cursor-pointer transition hover:border-rose-300 hover:ring-2 hover:ring-rose-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">
           <p class="text-sm font-semibold text-rose-800">즉시 처리 필요</p>
-          <p class="text-3xl font-bold text-rose-600 mt-2 tabular-nums">8건</p>
+          <p id="hubKpiUrgent" class="text-3xl font-bold text-rose-600 mt-2 tabular-nums transition-all duration-300">8건</p>
           <p class="text-xs text-rose-700/90 mt-2">누적 미처리 업무 · 우선 확인</p>
           <p class="text-[11px] text-rose-600 mt-2 font-medium">클릭 시 8건 전체 큐 (데모)</p>
         </button>
@@ -257,7 +357,7 @@ export function adminHubPageHtml(): string {
               <button type="button" data-hub-dash-detail="dash-action-bank" class="w-full flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 px-4 py-3 text-sm text-slate-800 transition hover:bg-slate-100 hover:border-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 text-left">
                 <span class="font-medium">무통장 입금 확인 대기</span>
                 <span class="flex items-center gap-2 shrink-0">
-                  <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">3건</span>
+                  <span id="hubBadgeActionBank" class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 transition-all duration-300">3건</span>
                   <span class="text-slate-400" aria-hidden="true">➔</span>
                 </span>
               </button>
@@ -266,7 +366,7 @@ export function adminHubPageHtml(): string {
               <button type="button" data-hub-dash-detail="dash-action-b2b" class="w-full flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 px-4 py-3 text-sm text-slate-800 transition hover:bg-slate-100 hover:border-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 text-left">
                 <span class="font-medium">B2B / 강사 권한 승인 대기</span>
                 <span class="flex items-center gap-2 shrink-0">
-                  <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">1건</span>
+                  <span id="hubBadgeActionB2b" class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 transition-all duration-300">1건</span>
                   <span class="text-slate-400" aria-hidden="true">➔</span>
                 </span>
               </button>
@@ -275,7 +375,7 @@ export function adminHubPageHtml(): string {
               <button type="button" data-hub-dash-detail="dash-action-inquiry" class="w-full flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 px-4 py-3 text-sm text-slate-800 transition hover:bg-slate-100 hover:border-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 text-left">
                 <span class="font-medium">미답변 1:1 문의 및 Q&amp;A</span>
                 <span class="flex items-center gap-2 shrink-0">
-                  <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">4건</span>
+                  <span id="hubBadgeActionInquiry" class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 transition-all duration-300">4건</span>
                   <span class="text-slate-400" aria-hidden="true">➔</span>
                 </span>
               </button>
@@ -620,7 +720,10 @@ export function adminHubPageHtml(): string {
         <div id="hubDashboardDetailSectionsWrap" class="hidden space-y-6"></div>
       </div>
       <div class="p-4 border-t border-slate-200 bg-gradient-to-r from-slate-50/90 to-violet-50/30 flex flex-wrap items-center justify-between gap-2 shrink-0">
-        <button type="button" class="button-excel inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 shadow-sm transition" onclick="hubDashboardDownloadDetailCsv()">📥 엑셀 다운로드 (CSV)</button>
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" class="button-excel inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 shadow-sm transition" onclick="hubDashboardDownloadDetailCsv()">📥 엑셀 다운로드 (CSV)</button>
+          <button type="button" class="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-800 bg-white border border-slate-200 hover:bg-slate-50 hover:border-indigo-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm transition" onclick="hubDashboardPrintDetailModal()" title="목록을 새 창에서 인쇄합니다">🖨 인쇄</button>
+        </div>
         <button type="button" onclick="closeHubDashboardDetailModal()" class="px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-emerald-300/80 transition">닫기</button>
       </div>
     </div>
@@ -633,7 +736,7 @@ export function adminHubPageHtml(): string {
   <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
   <script src="/static/js/auth.js?v=20260329-admin-name"></script>
   <script src="/static/js/utils.js"></script>
-  <script src="/static/js/admin-hub.js?v=20260330-dash-nav-modal"></script>
+  <script src="/static/js/admin-hub.js?v=20260330-ops-accordion"></script>
   <script src="/static/js/admin-isbn.js"></script>
   <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
 </body>

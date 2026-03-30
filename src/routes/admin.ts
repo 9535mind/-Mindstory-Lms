@@ -354,7 +354,12 @@ admin.post('/courses', requireAdmin, async (c) => {
       thumbnail_url,
       status = 'draft',
       category_group: rawCg,
-    } = body
+      next_cohort_start_date: rawDate,
+      schedule_info: rawScheduleInfo,
+    } = body as {
+      next_cohort_start_date?: string | null
+      schedule_info?: string | null
+    }
 
     // 필수 필드 검증
     if (!title || !description) {
@@ -370,6 +375,18 @@ admin.post('/courses', requireAdmin, async (c) => {
       categoryGroup = cg
     }
 
+    const nextCohort =
+      rawDate !== undefined && rawDate !== null && String(rawDate).trim() !== ''
+        ? String(rawDate).trim().slice(0, 32)
+        : null
+    if (nextCohort && !/^\d{4}-\d{2}-\d{2}$/.test(nextCohort)) {
+      return c.json(errorResponse('next_cohort_start_date는 YYYY-MM-DD 형식이어야 합니다'), 400)
+    }
+    const scheduleInfo =
+      rawScheduleInfo !== undefined && rawScheduleInfo !== null && String(rawScheduleInfo).trim() !== ''
+        ? String(rawScheduleInfo).trim().slice(0, 2000)
+        : null
+
     // 현재 로그인한 관리자의 ID를 instructor_id로 사용
     const session = c.get('session')
     const instructorId = session?.user_id || null
@@ -378,15 +395,18 @@ admin.post('/courses', requireAdmin, async (c) => {
       INSERT INTO courses (
         title, description, thumbnail_url, instructor_id, status,
         category_group,
+        next_cohort_start_date, schedule_info,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `).bind(
       title,
       description,
       thumbnail_url || null,
       instructorId,
       status,
-      categoryGroup
+      categoryGroup,
+      nextCohort,
+      scheduleInfo
     ).run()
 
     return c.json(successResponse({
@@ -412,7 +432,12 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
       thumbnail_url,
       status,
       category_group: rawCg,
-    } = body
+      next_cohort_start_date: rawDate,
+      schedule_info: rawScheduleInfo,
+    } = body as {
+      next_cohort_start_date?: string | null
+      schedule_info?: string | null
+    }
 
     // 필수 필드 검증
     if (!title || !description) {
@@ -428,6 +453,18 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
       categoryGroup = cg
     }
 
+    const nextCohort =
+      rawDate !== undefined && rawDate !== null && String(rawDate).trim() !== ''
+        ? String(rawDate).trim().slice(0, 32)
+        : null
+    if (nextCohort && !/^\d{4}-\d{2}-\d{2}$/.test(nextCohort)) {
+      return c.json(errorResponse('next_cohort_start_date는 YYYY-MM-DD 형식이어야 합니다'), 400)
+    }
+    const scheduleInfo =
+      rawScheduleInfo !== undefined && rawScheduleInfo !== null && String(rawScheduleInfo).trim() !== ''
+        ? String(rawScheduleInfo).trim().slice(0, 2000)
+        : null
+
     const result = categoryGroup
       ? await DB.prepare(`
       UPDATE courses SET
@@ -436,6 +473,8 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
         thumbnail_url = ?,
         status = ?,
         category_group = ?,
+        next_cohort_start_date = ?,
+        schedule_info = ?,
         updated_at = datetime('now')
       WHERE id = ?
     `).bind(
@@ -444,6 +483,8 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
         thumbnail_url || null,
         status,
         categoryGroup,
+        nextCohort,
+        scheduleInfo,
         courseId
       ).run()
       : await DB.prepare(`
@@ -452,6 +493,8 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
         description = ?,
         thumbnail_url = ?,
         status = ?,
+        next_cohort_start_date = ?,
+        schedule_info = ?,
         updated_at = datetime('now')
       WHERE id = ?
     `).bind(
@@ -459,6 +502,8 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
         description,
         thumbnail_url || null,
         status,
+        nextCohort,
+        scheduleInfo,
         courseId
       ).run()
 

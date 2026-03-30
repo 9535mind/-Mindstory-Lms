@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   bindHubDashboardCardClicks()
   bindHubDashboardDetailDemo()
+  initHubOpsDesktopAccordion()
 
   document.getElementById('userSearchBtn')?.addEventListener('click', () => {
     hubUserPage = 1
@@ -505,6 +506,51 @@ function hubDashboardDownloadDetailCsv() {
 
 window.hubDashboardDownloadDetailCsv = hubDashboardDownloadDetailCsv
 
+/** 상세 모달 본문 인쇄 (CSV와 동일 데이터 영역) */
+function hubDashboardPrintDetailModal() {
+  const modal = document.getElementById('hubDashboardDetailModal')
+  const titleEl = document.getElementById('hubDashboardDetailTitle')
+  const body = modal?.querySelector('.hub-dashboard-detail-panel .flex-1.overflow-auto')
+  if (!body) return
+  const title = (titleEl && titleEl.textContent) ? titleEl.textContent.trim() : '대시보드 상세'
+  const w = window.open('', '_blank')
+  if (!w) {
+    hubToastBottom('팝업이 차단되었습니다. 브라우저에서 팝업을 허용해 주세요.')
+    return
+  }
+  const style =
+    '<style>body{font-family:system-ui,-apple-system,sans-serif;padding:20px;color:#111} h1{font-size:18px;margin:0 0 16px;font-weight:700} table{border-collapse:collapse;width:100%;font-size:12px} th,td{border:1px solid #ccc;padding:6px 8px;text-align:left} thead{background:#f1f5f9} section{margin-top:16px}</style>'
+  w.document.open()
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + escapeHtml(title) + '</title>' + style + '</head><body>')
+  w.document.write('<h1>' + escapeHtml(title) + '</h1>')
+  w.document.write(body.innerHTML)
+  w.document.write('</body></html>')
+  w.document.close()
+  w.onload = function () {
+    try {
+      w.focus()
+      w.print()
+    } catch (e) {}
+  }
+}
+window.hubDashboardPrintDetailModal = hubDashboardPrintDetailModal
+
+function initHubOpsDesktopAccordion() {
+  document.querySelectorAll('#hubDesktopGnb [data-hub-group="ops"] .hub-ops-acc-trigger').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const sub = btn.closest('.hub-ops-subgroup')
+      const panel = sub && sub.querySelector('.hub-ops-acc-panel')
+      const chevron = btn.querySelector('.hub-ops-chevron')
+      if (!panel) return
+      panel.classList.toggle('hidden')
+      const isOpen = !panel.classList.contains('hidden')
+      if (chevron) chevron.classList.toggle('rotate-180', isOpen)
+    })
+  })
+}
+
 /** 대시보드 상세 모달 — 상태·우선·유형 등 배지 컬럼 */
 function hubDashColumnIsBadge(colName) {
   const c = String(colName || '').trim()
@@ -515,7 +561,7 @@ function hubDashBadgeHtml(raw) {
   const t = String(raw)
   let cls =
     'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset max-w-[14rem] truncate '
-  if (/결제완료|가입 완료|완료|정상|승인/.test(t)) cls += 'bg-emerald-50 text-emerald-800 ring-emerald-600/20'
+  if (/결제완료|가입 완료|완료|정상|승인완료|승인 완료/.test(t)) cls += 'bg-emerald-50 text-emerald-800 ring-emerald-600/20'
   else if (/입금대기|승인 대기|대기|미확인|미답변|본인인증|서류|확인필요|부분취소|취소요청/.test(t)) cls += 'bg-amber-50 text-amber-900 ring-amber-600/25'
   else if (/취소|거절|실패/.test(t)) cls += 'bg-rose-50 text-rose-800 ring-rose-600/20'
   else if (/긴급|높음/.test(t)) cls += 'bg-violet-50 text-violet-800 ring-violet-600/20'
@@ -532,16 +578,201 @@ function hubDashRenderCell(colName, cell) {
   return escapeHtml(String(cell))
 }
 
-function hubDashActionButtonHtml(label) {
+function hubDashActionButtonHtml(label, extraClass, dataAttrs) {
+  const attrs = dataAttrs || ''
+  const cls =
+    'hub-demo-action-btn hub-dash-live-action text-xs font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 px-3 py-1.5 rounded-lg shadow-sm ring-1 ring-emerald-500/20 ' +
+    (extraClass || '')
+  return '<button type="button" class="' + cls.trim() + '" ' + attrs + '>' + escapeHtml(label) + '</button>'
+}
+
+function hubGetMockTables() {
+  try {
+    const w = window
+    const p = w.__ADMIN_DASHBOARD_MOCK__ || w.ADMIN_DASHBOARD_MOCK
+    return p && p.tables ? p.tables : null
+  } catch (e) {
+    return null
+  }
+}
+
+function hubToastBottom(message) {
+  let c = document.getElementById('hubToastBottom')
+  if (!c) {
+    c = document.createElement('div')
+    c.id = 'hubToastBottom'
+    c.className =
+      'fixed bottom-6 left-1/2 z-[120] flex -translate-x-1/2 flex-col items-center gap-2 pointer-events-none'
+    document.body.appendChild(c)
+  }
+  const el = document.createElement('div')
+  el.className =
+    'pointer-events-auto rounded-lg bg-slate-900/95 px-4 py-2.5 text-sm font-medium text-white shadow-lg ring-1 ring-white/10 transition-all duration-300'
+  el.textContent = message
+  c.appendChild(el)
+  setTimeout(() => {
+    el.style.opacity = '0'
+    el.style.transform = 'translateY(6px)'
+  }, 2000)
+  setTimeout(() => el.remove(), 2400)
+}
+
+/** KPI 숫자 부드럽게 변경 (countdown 스타일) */
+function updateDashboardKpi(elId, nextValue, suffix) {
+  const el = document.getElementById(elId)
+  if (!el) return
+  const raw = el.textContent.replace(/,/g, '')
+  const m = raw.match(/(\d+)/)
+  const start = m ? parseInt(m[1], 10) : nextValue
+  const end = Math.max(0, nextValue)
+  if (start === end) {
+    el.textContent = end.toLocaleString('ko-KR') + (suffix || '')
+    return
+  }
+  const t0 = performance.now()
+  const dur = 420
+  function frame(now) {
+    const p = Math.min(1, (now - t0) / dur)
+    const eased = 1 - (1 - p) * (1 - p)
+    const v = Math.round(start + (end - start) * eased)
+    el.textContent = v.toLocaleString('ko-KR') + (suffix || '')
+    if (p < 1) requestAnimationFrame(frame)
+  }
+  requestAnimationFrame(frame)
+}
+
+function hubSetBadge(id, n) {
+  const el = document.getElementById(id)
+  if (el) el.textContent = n + '건'
+}
+
+/** mock 기준으로 대시보드 KPI·배지 전체 동기화 */
+function hubSyncAllKpiFromMock() {
+  const t = hubGetMockTables()
+  if (!t) return
+  const signups = t['dash-new-signups'] && t['dash-new-signups'].rows ? t['dash-new-signups'].rows : []
+  const pendingB2b = signups.filter((r) => /승인\s*대기/.test(String(r[4] || ''))).length
+  const sub = document.getElementById('hubKpiSignupsB2bPending')
+  if (sub) sub.textContent = 'B2B 승인 대기 ' + pendingB2b + '명'
+
+  const enRows = t['dash-today-enrollments'] && t['dash-today-enrollments'].rows
+  if (enRows) {
+    const el = document.getElementById('hubKpiEnrollments')
+    if (el) {
+      const cur = parseInt(el.textContent.replace(/\D/g, '') || '0', 10)
+      const n = enRows.length
+      if (cur !== n) updateDashboardKpi('hubKpiEnrollments', n, '건')
+    }
+  }
+
+  const uq = t['dash-urgent-queue']
+  if (uq && uq.sections && uq.sections.length >= 3) {
+    const n0 = uq.sections[0].rows.length
+    const n1 = uq.sections[1].rows.length
+    const n2 = uq.sections[2].rows.length
+    const total = n0 + n1 + n2
+    updateDashboardKpi('hubKpiUrgent', total, '건')
+    hubSetBadge('hubBadgeActionBank', n0)
+    hubSetBadge('hubBadgeActionB2b', n1)
+    hubSetBadge('hubBadgeActionInquiry', n2)
+  }
+}
+
+function hubDashboardDetailRenderActionTd(kind, sectionIndex, rowIndex, cells, dataCols, defaultLabel) {
+  const statusIdx = dataCols.indexOf('상태')
+  const status = statusIdx >= 0 ? String(cells[statusIdx] || '') : ''
+
+  if (kind === 'dash-new-signups') {
+    if (/승인\s*대기/.test(status)) {
+      return (
+        '<td class="p-3 text-center align-middle hub-demo-action-cell">' +
+        hubDashActionButtonHtml('승인', '', 'data-live-action="signup-approve" data-row-index="' + rowIndex + '"') +
+        '</td>'
+      )
+    }
+    return '<td class="p-3 text-center align-middle text-slate-300">—</td>'
+  }
+
+  if (kind === 'dash-urgent-queue' && sectionIndex !== undefined && sectionIndex !== null) {
+    if (sectionIndex === 0) {
+      return (
+        '<td class="p-3 text-center align-middle hub-demo-action-cell">' +
+        hubDashActionButtonHtml(
+          '입금확인',
+          'bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700',
+          'data-live-action="bank-confirm" data-section="0" data-row-index="' + rowIndex + '"',
+        ) +
+        '</td>'
+      )
+    }
+    if (sectionIndex === 1) {
+      return (
+        '<td class="p-3 text-center align-middle hub-demo-action-cell">' +
+        hubDashActionButtonHtml('승인', '', 'data-live-action="b2b-confirm" data-section="1" data-row-index="' + rowIndex + '"') +
+        '</td>'
+      )
+    }
+    if (sectionIndex === 2) {
+      return (
+        '<td class="p-3 text-center align-middle hub-demo-action-cell">' +
+        hubDashActionButtonHtml(
+          '답변하기',
+          'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700',
+          'data-live-action="qa-open" data-section="2" data-row-index="' + rowIndex + '"',
+        ) +
+        '</td>'
+      )
+    }
+  }
+
+  if (kind === 'dash-action-bank') {
+    return (
+      '<td class="p-3 text-center align-middle hub-demo-action-cell">' +
+      hubDashActionButtonHtml(
+        '입금확인',
+        'bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700',
+        'data-live-action="bank-standalone" data-row-index="' + rowIndex + '"',
+      ) +
+      '</td>'
+    )
+  }
+  if (kind === 'dash-action-b2b') {
+    return (
+      '<td class="p-3 text-center align-middle hub-demo-action-cell">' +
+      hubDashActionButtonHtml('승인', '', 'data-live-action="b2b-standalone" data-row-index="' + rowIndex + '"') +
+      '</td>'
+    )
+  }
+  if (kind === 'dash-action-inquiry') {
+    return (
+      '<td class="p-3 text-center align-middle hub-demo-action-cell">' +
+      hubDashActionButtonHtml(
+        '답변하기',
+        'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700',
+        'data-live-action="qa-open-standalone" data-row-index="' + rowIndex + '"',
+      ) +
+      '</td>'
+    )
+  }
+
   return (
-    '<button type="button" class="hub-demo-action-btn text-xs font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 px-3 py-1.5 rounded-lg shadow-sm ring-1 ring-emerald-500/20">' +
-    escapeHtml(label) +
-    '</button>'
+    '<td class="p-3 text-center align-middle hub-demo-action-cell">' +
+    hubDashActionButtonHtml(
+      defaultLabel || '확인',
+      '',
+      'data-live-action="generic-ok" data-kind="' +
+        escapeAttr(kind) +
+        '" data-row-index="' +
+        rowIndex +
+        '"',
+    ) +
+    '</td>'
   )
 }
 
-function hubDashboardDetailRenderTableRows(cols, rows, defaultActionLabel) {
-  const actionLabel = defaultActionLabel || '처리'
+function hubDashboardDetailRenderTableRows(cols, rows, defaultActionLabel, ctx) {
+  const kind = (ctx && ctx.kind) || ''
+  const sectionIndex = ctx && ctx.sectionIndex !== undefined ? ctx.sectionIndex : null
   const dataCols = cols.filter((c) => c !== '처리')
   return (rows || [])
     .map((cells, idx) => {
@@ -551,18 +782,75 @@ function hubDashboardDetailRenderTableRows(cols, rows, defaultActionLabel) {
           return '<td class="p-3 align-middle text-slate-800">' + hubDashRenderCell(colName, cell) + '</td>'
         })
         .join('')
-      const btn =
-        '<td class="p-3 text-center align-middle hub-demo-action-cell">' +
-        hubDashActionButtonHtml(actionLabel) +
-        '</td>'
-      return '<tr class="hover:bg-emerald-50/50 transition-colors" data-hub-demo-row="' + idx + '">' + tds + btn + '</tr>'
+      const actionTd = hubDashboardDetailRenderActionTd(kind, sectionIndex, idx, cells, dataCols, defaultActionLabel)
+      return (
+        '<tr class="hover:bg-emerald-50/50 transition-colors hub-dash-data-row" data-hub-demo-row="' +
+        idx +
+        '">' +
+        tds +
+        actionTd +
+        '</tr>'
+      )
     })
     .join('')
+}
+
+function hubDashboardDetailRenderQaSectionRows(cols, rows, sectionIndex, defaultAct) {
+  const dataCols = cols.filter((c) => c !== '처리')
+  const colSpan = cols.length
+  return (rows || [])
+    .map((cells, idx) => {
+      const tds = dataCols
+        .map((colName, i) => {
+          const cell = cells[i] != null ? cells[i] : ''
+          return '<td class="p-3 align-middle text-slate-800">' + hubDashRenderCell(colName, cell) + '</td>'
+        })
+        .join('')
+      const actionTd = hubDashboardDetailRenderActionTd('dash-urgent-queue', sectionIndex, idx, cells, dataCols, defaultAct)
+      const accId = 'hub-qa-acc-' + sectionIndex + '-' + idx
+      const accordion =
+        '<tr class="hub-qa-accordion hidden" id="' +
+        accId +
+        '"><td colspan="' +
+        colSpan +
+        '" class="p-4 bg-slate-50 border-t border-slate-100">' +
+        '<label class="block text-xs font-medium text-slate-600 mb-1">답변 작성</label>' +
+        '<textarea class="hub-qa-input w-full border border-slate-200 rounded-lg px-3 py-2 text-sm min-h-[4rem]" placeholder="답변을 입력하세요"></textarea>' +
+        '<div class="mt-2 flex justify-end gap-2">' +
+        '<button type="button" class="px-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white hover:bg-slate-50" data-live-action="qa-cancel" data-accordion="' +
+        accId +
+        '">취소</button>' +
+        '<button type="button" class="hub-dash-live-action px-3 py-1.5 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700" data-live-action="qa-send" data-section="2" data-row-index="' +
+        idx +
+        '">전송</button>' +
+        '</div></td></tr>'
+      return '<tr class="hub-dash-data-row">' + tds + actionTd + '</tr>' + accordion
+    })
+    .join('')
+}
+
+function hubRefreshOpenDashboardModal() {
+  const k = openHubDashboardDetailModal._currentKind
+  if (k) openHubDashboardDetailModal(k)
+}
+
+function hubFadeThenRefreshModal(tr) {
+  if (!tr) {
+    hubRefreshOpenDashboardModal()
+    return
+  }
+  tr.classList.add('hub-row-leaving')
+  const acc = tr.nextElementSibling
+  if (acc && acc.classList && acc.classList.contains('hub-qa-accordion')) acc.classList.add('hub-row-leaving')
+  setTimeout(() => {
+    hubRefreshOpenDashboardModal()
+  }, 460)
 }
 
 function openHubDashboardDetailModal(kind) {
   const cfg = getHubDashboardDemoTables()[kind]
   if (!cfg) return
+  openHubDashboardDetailModal._currentKind = kind
   const modal = document.getElementById('hubDashboardDetailModal')
   const titleEl = document.getElementById('hubDashboardDetailTitle')
   const subEl = document.getElementById('hubDashboardDetailSubtitle')
@@ -571,6 +859,11 @@ function openHubDashboardDetailModal(kind) {
   const thead = document.getElementById('hubDashboardDetailThead')
   const tbody = document.getElementById('hubDashboardDetailTbody')
   if (!modal || !titleEl || !subEl || !tableWrap || !sectionsWrap || !thead || !tbody) return
+
+  if (openHubDashboardDetailModal._esc) {
+    document.removeEventListener('keydown', openHubDashboardDetailModal._esc)
+    openHubDashboardDetailModal._esc = null
+  }
 
   titleEl.textContent = cfg.title
   subEl.textContent = cfg.subtitle
@@ -584,7 +877,7 @@ function openHubDashboardDetailModal(kind) {
     tbody.innerHTML = ''
     const defaultAct = cfg.actionLabel || '처리'
     sectionsWrap.innerHTML = cfg.sections
-      .map((sec) => {
+      .map((sec, secIdx) => {
         const cols = sec.columns || []
         const act = sec.actionLabel || defaultAct
         const theadRow =
@@ -598,7 +891,10 @@ function openHubDashboardDetailModal(kind) {
             )
             .join('') +
           '</tr>'
-        const body = hubDashboardDetailRenderTableRows(cols, sec.rows, act)
+        const body =
+          secIdx === 2
+            ? hubDashboardDetailRenderQaSectionRows(cols, sec.rows, secIdx, act)
+            : hubDashboardDetailRenderTableRows(cols, sec.rows, act, { kind: 'dash-urgent-queue', sectionIndex: secIdx })
         return (
           '<section class="rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-white ring-1 ring-violet-500/10">' +
           '<div class="px-4 py-3 bg-gradient-to-r from-emerald-50/90 to-violet-50/40 border-b border-slate-100">' +
@@ -635,7 +931,7 @@ function openHubDashboardDetailModal(kind) {
         .join('') +
       '</tr>'
     const actionLabel = cfg.actionLabel || '처리'
-    tbody.innerHTML = hubDashboardDetailRenderTableRows(cols, cfg.rows, actionLabel)
+    tbody.innerHTML = hubDashboardDetailRenderTableRows(cols, cfg.rows, actionLabel, { kind })
   }
 
   modal.classList.remove('hidden')
@@ -652,6 +948,7 @@ function openHubDashboardDetailModal(kind) {
 }
 
 window.openHubDashboardDetailModal = openHubDashboardDetailModal
+window.updateDashboardKpi = updateDashboardKpi
 
 function closeHubDashboardDetailModal() {
   const modal = document.getElementById('hubDashboardDetailModal')
@@ -681,6 +978,162 @@ function hubNavigateDashboardThenOpenModal(kind) {
   }
 }
 
+function hubModalLiveClickHandler(e) {
+  const btn = e.target.closest('[data-live-action]')
+  if (!btn) return
+  const action = btn.getAttribute('data-live-action')
+  const tables = hubGetMockTables()
+  if (!tables) return
+
+  if (action === 'qa-open') {
+    const ri = parseInt(btn.getAttribute('data-row-index'), 10)
+    const acc = document.getElementById('hub-qa-acc-2-' + ri)
+    if (acc) acc.classList.toggle('hidden')
+    return
+  }
+  if (action === 'qa-cancel') {
+    const id = btn.getAttribute('data-accordion')
+    const acc = id && document.getElementById(id)
+    if (acc) {
+      acc.classList.add('hidden')
+      const ta = acc.querySelector('.hub-qa-input')
+      if (ta) ta.value = ''
+    }
+    return
+  }
+
+  if (action === 'signup-approve') {
+    const idx = parseInt(btn.getAttribute('data-row-index'), 10)
+    const rows = tables['dash-new-signups'] && tables['dash-new-signups'].rows
+    const row = rows && rows[idx]
+    if (!row || !/승인\s*대기/.test(String(row[4]))) return
+    row[4] = '승인완료'
+    const tr = btn.closest('tr')
+    if (tr) {
+      const tds = tr.querySelectorAll('td')
+      if (tds[4]) tds[4].innerHTML = hubDashRenderCell('상태', '승인완료')
+      const cell = btn.closest('td')
+      if (cell) cell.innerHTML = '<span class="text-slate-400">—</span>'
+    }
+    hubToastBottom('성공적으로 처리되었습니다')
+    hubSyncAllKpiFromMock()
+    return
+  }
+
+  if (action === 'bank-confirm') {
+    const ri = parseInt(btn.getAttribute('data-row-index'), 10)
+    const uq = tables['dash-urgent-queue']
+    if (!uq || !uq.sections || !uq.sections[0].rows || uq.sections[0].rows[ri] == null) return
+    uq.sections[0].rows.splice(ri, 1)
+    const bank = tables['dash-action-bank']
+    if (bank && bank.rows && bank.rows[ri] !== undefined) bank.rows.splice(ri, 1)
+    hubToastBottom('입금 처리가 완료되었습니다')
+    hubSyncAllKpiFromMock()
+    hubFadeThenRefreshModal(btn.closest('tr'))
+    return
+  }
+
+  if (action === 'bank-standalone') {
+    const ri = parseInt(btn.getAttribute('data-row-index'), 10)
+    const bank = tables['dash-action-bank']
+    if (!bank || !bank.rows || bank.rows[ri] == null) return
+    bank.rows.splice(ri, 1)
+    const uq = tables['dash-urgent-queue']
+    if (uq && uq.sections && uq.sections[0].rows && uq.sections[0].rows[ri] !== undefined) uq.sections[0].rows.splice(ri, 1)
+    hubToastBottom('입금 처리가 완료되었습니다')
+    hubSyncAllKpiFromMock()
+    hubFadeThenRefreshModal(btn.closest('tr'))
+    return
+  }
+
+  if (action === 'b2b-confirm') {
+    const ri = parseInt(btn.getAttribute('data-row-index'), 10)
+    const uq = tables['dash-urgent-queue']
+    if (!uq || !uq.sections || !uq.sections[1].rows || uq.sections[1].rows[ri] == null) return
+    uq.sections[1].rows.splice(ri, 1)
+    const b2b = tables['dash-action-b2b']
+    if (b2b && b2b.rows && b2b.rows[ri] !== undefined) b2b.rows.splice(ri, 1)
+    hubToastBottom('성공적으로 처리되었습니다')
+    hubSyncAllKpiFromMock()
+    hubFadeThenRefreshModal(btn.closest('tr'))
+    return
+  }
+
+  if (action === 'b2b-standalone') {
+    const ri = parseInt(btn.getAttribute('data-row-index'), 10)
+    const b2b = tables['dash-action-b2b']
+    if (!b2b || !b2b.rows || b2b.rows[ri] == null) return
+    b2b.rows.splice(ri, 1)
+    const uq = tables['dash-urgent-queue']
+    if (uq && uq.sections && uq.sections[1].rows && uq.sections[1].rows[ri] !== undefined) uq.sections[1].rows.splice(ri, 1)
+    hubToastBottom('성공적으로 처리되었습니다')
+    hubSyncAllKpiFromMock()
+    hubFadeThenRefreshModal(btn.closest('tr'))
+    return
+  }
+
+  if (action === 'qa-open-standalone') {
+    if (!confirm('답변을 완료하고 이 문의를 목록에서 제거할까요?')) return
+    const ri = parseInt(btn.getAttribute('data-row-index'), 10)
+    const inq = tables['dash-action-inquiry']
+    if (!inq || !inq.rows || inq.rows[ri] == null) return
+    inq.rows.splice(ri, 1)
+    const uq = tables['dash-urgent-queue']
+    if (uq && uq.sections && uq.sections[2].rows && uq.sections[2].rows[ri] !== undefined) uq.sections[2].rows.splice(ri, 1)
+    hubToastBottom('성공적으로 처리되었습니다')
+    hubSyncAllKpiFromMock()
+    hubFadeThenRefreshModal(btn.closest('tr'))
+    return
+  }
+
+  if (action === 'qa-send') {
+    const ri = parseInt(btn.getAttribute('data-row-index'), 10)
+    const uq = tables['dash-urgent-queue']
+    if (!uq || !uq.sections || !uq.sections[2].rows || uq.sections[2].rows[ri] == null) return
+    uq.sections[2].rows.splice(ri, 1)
+    const inq = tables['dash-action-inquiry']
+    if (inq && inq.rows && inq.rows[ri] !== undefined) inq.rows.splice(ri, 1)
+    hubToastBottom('성공적으로 처리되었습니다')
+    hubSyncAllKpiFromMock()
+    const accTr = btn.closest('tr')
+    const dataTr = accTr && accTr.previousElementSibling
+    if (dataTr) dataTr.classList.add('hub-row-leaving')
+    if (accTr) accTr.classList.add('hub-row-leaving')
+    setTimeout(() => hubRefreshOpenDashboardModal(), 460)
+    return
+  }
+
+  if (action === 'generic-ok') {
+    const kind = btn.getAttribute('data-kind')
+    const ri = parseInt(btn.getAttribute('data-row-index'), 10)
+    const cfg = kind && tables[kind]
+    if (!cfg || !cfg.rows || cfg.rows[ri] == null) return
+    cfg.rows.splice(ri, 1)
+    if (kind === 'dash-action-bank' && tables['dash-urgent-queue']?.sections?.[0]?.rows)
+      tables['dash-urgent-queue'].sections[0].rows.splice(ri, 1)
+    if (kind === 'dash-action-b2b' && tables['dash-urgent-queue']?.sections?.[1]?.rows)
+      tables['dash-urgent-queue'].sections[1].rows.splice(ri, 1)
+    if (kind === 'dash-action-inquiry' && tables['dash-urgent-queue']?.sections?.[2]?.rows)
+      tables['dash-urgent-queue'].sections[2].rows.splice(ri, 1)
+    hubToastBottom('성공적으로 처리되었습니다')
+    hubSyncAllKpiFromMock()
+    if (kind === 'dash-today-revenue') hubRecalcRevenueKpi()
+    hubFadeThenRefreshModal(btn.closest('tr'))
+  }
+}
+
+function hubRecalcRevenueKpi() {
+  const t = hubGetMockTables()
+  if (!t || !t['dash-today-revenue'] || !t['dash-today-revenue'].rows) return
+  let sum = 0
+  t['dash-today-revenue'].rows.forEach((r) => {
+    const amt = String(r[2] || '').replace(/[^\d]/g, '')
+    sum += parseInt(amt, 10) || 0
+  })
+  const el = document.getElementById('hubKpiRevenue')
+  if (el) el.textContent = '₩ ' + sum.toLocaleString('ko-KR')
+}
+
 function bindHubDashboardDetailDemo() {
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-hub-dash-detail]')
@@ -696,19 +1149,9 @@ function bindHubDashboardDetailDemo() {
   })
 
   const modal = document.getElementById('hubDashboardDetailModal')
-  if (modal) {
-    modal.addEventListener('click', (e) => {
-      const btn = e.target.closest('.hub-demo-action-btn')
-      if (!btn) return
-      const tr = btn.closest('tr')
-      if (!tr) return
-      tr.classList.add('bg-emerald-50', 'transition-colors')
-      const cell = btn.closest('.hub-demo-action-cell')
-      if (cell) {
-        cell.innerHTML = '<span class="text-emerald-700 font-semibold text-sm py-1 inline-block">완료</span>'
-      }
-    })
-  }
+  if (modal) modal.addEventListener('click', hubModalLiveClickHandler)
+
+  hubSyncAllKpiFromMock()
 }
 
 async function loadDashboardSideLists() {
@@ -949,6 +1392,10 @@ window.openHubNewCourseModal = function () {
         <option value="published">published</option>
       </select>
       ${hubCourseCategoryOptions('CLASSIC')}
+      <label class="block text-sm font-medium">다음 개강일 (YYYY-MM-DD, 선택)</label>
+      <input type="date" id="hubCourseNextCohort" class="w-full border rounded px-3 py-2" value="">
+      <label class="block text-sm font-medium">일정 안내 (선택, 자유 입력)</label>
+      <textarea id="hubCourseScheduleInfo" rows="2" class="w-full border rounded px-3 py-2" placeholder="예: 매월 1·15일 개강"></textarea>
       <button type="button" onclick="saveCourseBasics()" class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">등록</button>
     </div>`
   const lessons = document.getElementById('courseTabPanelLessons')
@@ -996,6 +1443,10 @@ window.openCourseModal = async function (courseId) {
         <option value="published" ${cr.status === 'published' ? 'selected' : ''}>published</option>
       </select>
       ${hubCourseCategoryOptions(cgVal)}
+      <label class="block text-sm font-medium">다음 개강일 (YYYY-MM-DD, 선택)</label>
+      <input type="date" id="hubCourseNextCohort" class="w-full border rounded px-3 py-2" value="${escapeAttr((cr.next_cohort_start_date || '').slice(0, 10))}">
+      <label class="block text-sm font-medium">일정 안내 (선택, 자유 입력)</label>
+      <textarea id="hubCourseScheduleInfo" rows="2" class="w-full border rounded px-3 py-2" placeholder="예: 매월 1·15일 개강">${escapeHtml(cr.schedule_info || '')}</textarea>
       <button type="button" onclick="saveCourseBasics()" class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">저장</button>
     </div>`
   renderLessonEditors(courseId)
@@ -1090,6 +1541,8 @@ window.saveCourseBasics = async function () {
     status,
     thumbnail_url: thumb,
     category_group,
+    next_cohort_start_date,
+    schedule_info: schedule_info.trim() || null,
   })
   if (res.success) {
     showToast('저장되었습니다.', 'success')

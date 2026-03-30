@@ -9,6 +9,7 @@
 
 import { Hono } from 'hono'
 import type { Bindings } from '../types/database'
+import { buildCourseScheduleContextBlock } from '../config/course-schedule'
 import { MINDSTORY_LMS_AI_GUIDE_SYSTEM } from '../utils/ai-chat-system-prompt'
 
 const aiChat = new Hono<{ Bindings: Bindings }>()
@@ -92,13 +93,33 @@ aiChat.post('/chat', async (c) => {
       `마인드스토리의 공식 입장은 다음과 같습니다.\n` +
       `- 국가 공인/공인 민간 자격증은 마인드스토리에서 직접 발행하지 않습니다.\n` +
       `- 다만, **자격기본법**에 의한 **등록 민간자격증**과 연계된 과정을 운영하고 있습니다.\n` +
-      `- 과정별 발급 주체, 등록번호, 취득 조건(출석·평가·실습)은 상이할 수 있어, 최종 기준은 과정 상세 페이지와 담당자 안내를 확인해 주세요.\n\n` +
+      `- 과정별 발급 주체, 등록번호, 취득 조건(출석·평가·실습)은 상이할 수 있어, 최종 기준은 각 과정 상세 페이지에 안내된 내용을 기준으로 합니다.\n\n` +
       `제가 ${displayName}을 위해 과정별 자격 연계 여부와 준비 절차를 상세히 찾아보겠습니다.`
     return c.json({ success: true, reply: fixedReply })
   }
 
+  let siteDataBlock = ''
+  let courseRowCount = -1
+  try {
+    const { DB } = c.env
+    const listed = await DB.prepare(
+      `SELECT id, title, category_group FROM courses WHERE status IN ('published', 'active') ORDER BY IFNULL(display_order, 0) ASC, id ASC`
+    ).all<{ id: number; title: string; category_group: string | null }>()
+    const rows = listed.results || []
+    courseRowCount = rows.length
+    siteDataBlock = buildCourseScheduleContextBlock(rows)
+    if (courseRowCount === 0) {
+      console.warn('[ai-chat] D1 courses: 공개 강좌 0건 — 브랜드·카탈로그 URL만 컨텍스트에 포함')
+    }
+  } catch (e) {
+    console.warn('[ai-chat] course schedule context (D1 오류, 브랜드 블록만 사용)', e)
+    siteDataBlock = buildCourseScheduleContextBlock([])
+    courseRowCount = -2
+  }
+
   const messages: { role: 'system' | ChatRole; content: string }[] = [
-    { role: 'system', content: MINDSTORY_LMS_AI_GUIDE_SYSTEM }
+    { role: 'system', content: MINDSTORY_LMS_AI_GUIDE_SYSTEM },
+    { role: 'system', content: siteDataBlock }
   ]
 
   if (summaryRaw) {
@@ -135,6 +156,14 @@ aiChat.post('/chat', async (c) => {
   messages.push({ role: 'user', content: userMessage })
 
   try {
+    console.log('[ai-chat] LLM 전송 직전 messages 전문', {
+      model,
+      courseRowCount,
+      messageCount: messages.length,
+      roles: messages.map((m) => m.role),
+      messages: messages.map((m) => ({ role: m.role, content: m.content }))
+    })
+
     const res = await fetch(`${base}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -144,7 +173,7 @@ aiChat.post('/chat', async (c) => {
       body: JSON.stringify({
         model: model,
         messages,
-        temperature: 0.45,
+        temperature: 0.25,
         max_tokens: 650
       })
     })

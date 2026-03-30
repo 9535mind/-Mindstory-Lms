@@ -76,7 +76,7 @@ export function siteAiChatWidgetMarkup(): string {
       </header>
       <div class="min-h-0 flex-1 overflow-y-auto bg-slate-50/40 p-4" id="ms-ai-chat-messages">
         <div id="ms-ai-chat-initial-greeting" class="rounded-2xl rounded-tl-md border border-white/30 bg-white/70 px-3.5 py-2.5 text-sm leading-relaxed text-slate-700 shadow-sm backdrop-blur-sm">
-          안녕하세요, 방문자님! 오직 방문자님을 위해 대기 중인 마인드스토리 전용 AI 비서입니다. 무엇을 도와드릴까요?
+          안녕하세요, <strong>방문자님</strong>! 오직 <strong>방문자님</strong>의 성장을 위해 대기 중인 <strong>마인드스토리 전용 AI 비서</strong>입니다. 마인드스토리의 교육 라인업 안내부터 <strong>자격기본법에 따른 등록 민간자격증</strong> 연계 상담까지, 정성을 다해 보좌하겠습니다. 무엇을 도와드릴까요?
         </div>
       </div>
       <div class="shrink-0 border-t border-slate-200/50 bg-white/70 px-3 py-2 backdrop-blur-sm">
@@ -172,47 +172,50 @@ export function siteAiChatWidgetScript(): string {
     var openClasses = ['opacity-100', 'scale-100', 'pointer-events-auto'];
     var closedClasses = ['opacity-0', 'scale-95', 'pointer-events-none', 'invisible'];
 
-    function toHonorificName(rawName) {
-      var t = String(rawName || '').trim();
-      if (!t) return '방문자님';
-      var plain = t.replace(/\s*님$/, '').trim();
-      if (!plain) return '방문자님';
-      return plain === '방문자' ? '방문자님' : plain + '님';
-    }
-
-    function readHeaderUserName() {
-      var ids = ['headerUserName', 'mHeaderUserName', 'adminName'];
-      for (var i = 0; i < ids.length; i++) {
-        var el = document.getElementById(ids[i]);
-        var txt = el && el.textContent ? el.textContent.trim() : '';
-        if (txt) return txt;
-      }
-      return '';
-    }
-
-    function resolveGreetingName() {
+    /** 풀네임 등 표시용 (님 접미사 없음). 없으면 방문자 */
+    function resolveGreetingBaseName() {
       try {
         if (typeof AuthManager !== 'undefined' && AuthManager && typeof AuthManager.getUser === 'function') {
           var u = AuthManager.getUser();
           var n = u && u.name ? String(u.name).trim() : '';
-          if (n) return toHonorificName(n);
+          if (n) return n.replace(/\s*님$/, '').trim() || '방문자';
         }
       } catch (e) {}
-      var headerName = readHeaderUserName();
-      if (headerName) return toHonorificName(headerName);
-      return '방문자님';
+      var ids = ['headerUserName', 'mHeaderUserName', 'adminName'];
+      for (var i = 0; i < ids.length; i++) {
+        var el = document.getElementById(ids[i]);
+        var txt = el && el.textContent ? el.textContent.trim() : '';
+        if (txt) {
+          var plain = txt.replace(/\s*님$/, '').trim();
+          if (plain) return plain;
+        }
+      }
+      return '방문자';
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function buildGreetingHtml(baseName) {
+      var userName = escapeHtml(String(baseName || '방문자').trim() || '방문자');
+      return (
+        '안녕하세요, <strong>' +
+        userName +
+        '님</strong>! 오직 <strong>' +
+        userName +
+        '님</strong>의 성장을 위해 대기 중인 <strong>마인드스토리 전용 AI 비서</strong>입니다. 마인드스토리의 교육 라인업 안내부터 <strong>자격기본법에 따른 등록 민간자격증</strong> 연계 상담까지, 정성을 다해 보좌하겠습니다. 무엇을 도와드릴까요?'
+      );
     }
 
     function applyInitialGreetingName() {
       var greetingEl = document.getElementById('ms-ai-chat-initial-greeting');
       if (!greetingEl) return;
-      var displayName = resolveGreetingName();
-      greetingEl.textContent =
-        '안녕하세요, ' +
-        displayName +
-        '! 오직 ' +
-        displayName +
-        '을 위해 대기 중인 마인드스토리 전용 AI 비서입니다. 무엇을 도와드릴까요?';
+      greetingEl.innerHTML = buildGreetingHtml(resolveGreetingBaseName());
     }
 
     function setOpen(open) {
@@ -265,7 +268,7 @@ export function siteAiChatWidgetScript(): string {
         message: userText,
         summary: summary || undefined,
         history: history,
-        userName: resolveGreetingName()
+        userName: resolveGreetingBaseName()
       };
     }
 
