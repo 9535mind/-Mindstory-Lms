@@ -27,8 +27,6 @@ import { SITE_POPUP_SCRIPT_TAG } from '../utils/site-popup-script'
 const pages = new Hono<{ Bindings: Bindings; Variables: { user?: User } }>()
 pages.use('*', optionalAuth)
 
-/** GET /forest.html 은 Cloudflare _routes.json exclude 로 Worker 우회·정적 서빙 (ASSETS.fetch 재진입 루프 방지). */
-
 // 공통 헤더/푸터 컴포넌트 (SSR: 관리자 미처리 문의 시 커맨드 센터 펄스)
 const getHeader = async (c: Context) => {
   const adminCommandPulse = await resolveAdminCommandPulse(c)

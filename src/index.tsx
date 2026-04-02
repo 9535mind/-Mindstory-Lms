@@ -224,10 +224,6 @@ app.get('/admin-users.html', (c) => c.redirect('/admin/members', 302))
 app.get('/admin-users', (c) => c.redirect('/admin/members', 302))
 app.get('/pg-business-info.html', (c) => c.redirect('/pg-business-info', 302))
 
-// 유아숲 행동관찰 — /forest.html 은 _routes.json exclude 정적 서빙(Worker 미호출). 여기서는 짧은 경로만 1회 리다이렉트.
-app.get('/forest', (c) => c.redirect('/forest.html', 302))
-app.get('/유아숲 행동관찰.html', (c) => c.redirect('/forest.html', 302))
-
 // 페이지 라우트 (약관·개인정보·환불은 다른 / 라우터보다 먼저 등록)
 app.route('/', landing)  // 신규 랜딩 페이지 (Phase 3)
 app.route('/', pagesLegal) // /terms, /privacy, /refund
