@@ -27,22 +27,7 @@ import { SITE_POPUP_SCRIPT_TAG } from '../utils/site-popup-script'
 const pages = new Hono<{ Bindings: Bindings; Variables: { user?: User } }>()
 pages.use('*', optionalAuth)
 
-/**
- * 유아숲 행동관찰 단일 페이지 — 공식 URL https://mindstory.kr/forest.html
- * Cloudflare Pages: dist에 포함된 정적 forest.html 을 ASSETS 로 조회해 그대로 반환합니다.
- * (Node fs 사용 불가 — 배포 번들의 정적 자산만 사용)
- */
-pages.get('/forest.html', async (c) => {
-  const assets = c.env.ASSETS
-  if (!assets) {
-    return c.text('forest.html: ASSETS 바인딩 없음(로컬은 npm run preview 권장)', 404)
-  }
-  const res = await assets.fetch(c.req.raw)
-  if (res.status === 404) {
-    return c.text('forest.html 정적 파일을 찾을 수 없습니다. 빌드에 public/forest.html 이 포함됐는지 확인하세요.', 404)
-  }
-  return res
-})
+/** GET /forest.html 은 Cloudflare _routes.json exclude 로 Worker 우회·정적 서빙 (ASSETS.fetch 재진입 루프 방지). */
 
 // 공통 헤더/푸터 컴포넌트 (SSR: 관리자 미처리 문의 시 커맨드 센터 펄스)
 const getHeader = async (c: Context) => {

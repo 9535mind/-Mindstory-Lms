@@ -21,6 +21,8 @@ const ROUTES = {
     '/static/*',
     '/pg-business-info.html',
     '/mindstory-4gunja-temperament.html',
+    /** Worker·ASSETS.fetch 재진입 루프 방지 — 에지 정적만 서빙 */
+    '/forest.html',
     '/유아숲 행동관찰.html',
     '/build.txt',
     '/google7186e759c88da5d4.html',

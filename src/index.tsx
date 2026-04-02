@@ -224,7 +224,7 @@ app.get('/admin-users.html', (c) => c.redirect('/admin/members', 302))
 app.get('/admin-users', (c) => c.redirect('/admin/members', 302))
 app.get('/pg-business-info.html', (c) => c.redirect('/pg-business-info', 302))
 
-// 유아숲 행동관찰 단일 도구 — 본문은 src/routes/pages.ts 의 GET /forest.html (ASSETS)
+// 유아숲 행동관찰 — /forest.html 은 _routes.json exclude 정적 서빙(Worker 미호출). 여기서는 짧은 경로만 1회 리다이렉트.
 app.get('/forest', (c) => c.redirect('/forest.html', 302))
 app.get('/유아숲 행동관찰.html', (c) => c.redirect('/forest.html', 302))
 
