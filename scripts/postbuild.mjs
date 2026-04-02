@@ -40,6 +40,15 @@ if (existsSync(uploadsSrc)) {
   console.log('⚠️  public/uploads 없음 — 건너뜀')
 }
 
+/** Vite copyPublicDir 외에도 단일 HTML 도구가 dist 루트에 반드시 있도록 보강 */
+const forestHtml = join(publicDir, 'forest.html')
+if (existsSync(forestHtml)) {
+  cpSync(forestHtml, join(dist, 'forest.html'))
+  console.log('✅ forest.html → dist 루트 명시 복사')
+} else {
+  console.log('⚠️  public/forest.html 없음 — /forest.html 404 가능')
+}
+
 writeFileSync(join(dist, '_routes.json'), JSON.stringify(ROUTES, null, 2) + '\n', 'utf8')
 console.log('✅ dist/_routes.json 작성 (정적 exclude: /pg-business-info.html 등)')
 
