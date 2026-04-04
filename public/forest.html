@@ -291,7 +291,7 @@
         <h1 class="text-2xl md:text-3xl font-black text-[#2D4A3E] tracking-tight leading-tight px-1">어린이 4군자 기질검사</h1>
         <div id="ms-header-age-tabs" class="print-hidden max-w-md mx-auto w-full px-2 mt-5 mb-1" aria-label="연령·문항 세트 선택"></div>
         <p class="mt-2 text-[10px] text-ms-muted leading-snug px-2 max-w-md mx-auto print-hidden">
-            통합 엔진 v1.5 · <span class="font-black text-[#1B5E20] tracking-wide">[SCHEMA v14.0 - FINAL]</span> · 보고서 v2.0
+            통합 엔진 v1.5 · <span class="font-black text-[#1B5E20] tracking-wide">[SCHEMA v15.0]</span> · 보고서 v2.0
         </p>
     </header>
 
@@ -337,10 +337,79 @@
         '!bg-[rgba(255,152,0,0.18)] !text-[#E65100] border-0 shadow-sm shadow-[#FF9800]/25 ring-0 outline-none hover:!bg-[rgba(255,152,0,0.26)]';
 
     /**
-     * 유아부 설정 화면 전용: 기관 검색·▼(전체) 목록에 합쳐지는 사전 명단.
-     * 운영 전에 아래 배열에 어린이집·유치원 등 기관명 문자열을 추가하면 됩니다.
+     * v15.0 기관 사전 DB (코드 내장). 검색·▼ 전체 목록·초성 검색에 사용.
      */
-    const PRESET_FOREST_DAYCARE_NAMES = [];
+    const INSTITUTION_DATABASE = [
+        '삼계중앙어린이집',
+        '사창유치원',
+        '장성중앙초 병설유치원',
+        '장성성산초병설유치원',
+        '진원동초 병설유치원',
+        '장성성모유치원',
+        '공립정다운상무어린이집',
+        '공립소중한어린이집',
+        '진원초병설유치원',
+        '동화초병설유치원',
+        '삼서초 병설유치원',
+        '분향초 병설유치원',
+        '서삼초병설유치원',
+        '북이 병설유치원',
+        '월평초병설유치원',
+        '북일초병설유치원',
+        '약수초 병설유치원',
+        '기독어린이집',
+        '공립성모어린이집',
+        '늘푸른어린이집',
+        '공립사임당예랑어린이집',
+        '공립로제비앙어린이집',
+        '한마음자연생태유치원'
+    ];
+
+    /** 유아부 설정 화면: 사전 명단 = INSTITUTION_DATABASE */
+    const PRESET_FOREST_DAYCARE_NAMES = INSTITUTION_DATABASE;
+
+    const HANGUL_SYLLABLE_START = 0xac00;
+    const HANGUL_SYLLABLE_END = 0xd7a3;
+    /** ㄱ ㄲ ㄴ ㄷ ㄸ ㄹ ㅁ ㅂ ㅃ ㅅ ㅆ ㅇ ㅈ ㅉ ㅊ ㅋ ㅌ ㅍ ㅎ */
+    const CHOSEONG_JAMO = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+
+    function isHangulConsonantJamoChar(ch) {
+        const c = ch.charCodeAt(0);
+        return c >= 0x3131 && c <= 0x314e;
+    }
+
+    /** 검색어가 호환 자음(ㄱ~ㅎ)만으로 이루어졌는지 — 초성 검색 모드 */
+    function isChoseongOnlyQueryStr(str) {
+        const s = String(str || '').trim();
+        if (!s) return false;
+        for (let i = 0; i < s.length; i++) {
+            if (!isHangulConsonantJamoChar(s[i])) return false;
+        }
+        return true;
+    }
+
+    function initialChoseongFromHangulSyllable(ch) {
+        const c = ch.charCodeAt(0);
+        if (c >= HANGUL_SYLLABLE_START && c <= HANGUL_SYLLABLE_END) {
+            const idx = Math.floor((c - HANGUL_SYLLABLE_START) / 588);
+            return CHOSEONG_JAMO[idx] || '';
+        }
+        return '';
+    }
+
+    /** 기관명에서 한글 음절마다 초성만 뽑은 문자열 (예: 삼계중 → ㅅㄱㅈ) */
+    function extractChoseongSequenceFromName(name) {
+        const s = String(name || '');
+        let out = '';
+        for (let i = 0; i < s.length; i++) {
+            const ch = s[i];
+            const cc = ch.charCodeAt(0);
+            if (cc >= HANGUL_SYLLABLE_START && cc <= HANGUL_SYLLABLE_END) {
+                out += initialChoseongFromHangulSyllable(ch);
+            }
+        }
+        return out;
+    }
 
     function normalizePresetInstitutionNames(arr) {
         const seen = new Set();
@@ -366,11 +435,11 @@
     }
 
     /**
-     * SCHEMA — v14.0 UI · 진행자 입력 지연 + v10 빌더
+     * SCHEMA — v15.0 기관 DB·초성 검색 · v14 UI · 진행자 입력 지연 + v10 빌더
      * 톤: MINDSTORY V1 · 관찰과 공감 · 따뜻한 어휘
      */
     const SCHEMA = {
-        version: '14.0',
+        version: '15.0',
         categories: ['난초', '대나무', '국화', '매화'],
         /** 동점 시 정렬: 매(매화) → 란(난초) → 국(국화) → 죽(대나무) */
         temperamentTieOrder: ['매화', '난초', '국화', '대나무'],
@@ -2699,6 +2768,7 @@
                                     value="${this.esc(nameVal)}" autocomplete="organization" aria-autocomplete="list" aria-expanded="false" aria-controls="ms-inst-dropdown"
                                     oninput="MS.onNameInput(this.value)"
                                     onfocus="MS.onInstNameFocus()"
+                                    onblur="MS.onInstNameBlur(this)"
                                     onkeydown="MS.onInstNameKeydown(event)">
                                 <button type="button" id="ms-inst-toggle-all"
                                     class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center w-11 h-11 min-h-[44px] min-w-[44px] rounded-2xl text-[#2D4A3E] hover:bg-[rgba(240,253,244,0.75)] active:bg-[rgba(240,253,244,0.9)] transition-colors print-hidden"
@@ -2707,7 +2777,7 @@
                                     onclick="MS.toggleInstListAll(event)">
                                     <span class="text-base font-bold leading-none select-none" aria-hidden="true">▼</span>
                                 </button>
-                                <div id="ms-inst-dropdown" class="hidden absolute left-0 right-0 top-full mt-2 z-50 max-h-[min(50vh,22rem)] overflow-y-auto rounded-2xl border-2 border-[#2D4A3E] bg-[#FAF8F3] shadow-[0_12px_40px_rgba(45,74,62,0.12)] custom-scrollbar"
+                                <div id="ms-inst-dropdown" class="hidden absolute left-0 right-0 top-full mt-2 z-50 max-h-[min(50vh,22rem)] overflow-y-auto rounded-2xl border-2 border-[#5D4037]/25 bg-white shadow-[0_12px_40px_rgba(93,64,55,0.12)] custom-scrollbar"
                                     role="listbox" aria-label="기관 목록"></div>
                             </div>
                         </div>
@@ -3093,6 +3163,10 @@
 
         _advT: {},
         _instDropdownAll: false,
+        /** 기관 설정 모달 전용 ▼ 전체 목록 */
+        _modalInstDropdownAll: false,
+        /** 드롭다운 키보드(↑↓) 하이라이트 인덱스 */
+        _instDropdownActiveIndex: -1,
         _instSuggestCloseBound: false,
 
         getExaminerName() {
@@ -3116,48 +3190,200 @@
                 return false;
             }
         },
+        /** 기관명 키워드로 대상·세부 유형 자동 설정(입력 시). 수동으로 언제든 변경 가능 */
+        applySmartKeywordFromInstName(raw) {
+            const t = String(raw || '');
+            if (!t.trim()) return;
+            if (t.includes('지역아동') || t.includes('아동센터')) {
+                STATE.targetGroup = 'elementary';
+                STATE.setupTypeOverride = '지역아동센터';
+                return;
+            }
+            if (t.includes('방과후')) {
+                STATE.targetGroup = 'elementary';
+                STATE.setupTypeOverride = '방과후학교';
+                return;
+            }
+            if (t.includes('유치원')) {
+                STATE.targetGroup = 'preschool';
+                STATE.setupTypeOverride = '유치원';
+                return;
+            }
+            if (t.includes('어린이집')) {
+                STATE.targetGroup = 'preschool';
+                STATE.setupTypeOverride = '어린이집';
+                return;
+            }
+        },
+        onModalInstNameInput(el) {
+            const v = String((el && el.value) || '');
+            let start = 0;
+            let end = 0;
+            try {
+                start = el.selectionStart;
+                end = el.selectionEnd;
+            } catch (_) {
+                /* ignore */
+            }
+            MS._modalInstDropdownAll = false;
+            STATE.searchTerm = v;
+            const match = STATE.institutions.find((i) => String(i.name).trim() === v.trim());
+            STATE.selectedId = match ? match.id : null;
+            if (match) {
+                STATE.setupTypeOverride = null;
+            } else {
+                MS.applySmartKeywordFromInstName(v);
+            }
+            try {
+                STATE.persist();
+            } catch (_) {
+                /* ignore */
+            }
+            MS.openNewExamPrepModal();
+            requestAnimationFrame(() => {
+                const n = document.getElementById('ms-modal-inst-name');
+                if (!n) return;
+                n.focus();
+                try {
+                    if (typeof start === 'number' && typeof end === 'number') {
+                        n.setSelectionRange(start, end);
+                    }
+                } catch (_) {
+                    /* ignore */
+                }
+                MS.updateModalInstDropdown();
+            });
+        },
+        setPrepModalType(ty) {
+            const valid = ['어린이집', '유치원', '기타', '지역아동센터', '방과후학교'];
+            if (!valid.includes(ty)) return;
+            const sel = STATE.selected();
+            if (sel) {
+                sel.type = ty;
+                sel.targetGroup = ty === '지역아동센터' || ty === '방과후학교' ? 'elementary' : 'preschool';
+                STATE.targetGroup = sel.targetGroup;
+                STATE.setupTypeOverride = null;
+            } else {
+                STATE.setupTypeOverride = ty;
+                STATE.targetGroup = ty === '지역아동센터' || ty === '방과후학교' ? 'elementary' : 'preschool';
+            }
+            try {
+                STATE.persist();
+            } catch (_) {
+                /* ignore */
+            }
+            MS.openNewExamPrepModal();
+        },
         openNewExamPrepModal() {
             const root = document.getElementById('ms-modal-root');
             if (!root) return;
-            const name = String(MS.getExaminerName() || '').trim();
+            const examinerName = String(MS.getExaminerName() || '').trim();
+            const sel = STATE.selected();
+            const instDraft = String(STATE.searchTerm || (sel ? sel.name : '') || '').trim();
             const tg = STATE.targetGroup === 'elementary' ? 'elementary' : 'preschool';
+            const nameVal = instDraft || STATE.searchTerm || (sel ? sel.name : '');
+            const type = sel ? sel.type : STATE.setupTypeOverride || STATE.guessType(nameVal);
+            const tgSetup = tg;
+            let typeForUi = type;
+            if (tgSetup === 'elementary' && (type === '어린이집' || type === '유치원' || type === '기타')) {
+                typeForUi = '방과후학교';
+            }
+            if (tgSetup === 'preschool' && (type === '지역아동센터' || type === '방과후학교')) {
+                typeForUi = '어린이집';
+            }
             const base =
-                'ms-btn flex-1 min-h-[48px] px-3 py-3 font-bold text-xs rounded-full transition-colors duration-200';
+                'ms-btn flex-1 min-h-[44px] px-3 py-2.5 font-bold text-xs rounded-full transition-colors duration-200';
             const tabPs = tg === 'preschool' ? TAB_AGE_PS_ON : TAB_AGE_PS_OFF;
             const tabEl = tg === 'elementary' ? TAB_AGE_EL_ON : TAB_AGE_EL_OFF;
+            const typeRowHtml =
+                tgSetup === 'elementary'
+                    ? `<div class="flex flex-wrap gap-2 mb-4">
+                            <button type="button" class="ms-btn flex-1 min-w-[120px] min-h-[44px] py-2.5 font-bold border-2 text-xs ${typeForUi === '지역아동센터' ? 'border-[#FF9800] bg-[rgba(255,152,0,0.14)] text-[#2D4A3E] shadow-sm' : 'border-ms text-ms-muted'}"
+                                onclick="MS.setPrepModalType('지역아동센터')">지역아동센터</button>
+                            <button type="button" class="ms-btn flex-1 min-w-[120px] min-h-[44px] py-2.5 font-bold border-2 text-xs ${typeForUi === '방과후학교' ? 'border-[#FF9800] bg-[rgba(255,152,0,0.14)] text-[#2D4A3E] shadow-sm' : 'border-ms text-ms-muted'}"
+                                onclick="MS.setPrepModalType('방과후학교')">방과후·기타</button>
+                        </div>`
+                    : `<div class="flex flex-wrap gap-2 mb-4">
+                            <button type="button" class="ms-btn flex-1 min-w-[88px] min-h-[44px] py-2.5 font-bold border-2 text-xs ${typeForUi === '어린이집' ? 'border-[#03C75A] bg-[rgba(3,199,90,0.12)] text-[#2D4A3E] shadow-sm' : 'border-ms text-ms-muted'}"
+                                onclick="MS.setPrepModalType('어린이집')">어린이집</button>
+                            <button type="button" class="ms-btn flex-1 min-w-[88px] min-h-[44px] py-2.5 font-bold border-2 text-xs ${typeForUi === '유치원' ? 'border-[#03C75A] bg-[rgba(3,199,90,0.12)] text-[#2D4A3E] shadow-sm' : 'border-ms text-ms-muted'}"
+                                onclick="MS.setPrepModalType('유치원')">유치원</button>
+                            <button type="button" class="ms-btn flex-1 min-w-[88px] min-h-[44px] py-2.5 font-bold border-2 text-xs ${typeForUi === '기타' ? 'border-[#03C75A] bg-[rgba(3,199,90,0.12)] text-[#2D4A3E] shadow-sm' : 'border-ms text-ms-muted'}"
+                                onclick="MS.setPrepModalType('기타')">기타</button>
+                        </div>`;
             root.className = 'print-hidden fixed inset-0 z-[200] flex items-center justify-center p-4';
             root.innerHTML = `
                 <div class="absolute inset-0 bg-black/45" onclick="MS.closeForestModal()" aria-hidden="true"></div>
-                <div class="relative w-full max-w-md rounded-[2rem] bg-[#FDFBF7] shadow-2xl border border-[#2D4A3E]/12 p-6 md:p-8" onclick="event.stopPropagation()">
-                    <h2 id="ms-modal-title" class="text-lg md:text-xl font-black text-[#2D4A3E] mb-2 text-center leading-tight">기관 설정 및 검사 준비</h2>
-                    <p class="text-xs text-ms-muted mb-4 text-center leading-relaxed">진행자(해설사) 성함을 입력하고 대상(유아·초등)을 선택한 뒤 검사 설정으로 이동합니다.</p>
-                    <label for="ms-examiner-name-modal" class="block text-xs font-bold text-ms-muted mb-2 ml-0.5 tracking-widest">진행자(해설사) 성함</label>
-                    <input id="ms-examiner-name-modal" type="text" maxlength="40" autocomplete="name" placeholder="필수"
-                        class="w-full ms-input px-4 py-3.5 text-center font-bold rounded-2xl mb-5 text-[#2D4A3E]"
-                        value="${UI.esc(name)}"
-                        oninput="MS.onExaminerNameInput(this.value)" />
-                    <span class="block text-xs font-bold text-ms-muted mb-2 ml-0.5 tracking-widest">대상 (문항뱅크)</span>
-                    <div class="flex gap-2 mb-3">
+                <div class="relative w-full max-w-md rounded-[1.75rem] bg-[#FDFBF7] shadow-2xl border border-[#2D4A3E]/12 p-5 md:p-6" onclick="event.stopPropagation()">
+                    <h2 id="ms-modal-title" class="text-base md:text-lg font-black text-[#2D4A3E] mb-1 text-center leading-tight">기관 설정</h2>
+                    <label for="ms-modal-inst-name" class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">기관명</label>
+                    <div class="relative z-40 mb-2">
+                        <input id="ms-modal-inst-name" type="text" maxlength="120" autocomplete="organization" placeholder="예: 삼계중앙어린이집 · ㅅ 으로 초성 검색"
+                            class="w-full ms-input pl-4 pr-14 py-3 text-center font-bold rounded-2xl text-[#2D4A3E] text-sm"
+                            value="${UI.esc(instDraft)}"
+                            aria-autocomplete="list" aria-expanded="false" aria-controls="ms-modal-inst-dropdown"
+                            oninput="MS.onModalInstNameInput(this)"
+                            onfocus="MS.onModalInstNameFocus()"
+                            onblur="MS.onModalInstNameBlur(this)"
+                            onkeydown="MS.onModalInstNameKeydown(event)" />
+                        <button type="button" id="ms-modal-inst-toggle-all"
+                            class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center w-11 h-11 min-h-[44px] min-w-[44px] rounded-2xl text-[#5D4037] hover:bg-[rgba(212,163,115,0.2)] active:bg-[rgba(212,163,115,0.28)] transition-colors"
+                            aria-label="사전 기관 전체 보기 (가나다순)" aria-expanded="false" aria-controls="ms-modal-inst-dropdown"
+                            onmousedown="event.preventDefault()"
+                            onclick="MS.toggleModalInstListAll(event)">
+                            <span class="text-base font-bold leading-none select-none" aria-hidden="true">▼</span>
+                        </button>
+                        <div id="ms-modal-inst-dropdown" class="hidden absolute left-0 right-0 top-full mt-2 z-[60] max-h-[min(42vh,18rem)] overflow-y-auto rounded-2xl border-2 border-[#5D4037]/25 bg-white shadow-[0_12px_40px_rgba(93,64,55,0.12)] custom-scrollbar"
+                            role="listbox" aria-label="기관 자동완성"></div>
+                    </div>
+                    <p class="text-[10px] text-ms-muted mb-3 leading-relaxed rounded-xl bg-[rgba(45,74,62,0.04)] px-2.5 py-2 border border-[rgba(45,74,62,0.07)]">
+                        이름에 <span class="font-bold text-[#03C75A]">어린이집·유치원</span> 또는
+                        <span class="font-bold text-[#FF9800]">지역아동·아동센터·방과후</span>가 들어가면 세부 유형이 자동으로 맞춰져요. 틀리면 아래에서 바로 고칠 수 있어요.
+                    </p>
+                    <span class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">대상 (문항뱅크)</span>
+                    <div class="flex gap-2 mb-2">
                         <button type="button" class="${base} ${tabPs}"
                             onclick="MS.setPrepModalTargetGroup('preschool')">유아·유치부</button>
                         <button type="button" class="${base} ${tabEl}"
                             onclick="MS.setPrepModalTargetGroup('elementary')">초등부</button>
                     </div>
-                    <p class="text-[11px] text-ms-body mb-5 text-center leading-relaxed rounded-2xl bg-[rgba(45,74,62,0.04)] px-3 py-2.5 border border-[rgba(45,74,62,0.08)]">
-                        유아부는 <span class="font-bold text-[#03C75A]">어린이집·유치원·기타</span> 중 하나를, 초등부는 <span class="font-bold text-[#FF9800]">지역아동센터·방과후·기타</span> 중 하나를 골라 주세요.
-                    </p>
+                    <span class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">세부 유형</span>
+                    ${typeRowHtml}
+                    <label for="ms-examiner-name-modal" class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">진행자(해설사) 성함</label>
+                    <input id="ms-examiner-name-modal" type="text" maxlength="40" autocomplete="name" placeholder="필수"
+                        class="w-full ms-input px-4 py-3 text-center font-bold rounded-2xl mb-4 text-[#2D4A3E] text-sm"
+                        value="${UI.esc(examinerName)}"
+                        oninput="MS.onExaminerNameInput(this.value)" />
                     <div class="flex flex-col sm:flex-row gap-2">
-                        <button type="button" class="ms-btn flex-1 rounded-full border-2 border-ms text-[#2D4A3E] font-bold py-3.5 text-sm" onclick="MS.closeForestModal()">취소</button>
-                        <button type="button" class="ms-btn flex-1 rounded-full bg-[#2D4A3E] text-white font-black py-3.5 text-sm shadow-lg" onclick="MS.confirmNewExamPrepModal()">검사 설정으로 이동</button>
+                        <button type="button" class="ms-btn flex-1 rounded-full border-2 border-ms text-[#2D4A3E] font-bold py-3 text-sm" onclick="MS.closeForestModal()">취소</button>
+                        <button type="button" class="ms-btn flex-1 rounded-full bg-[#2D4A3E] text-white font-black py-3 text-sm shadow-lg" onclick="MS.confirmNewExamPrepModal()">검사 설정으로 이동</button>
                     </div>
                 </div>
             `;
             document.body.style.overflow = 'hidden';
-            requestAnimationFrame(() => document.getElementById('ms-examiner-name-modal')?.focus());
+            requestAnimationFrame(() => {
+                const inst = document.getElementById('ms-modal-inst-name');
+                const ex = document.getElementById('ms-examiner-name-modal');
+                if (inst && !String(inst.value || '').trim()) inst.focus();
+                else if (ex) ex.focus();
+                MS.updateModalInstDropdown();
+            });
         },
         setPrepModalTargetGroup(tg) {
             if (tg !== 'preschool' && tg !== 'elementary') return;
             STATE.targetGroup = tg;
+            const sel = STATE.selected();
+            if (sel) {
+                STATE.setupTypeOverride = null;
+            } else {
+                const nameVal = String(STATE.searchTerm || '');
+                const type = STATE.setupTypeOverride || STATE.guessType(nameVal);
+                if (tg === 'elementary' && (type === '어린이집' || type === '유치원' || type === '기타')) {
+                    STATE.setupTypeOverride = '방과후학교';
+                } else if (tg === 'preschool' && (type === '지역아동센터' || type === '방과후학교')) {
+                    STATE.setupTypeOverride = '어린이집';
+                }
+            }
             try {
                 STATE.persist();
             } catch (_) {
@@ -3166,11 +3392,26 @@
             MS.openNewExamPrepModal();
         },
         confirmNewExamPrepModal() {
+            const instEl = document.getElementById('ms-modal-inst-name');
+            const instName = String((instEl && instEl.value) || '').trim();
+            if (!instName) {
+                alert('기관명을 입력해 주세요.');
+                return;
+            }
             const el = document.getElementById('ms-examiner-name-modal');
             const v = String((el && el.value) || '').trim();
             if (!v) {
                 alert('진행자(해설사) 성함을 입력해 주세요.');
                 return;
+            }
+            STATE.searchTerm = instName;
+            const match = STATE.institutions.find((i) => String(i.name).trim() === instName);
+            if (match) {
+                STATE.selectedId = match.id;
+                STATE.targetGroup = SCHEMA.getTargetGroup(match);
+                STATE.setupTypeOverride = null;
+            } else {
+                STATE.selectedId = null;
             }
             MS.onExaminerNameInput(v);
             MS.closeForestModal();
@@ -3389,26 +3630,46 @@
             document.addEventListener(
                 'mousedown',
                 (ev) => {
-                    if (STATE.step !== 'setup') return;
-                    const panel = document.getElementById('ms-inst-dropdown');
-                    if (!panel || panel.classList.contains('hidden')) return;
                     const t = ev.target;
-                    const inp = document.getElementById('inst-name');
-                    const btn = document.getElementById('ms-inst-toggle-all');
-                    if (
-                        panel.contains(t) ||
-                        inp === t ||
-                        (inp && inp.contains(t)) ||
-                        btn === t ||
-                        (btn && btn.contains(t))
-                    ) {
-                        return;
+                    const panelSetup = document.getElementById('ms-inst-dropdown');
+                    if (panelSetup && !panelSetup.classList.contains('hidden') && STATE.step === 'setup') {
+                        const inp = document.getElementById('inst-name');
+                        const btn = document.getElementById('ms-inst-toggle-all');
+                        if (
+                            panelSetup.contains(t) ||
+                            inp === t ||
+                            (inp && inp.contains(t)) ||
+                            btn === t ||
+                            (btn && btn.contains(t))
+                        ) {
+                            /* keep open */
+                        } else {
+                            MS._instDropdownAll = false;
+                            panelSetup.innerHTML = '';
+                            panelSetup.classList.add('hidden');
+                            MS.setInstToggleAria(false);
+                            if (inp) inp.setAttribute('aria-expanded', 'false');
+                        }
                     }
-                    MS._instDropdownAll = false;
-                    panel.innerHTML = '';
-                    panel.classList.add('hidden');
-                    MS.setInstToggleAria(false);
-                    if (inp) inp.setAttribute('aria-expanded', 'false');
+                    const panelModal = document.getElementById('ms-modal-inst-dropdown');
+                    if (panelModal && !panelModal.classList.contains('hidden')) {
+                        const inpM = document.getElementById('ms-modal-inst-name');
+                        const btnM = document.getElementById('ms-modal-inst-toggle-all');
+                        if (
+                            panelModal.contains(t) ||
+                            inpM === t ||
+                            (inpM && inpM.contains(t)) ||
+                            btnM === t ||
+                            (btnM && btnM.contains(t))
+                        ) {
+                            return;
+                        }
+                        MS._modalInstDropdownAll = false;
+                        panelModal.innerHTML = '';
+                        panelModal.classList.add('hidden');
+                        if (btnM) btnM.setAttribute('aria-expanded', 'false');
+                        if (inpM) inpM.setAttribute('aria-expanded', 'false');
+                    }
                 },
                 true
             );
@@ -3434,8 +3695,7 @@
         },
 
         getPresetDaycareNamesForSetup() {
-            if (STATE.targetGroup === 'elementary') return [];
-            return normalizePresetInstitutionNames(PRESET_FOREST_DAYCARE_NAMES);
+            return normalizePresetInstitutionNames(INSTITUTION_DATABASE);
         },
 
         /**
@@ -3450,10 +3710,16 @@
             const namesFromInst = new Set(instList.map((i) => nameKey(i.name)));
             const virtualPresets = presetNames.filter((n) => !namesFromInst.has(nameKey(n)));
 
-            const ql = q.trim().toLocaleLowerCase('ko-KR');
+            const qt = q.trim();
+            const ql = qt.toLocaleLowerCase('ko-KR');
+            const choseongMode = isChoseongOnlyQueryStr(qt);
             const nameMatches = (nm) => {
                 if (allMode) return true;
-                if (q.length < 1) return false;
+                if (qt.length < 1) return false;
+                if (choseongMode) {
+                    const seq = extractChoseongSequenceFromName(nm);
+                    return seq.startsWith(qt);
+                }
                 return nameKey(nm).includes(ql);
             };
 
@@ -3471,6 +3737,48 @@
             return rows;
         },
 
+        /** 드롭다운 옵션 행 HTML (v15.0 스타일: 화이트·밤색·베이지 호버) */
+        buildInstDropdownRowsHtml(rows, q, allMode) {
+            const qt = String(q || '').trim();
+            const choseongQ = isChoseongOnlyQueryStr(qt);
+            const rowBtnClass =
+                'ms-inst-dd-opt w-full text-left px-4 py-3 min-h-[44px] flex flex-col justify-center sm:flex-row sm:items-baseline sm:gap-2 border-b border-[rgba(93,64,55,0.1)] last:border-b-0 bg-white text-[#5D4037] hover:bg-[rgba(212,163,115,0.22)] active:bg-[rgba(212,163,115,0.3)] transition-colors';
+            return rows
+                .map((row) => {
+                    if (row.kind === 'inst') {
+                        const inst = row.inst;
+                        const labelHtml = allMode
+                            ? UI.esc(inst.name)
+                            : choseongQ
+                              ? UI.esc(inst.name)
+                              : UI.highlightInstMatch(inst.name, q);
+                        const safeId = String(inst.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                        return `<button type="button" role="option"
+                        class="${rowBtnClass}"
+                        onmousedown="event.preventDefault()"
+                        onclick="MS.pickInstitution('${safeId}')">
+                        <span class="text-sm font-bold">${labelHtml}</span>
+                        <span class="text-[10px] text-[#5D4037]/70 font-semibold shrink-0">[${UI.esc(inst.type)}]</span>
+                    </button>`;
+                    }
+                    const name = row.name;
+                    const labelHtml = allMode
+                        ? UI.esc(name)
+                        : choseongQ
+                          ? UI.esc(name)
+                          : UI.highlightInstMatch(name, q);
+                    const safeName = MS.escapeAttrJs(name);
+                    return `<button type="button" role="option"
+                        class="${rowBtnClass}"
+                        onmousedown="event.preventDefault()"
+                        onclick="MS.pickInstitutionByName('${safeName}')">
+                        <span class="text-sm font-bold">${labelHtml}</span>
+                        <span class="text-[10px] text-[#5D4037]/80 font-semibold shrink-0">[사전명단]</span>
+                    </button>`;
+                })
+                .join('');
+        },
+
         updateInstDropdown() {
             const panel = document.getElementById('ms-inst-dropdown');
             const inp = document.getElementById('inst-name');
@@ -3479,6 +3787,7 @@
             const raw = inp ? inp.value : STATE.searchTerm || '';
             const q = raw.trim();
             const allMode = MS._instDropdownAll;
+            MS._instDropdownActiveIndex = -1;
 
             if (!allMode && q.length < 1) {
                 panel.innerHTML = '';
@@ -3492,39 +3801,52 @@
             if (rows.length === 0) {
                 panel.classList.remove('hidden');
                 panel.innerHTML =
-                    '<div class="px-4 py-3 min-h-[44px] flex items-center text-sm text-ms-muted border-b border-[rgba(45,74,62,0.06)] last:border-0">검색 결과가 없어요.</div>';
+                    '<div class="px-4 py-3 min-h-[44px] flex items-center text-sm text-[#5D4037]/80 border-b border-[rgba(93,64,55,0.08)] bg-white">검색 결과가 없어요.</div>';
                 MS.setInstToggleAria(true);
                 return;
             }
 
             panel.classList.remove('hidden');
-            panel.innerHTML = rows
-                .map((row) => {
-                    if (row.kind === 'inst') {
-                        const inst = row.inst;
-                        const labelHtml = allMode ? UI.esc(inst.name) : UI.highlightInstMatch(inst.name, q);
-                        const safeId = String(inst.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-                        return `<button type="button" role="option"
-                        class="w-full text-left px-4 py-3 min-h-[44px] flex flex-col justify-center sm:flex-row sm:items-baseline sm:gap-2 border-b border-[rgba(45,74,62,0.08)] last:border-b-0 hover:bg-[rgba(240,253,244,0.88)] active:bg-[rgba(240,253,244,0.95)] text-[#2D4A3E] transition-colors"
-                        onmousedown="event.preventDefault()"
-                        onclick="MS.pickInstitution('${safeId}')">
-                        <span class="text-sm font-bold">${labelHtml}</span>
-                        <span class="text-[10px] text-ms-muted font-semibold shrink-0">[${UI.esc(inst.type)}]</span>
-                    </button>`;
-                    }
-                    const name = row.name;
-                    const labelHtml = allMode ? UI.esc(name) : UI.highlightInstMatch(name, q);
-                    const safeName = MS.escapeAttrJs(name);
-                    return `<button type="button" role="option"
-                        class="w-full text-left px-4 py-3 min-h-[44px] flex flex-col justify-center sm:flex-row sm:items-baseline sm:gap-2 border-b border-[rgba(45,74,62,0.08)] last:border-b-0 hover:bg-[rgba(240,253,244,0.88)] active:bg-[rgba(240,253,244,0.95)] text-[#2D4A3E] transition-colors"
-                        onmousedown="event.preventDefault()"
-                        onclick="MS.pickInstitutionByName('${safeName}')">
-                        <span class="text-sm font-bold">${labelHtml}</span>
-                        <span class="text-[10px] text-[#03C75A] font-semibold shrink-0">[사전명단]</span>
-                    </button>`;
-                })
-                .join('');
+            panel.innerHTML = MS.buildInstDropdownRowsHtml(rows, q, allMode);
             MS.setInstToggleAria(true);
+        },
+
+        updateModalInstDropdown() {
+            const panel = document.getElementById('ms-modal-inst-dropdown');
+            const inp = document.getElementById('ms-modal-inst-name');
+            if (!panel || !inp) return;
+            MS.bindInstSuggestCloseOutside();
+            const raw = inp.value;
+            const q = raw.trim();
+            const allMode = MS._modalInstDropdownAll;
+            MS._instDropdownActiveIndex = -1;
+
+            if (!allMode && q.length < 1) {
+                panel.innerHTML = '';
+                panel.classList.add('hidden');
+                const btn = document.getElementById('ms-modal-inst-toggle-all');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+                if (inp) inp.setAttribute('aria-expanded', 'false');
+                return;
+            }
+
+            const rows = MS.buildInstitutionDropdownRows(q, allMode);
+
+            if (rows.length === 0) {
+                panel.classList.remove('hidden');
+                panel.innerHTML =
+                    '<div class="px-4 py-3 min-h-[44px] flex items-center text-sm text-[#5D4037]/80 border-b border-[rgba(93,64,55,0.08)] bg-white">검색 결과가 없어요.</div>';
+                const btn = document.getElementById('ms-modal-inst-toggle-all');
+                if (btn) btn.setAttribute('aria-expanded', 'true');
+                if (inp) inp.setAttribute('aria-expanded', 'true');
+                return;
+            }
+
+            panel.classList.remove('hidden');
+            panel.innerHTML = MS.buildInstDropdownRowsHtml(rows, q, allMode);
+            const btn = document.getElementById('ms-modal-inst-toggle-all');
+            if (btn) btn.setAttribute('aria-expanded', 'true');
+            if (inp) inp.setAttribute('aria-expanded', 'true');
         },
 
         toggleInstListAll(ev) {
@@ -3548,6 +3870,17 @@
             MS.updateInstDropdown();
         },
 
+        isExamPrepModalOpen() {
+            return !!document.getElementById('ms-modal-inst-name');
+        },
+
+        isInstitutionDatabaseName(raw) {
+            const nk = String(raw || '').trim().toLocaleLowerCase('ko-KR');
+            return normalizePresetInstitutionNames(INSTITUTION_DATABASE).some(
+                (n) => String(n).trim().toLocaleLowerCase('ko-KR') === nk
+            );
+        },
+
         pickInstitution(id) {
             const inst = STATE.institutions.find((i) => i.id === id);
             if (!inst) return;
@@ -3556,6 +3889,7 @@
             STATE.targetGroup = SCHEMA.getTargetGroup(inst);
             STATE.setupObsPhase = STATE.observationStage;
             MS._instDropdownAll = false;
+            MS._modalInstDropdownAll = false;
             STATE.setupTypeOverride = null;
             STATE.persist();
             const panel = document.getElementById('ms-inst-dropdown');
@@ -3563,15 +3897,28 @@
                 panel.innerHTML = '';
                 panel.classList.add('hidden');
             }
+            const panelM = document.getElementById('ms-modal-inst-dropdown');
+            if (panelM) {
+                panelM.innerHTML = '';
+                panelM.classList.add('hidden');
+            }
             MS.setInstToggleAria(false);
-            UI.render();
+            const btnM = document.getElementById('ms-modal-inst-toggle-all');
+            if (btnM) btnM.setAttribute('aria-expanded', 'false');
+            if (MS.isExamPrepModalOpen()) {
+                MS.openNewExamPrepModal();
+            } else {
+                UI.render();
+            }
         },
 
         /** 사전 명단만 있고 아직 금고에 없을 때: 동일 이름 기관을 만들고 선택 */
         pickInstitutionByName(rawName) {
             const name = String(rawName || '').trim();
             if (!name) return;
-            const tg = STATE.targetGroup === 'elementary' ? 'elementary' : 'preschool';
+            const inDb = MS.isInstitutionDatabaseName(name);
+            let tg = STATE.targetGroup === 'elementary' ? 'elementary' : 'preschool';
+            if (inDb) tg = 'preschool';
             const pool = STATE.institutions.filter((i) => String(i.name).trim() === name);
             let inst =
                 pool.find((i) => SCHEMA.getTargetGroup(i) === tg) ||
@@ -3580,19 +3927,20 @@
             if (!inst) {
                 inst = STATE.addInstitution(name);
                 inst.targetGroup = tg;
-                if (tg === 'elementary') {
-                    inst.type = '방과후학교';
-                } else {
-                    inst.type = '어린이집';
-                }
+                inst.type = STATE.guessType(name);
             } else {
                 STATE.selectedId = inst.id;
                 STATE.ensureCounts(inst);
+                if (inDb) {
+                    inst.targetGroup = 'preschool';
+                    inst.type = STATE.guessType(name);
+                }
             }
             STATE.searchTerm = inst.name;
             STATE.targetGroup = SCHEMA.getTargetGroup(inst);
             STATE.setupObsPhase = STATE.observationStage;
             MS._instDropdownAll = false;
+            MS._modalInstDropdownAll = false;
             STATE.setupTypeOverride = null;
             STATE.persist();
             const panel = document.getElementById('ms-inst-dropdown');
@@ -3600,8 +3948,19 @@
                 panel.innerHTML = '';
                 panel.classList.add('hidden');
             }
+            const panelM = document.getElementById('ms-modal-inst-dropdown');
+            if (panelM) {
+                panelM.innerHTML = '';
+                panelM.classList.add('hidden');
+            }
             MS.setInstToggleAria(false);
-            UI.render();
+            const btnM = document.getElementById('ms-modal-inst-toggle-all');
+            if (btnM) btnM.setAttribute('aria-expanded', 'false');
+            if (MS.isExamPrepModalOpen()) {
+                MS.openNewExamPrepModal();
+            } else {
+                UI.render();
+            }
         },
 
         onInstNameFocus() {
@@ -3611,15 +3970,188 @@
             if (q.length >= 1) MS.updateInstDropdown();
         },
 
+        /** 초등부: 기관명 입력 후 포커스가 나가면 '지역아동센터' 접미어 자동 완성 (드롭다운 클릭 시 blur 무시) */
+        onInstNameBlur(el) {
+            setTimeout(() => {
+                if (STATE.targetGroup !== 'elementary') return;
+                if (STATE.step !== 'setup') return;
+                const instEl = document.getElementById('inst-name');
+                if (!instEl || instEl !== el) return;
+                const ae = document.activeElement;
+                const dd = document.getElementById('ms-inst-dropdown');
+                if (dd && ae && dd.contains(ae)) return;
+                if (ae && ae.id === 'ms-inst-toggle-all') return;
+                const v = String(el.value || '').trim();
+                if (!v) return;
+                if (v.includes('지역아동') || v.includes('아동센터')) return;
+                const next = v + '지역아동센터';
+                el.value = next;
+                MS.onNameInput(next);
+            }, 0);
+        },
+
+        highlightInstDropdownOption(panelId, idx) {
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+            const opts = panel.querySelectorAll('button.ms-inst-dd-opt');
+            opts.forEach((btn, i) => {
+                if (i === idx) {
+                    btn.classList.add('ring-2', 'ring-[#5D4037]/35', 'ring-inset');
+                    try {
+                        btn.scrollIntoView({ block: 'nearest' });
+                    } catch (_) {
+                        /* ignore */
+                    }
+                } else {
+                    btn.classList.remove('ring-2', 'ring-[#5D4037]/35', 'ring-inset');
+                }
+            });
+        },
+
         onInstNameKeydown(ev) {
+            const panel = document.getElementById('ms-inst-dropdown');
+            const inp = document.getElementById('inst-name');
+            const open = panel && !panel.classList.contains('hidden');
+            const opts = panel ? panel.querySelectorAll('button.ms-inst-dd-opt') : [];
+
             if (ev.key === 'Escape') {
                 MS._instDropdownAll = false;
-                const panel = document.getElementById('ms-inst-dropdown');
+                MS._instDropdownActiveIndex = -1;
                 if (panel) {
                     panel.innerHTML = '';
                     panel.classList.add('hidden');
                 }
                 MS.setInstToggleAria(false);
+                return;
+            }
+
+            if (!open || !opts.length) return;
+
+            if (ev.key === 'ArrowDown') {
+                ev.preventDefault();
+                MS._instDropdownActiveIndex = Math.min(
+                    opts.length - 1,
+                    (MS._instDropdownActiveIndex < 0 ? -1 : MS._instDropdownActiveIndex) + 1
+                );
+                MS.highlightInstDropdownOption('ms-inst-dropdown', MS._instDropdownActiveIndex);
+                return;
+            }
+            if (ev.key === 'ArrowUp') {
+                ev.preventDefault();
+                MS._instDropdownActiveIndex = Math.max(
+                    0,
+                    (MS._instDropdownActiveIndex < 0 ? 0 : MS._instDropdownActiveIndex) - 1
+                );
+                MS.highlightInstDropdownOption('ms-inst-dropdown', MS._instDropdownActiveIndex);
+                return;
+            }
+            if (ev.key === 'Enter') {
+                if (MS._instDropdownActiveIndex >= 0 && opts[MS._instDropdownActiveIndex]) {
+                    ev.preventDefault();
+                    opts[MS._instDropdownActiveIndex].click();
+                }
+            }
+        },
+
+        toggleModalInstListAll(ev) {
+            if (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+            }
+            MS._modalInstDropdownAll = !MS._modalInstDropdownAll;
+            if (!MS._modalInstDropdownAll) {
+                const panel = document.getElementById('ms-modal-inst-dropdown');
+                if (panel) {
+                    panel.innerHTML = '';
+                    panel.classList.add('hidden');
+                }
+                const inp = document.getElementById('ms-modal-inst-name');
+                if (inp) inp.setAttribute('aria-expanded', 'false');
+                const btn = document.getElementById('ms-modal-inst-toggle-all');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+                MS.updateModalInstDropdown();
+                return;
+            }
+            MS.updateModalInstDropdown();
+        },
+
+        onModalInstNameFocus() {
+            MS._modalInstDropdownAll = false;
+            const inp = document.getElementById('ms-modal-inst-name');
+            const q = (inp && inp.value.trim()) || '';
+            if (q.length >= 1) MS.updateModalInstDropdown();
+        },
+
+        onModalInstNameBlur(el) {
+            setTimeout(() => {
+                if (!document.getElementById('ms-modal-inst-name')) return;
+                if (STATE.targetGroup !== 'elementary') return;
+                const modalInp = document.getElementById('ms-modal-inst-name');
+                if (!modalInp || modalInp !== el) return;
+                const ae = document.activeElement;
+                if (!ae || ae === document.body || ae === document.documentElement) return;
+                const dd = document.getElementById('ms-modal-inst-dropdown');
+                if (dd && ae && dd.contains(ae)) return;
+                if (ae && ae.id === 'ms-modal-inst-toggle-all') return;
+                const v = String(el.value || '').trim();
+                if (!v) return;
+                if (v.includes('지역아동') || v.includes('아동센터')) return;
+                const next = v + '지역아동센터';
+                STATE.searchTerm = next;
+                MS.applySmartKeywordFromInstName(next);
+                try {
+                    STATE.persist();
+                } catch (_) {
+                    /* ignore */
+                }
+                MS.openNewExamPrepModal();
+            }, 0);
+        },
+
+        onModalInstNameKeydown(ev) {
+            const panel = document.getElementById('ms-modal-inst-dropdown');
+            const open = panel && !panel.classList.contains('hidden');
+            const opts = panel ? panel.querySelectorAll('button.ms-inst-dd-opt') : [];
+
+            if (ev.key === 'Escape') {
+                MS._modalInstDropdownAll = false;
+                MS._instDropdownActiveIndex = -1;
+                if (panel) {
+                    panel.innerHTML = '';
+                    panel.classList.add('hidden');
+                }
+                const btn = document.getElementById('ms-modal-inst-toggle-all');
+                const inp = document.getElementById('ms-modal-inst-name');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+                if (inp) inp.setAttribute('aria-expanded', 'false');
+                return;
+            }
+
+            if (!open || !opts.length) return;
+
+            if (ev.key === 'ArrowDown') {
+                ev.preventDefault();
+                MS._instDropdownActiveIndex = Math.min(
+                    opts.length - 1,
+                    (MS._instDropdownActiveIndex < 0 ? -1 : MS._instDropdownActiveIndex) + 1
+                );
+                MS.highlightInstDropdownOption('ms-modal-inst-dropdown', MS._instDropdownActiveIndex);
+                return;
+            }
+            if (ev.key === 'ArrowUp') {
+                ev.preventDefault();
+                MS._instDropdownActiveIndex = Math.max(
+                    0,
+                    (MS._instDropdownActiveIndex < 0 ? 0 : MS._instDropdownActiveIndex) - 1
+                );
+                MS.highlightInstDropdownOption('ms-modal-inst-dropdown', MS._instDropdownActiveIndex);
+                return;
+            }
+            if (ev.key === 'Enter') {
+                if (MS._instDropdownActiveIndex >= 0 && opts[MS._instDropdownActiveIndex]) {
+                    ev.preventDefault();
+                    opts[MS._instDropdownActiveIndex].click();
+                }
             }
         },
 
@@ -4079,8 +4611,11 @@
             STATE.isPreviewSample = false;
             MS._instDropdownAll = false;
             const sel = STATE.selected();
-            STATE.searchTerm = sel ? sel.name : '';
-            if (sel) STATE.targetGroup = SCHEMA.getTargetGroup(sel);
+            if (sel) {
+                STATE.searchTerm = sel.name;
+                STATE.targetGroup = SCHEMA.getTargetGroup(sel);
+                STATE.setupTypeOverride = null;
+            }
             STATE.setupObsPhase = STATE.observationStage;
             STATE.persist();
             UI.render();
