@@ -291,7 +291,7 @@
         <h1 class="text-2xl md:text-3xl font-black text-[#2D4A3E] tracking-tight leading-tight px-1">어린이 4군자 기질검사</h1>
         <div id="ms-header-age-tabs" class="print-hidden max-w-md mx-auto w-full px-2 mt-5 mb-1" aria-label="연령·문항 세트 선택"></div>
         <p class="mt-2 text-[10px] text-ms-muted leading-snug px-2 max-w-md mx-auto print-hidden">
-            통합 엔진 v1.5 · <span class="font-black text-[#1B5E20] tracking-wide">[SCHEMA v14.0 - FINAL]</span> · 보고서 v2.0 · 기기 안에서만 저장 · 오프라인
+            통합 엔진 v1.5 · <span class="font-black text-[#1B5E20] tracking-wide">[SCHEMA v14.0 - FINAL]</span> · 보고서 v2.0
         </p>
     </header>
 
@@ -326,15 +326,15 @@
     /** 전역 관찰 단계(사전/사후) — 앱 재시작 후에도 유지 */
     const LS_OBSERVATION_STAGE = 'ms_observation_stage';
 
-    /** 연령 탭: 선택=네이버초록/오렌지 솔리드+흰 글자, 비선택=같은 색조의 연한 솔리드(테두리만 있는 형태가 아님) */
+    /** 연령 탭: 선택=솔리드(#03C75A / #FF9800)+흰 글자(!로 우선순위 고정). 비선택=연한 톤 솔리드(테두리 전용 아님) */
     const TAB_AGE_PS_ON =
-        'bg-[#03C75A] text-[#FFFFFF] border-0 shadow-lg shadow-[#03C75A]/35 hover:brightness-[1.02]';
+        '!bg-[#03C75A] !text-[#FFFFFF] border-0 shadow-lg shadow-[#03C75A]/35 ring-0 outline-none hover:brightness-[1.02]';
     const TAB_AGE_PS_OFF =
-        'bg-[rgba(3,199,90,0.12)] text-[#03C75A] border-0 shadow-sm shadow-[#03C75A]/10 hover:bg-[rgba(3,199,90,0.18)]';
+        '!bg-[rgba(3,199,90,0.14)] !text-[#03C75A] border-0 shadow-sm shadow-[#03C75A]/10 ring-0 outline-none hover:!bg-[rgba(3,199,90,0.22)]';
     const TAB_AGE_EL_ON =
-        'bg-[#FF9800] text-[#FFFFFF] border-0 shadow-lg shadow-[#FF9800]/35 hover:brightness-[1.02]';
+        '!bg-[#FF9800] !text-[#FFFFFF] border-0 shadow-lg shadow-[#FF9800]/35 ring-0 outline-none hover:brightness-[1.02]';
     const TAB_AGE_EL_OFF =
-        'bg-[rgba(255,152,0,0.14)] text-[#E65100] border-0 shadow-sm shadow-[#FF9800]/25 hover:bg-[rgba(255,152,0,0.22)]';
+        '!bg-[rgba(255,152,0,0.18)] !text-[#E65100] border-0 shadow-sm shadow-[#FF9800]/25 ring-0 outline-none hover:!bg-[rgba(255,152,0,0.26)]';
 
     /**
      * 유아부 설정 화면 전용: 기관 검색·▼(전체) 목록에 합쳐지는 사전 명단.
@@ -2161,10 +2161,14 @@
             }
 
             const facilitatorActions = `
-                        <p class="text-center mt-2 print:hidden">
-                            <button type="button" class="text-[10px] font-semibold text-[#5D4037]/70 hover:text-[#5D4037] underline underline-offset-2"
-                                onclick="MS.openAdminUnlockModal()">관리자 · 대시보드 잠금 해제</button>
-                        </p>`;
+                        <div class="space-y-3 mt-2 print:hidden">
+                            <button type="button" class="ms-btn w-full !rounded-xl border-2 border-[#D4A373]/50 bg-[rgba(212,163,115,0.08)] text-[#2D4A3E] font-black py-4 text-sm"
+                                onclick="MS.goGuide()">검사설명서 보기</button>
+                            <p class="text-center pt-2 border-t border-[#2D4A3E]/10">
+                                <button type="button" class="text-[10px] font-semibold text-[#5D4037]/70 hover:text-[#5D4037] underline underline-offset-2"
+                                    onclick="MS.openAdminUnlockModal()">관리자 · 대시보드 잠금 해제</button>
+                            </p>
+                        </div>`;
 
             const adminDashboardPanel = `
                         <button type="button" id="ms-dashboard-toggle"
@@ -2718,7 +2722,6 @@
                                 aria-label="반 이름 또는 생략">
                         </div>
                         ${this.buildRecentHistorySectionHtml()}
-                        <p class="text-[11px] text-ms-muted mb-3 text-center leading-relaxed">유아부는 <strong class="text-[#03C75A]">어린이집·유치원·기타</strong> 중 하나를, 초등부는 <strong class="text-[#FF9800]">지역아동센터·방과후·기타</strong> 중 하나를 골라 주세요.</p>
                         <div class="mb-4">
                             <span class="block text-xs font-bold text-ms-muted mb-2 ml-1 tracking-widest">대상 (문항뱅크)</span>
                             <div class="flex gap-2">
@@ -3117,17 +3120,32 @@
             const root = document.getElementById('ms-modal-root');
             if (!root) return;
             const name = String(MS.getExaminerName() || '').trim();
+            const tg = STATE.targetGroup === 'elementary' ? 'elementary' : 'preschool';
+            const base =
+                'ms-btn flex-1 min-h-[48px] px-3 py-3 font-bold text-xs rounded-full transition-colors duration-200';
+            const tabPs = tg === 'preschool' ? TAB_AGE_PS_ON : TAB_AGE_PS_OFF;
+            const tabEl = tg === 'elementary' ? TAB_AGE_EL_ON : TAB_AGE_EL_OFF;
             root.className = 'print-hidden fixed inset-0 z-[200] flex items-center justify-center p-4';
             root.innerHTML = `
                 <div class="absolute inset-0 bg-black/45" onclick="MS.closeForestModal()" aria-hidden="true"></div>
                 <div class="relative w-full max-w-md rounded-[2rem] bg-[#FDFBF7] shadow-2xl border border-[#2D4A3E]/12 p-6 md:p-8" onclick="event.stopPropagation()">
                     <h2 id="ms-modal-title" class="text-lg md:text-xl font-black text-[#2D4A3E] mb-2 text-center leading-tight">기관 설정 및 검사 준비</h2>
-                    <p class="text-xs text-ms-muted mb-5 text-center leading-relaxed">진행자(해설사) 성함을 입력한 뒤 검사 설정으로 이동합니다.</p>
+                    <p class="text-xs text-ms-muted mb-4 text-center leading-relaxed">진행자(해설사) 성함을 입력하고 대상(유아·초등)을 선택한 뒤 검사 설정으로 이동합니다.</p>
                     <label for="ms-examiner-name-modal" class="block text-xs font-bold text-ms-muted mb-2 ml-0.5 tracking-widest">진행자(해설사) 성함</label>
                     <input id="ms-examiner-name-modal" type="text" maxlength="40" autocomplete="name" placeholder="필수"
-                        class="w-full ms-input px-4 py-3.5 text-center font-bold rounded-2xl mb-4 text-[#2D4A3E]"
+                        class="w-full ms-input px-4 py-3.5 text-center font-bold rounded-2xl mb-5 text-[#2D4A3E]"
                         value="${UI.esc(name)}"
                         oninput="MS.onExaminerNameInput(this.value)" />
+                    <span class="block text-xs font-bold text-ms-muted mb-2 ml-0.5 tracking-widest">대상 (문항뱅크)</span>
+                    <div class="flex gap-2 mb-3">
+                        <button type="button" class="${base} ${tabPs}"
+                            onclick="MS.setPrepModalTargetGroup('preschool')">유아·유치부</button>
+                        <button type="button" class="${base} ${tabEl}"
+                            onclick="MS.setPrepModalTargetGroup('elementary')">초등부</button>
+                    </div>
+                    <p class="text-[11px] text-ms-body mb-5 text-center leading-relaxed rounded-2xl bg-[rgba(45,74,62,0.04)] px-3 py-2.5 border border-[rgba(45,74,62,0.08)]">
+                        유아부는 <span class="font-bold text-[#03C75A]">어린이집·유치원·기타</span> 중 하나를, 초등부는 <span class="font-bold text-[#FF9800]">지역아동센터·방과후·기타</span> 중 하나를 골라 주세요.
+                    </p>
                     <div class="flex flex-col sm:flex-row gap-2">
                         <button type="button" class="ms-btn flex-1 rounded-full border-2 border-ms text-[#2D4A3E] font-bold py-3.5 text-sm" onclick="MS.closeForestModal()">취소</button>
                         <button type="button" class="ms-btn flex-1 rounded-full bg-[#2D4A3E] text-white font-black py-3.5 text-sm shadow-lg" onclick="MS.confirmNewExamPrepModal()">검사 설정으로 이동</button>
@@ -3136,6 +3154,16 @@
             `;
             document.body.style.overflow = 'hidden';
             requestAnimationFrame(() => document.getElementById('ms-examiner-name-modal')?.focus());
+        },
+        setPrepModalTargetGroup(tg) {
+            if (tg !== 'preschool' && tg !== 'elementary') return;
+            STATE.targetGroup = tg;
+            try {
+                STATE.persist();
+            } catch (_) {
+                /* ignore */
+            }
+            MS.openNewExamPrepModal();
         },
         confirmNewExamPrepModal() {
             const el = document.getElementById('ms-examiner-name-modal');
