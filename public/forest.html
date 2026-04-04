@@ -355,9 +355,18 @@
     const ADMIN_PASSWORDS = ['9535', '0000'];
     /** 메인 대문 숏츠 비주얼 — 관리자 패널에서 URL 변경 가능 (기본: 로컬 MP4 + Unsplash 포스터) */
     const LS_FOREST_DASH_VISUAL = 'ms_forest_dashboard_visual_v1';
-    const DEFAULT_FOREST_DASH_VIDEO = 'assets/forest_intro.mp4';
+    /** 루트 절대경로 — /forest·/forest.html 어디서 열어도 동일하게 요청 */
+    const DEFAULT_FOREST_DASH_VIDEO = '/assets/forest_intro.mp4';
     const DEFAULT_FOREST_DASH_POSTER =
         'https://images.unsplash.com/photo-1441974230534-f855a888fb44?w=600&h=1067&fit=crop&q=80';
+
+    function normalizeForestVideoUrl(u) {
+        const s = String(u || '').trim();
+        if (!s) return DEFAULT_FOREST_DASH_VIDEO;
+        if (/^https?:\/\//i.test(s)) return s;
+        if (s.startsWith('/')) return s;
+        return '/' + s.replace(/^\/+/, '');
+    }
     /** 전역 관찰 단계(사전/사후) — 앱 재시작 후에도 유지 */
     const LS_OBSERVATION_STAGE = 'ms_observation_stage';
     /** 진행 장소(숲/실내) — 검사 설정 모달과 동기 */
@@ -3576,7 +3585,7 @@
                 if (raw) {
                     const o = JSON.parse(raw);
                     return {
-                        videoUrl: String(o.videoUrl || '').trim() || DEFAULT_FOREST_DASH_VIDEO,
+                        videoUrl: normalizeForestVideoUrl(String(o.videoUrl || '').trim() || DEFAULT_FOREST_DASH_VIDEO),
                         posterUrl: String(o.posterUrl || '').trim() || DEFAULT_FOREST_DASH_POSTER
                     };
                 }
