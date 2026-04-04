@@ -3,7 +3,7 @@
  * - uploads 복사
  * - _routes.json (정적 사업자 안내 페이지는 Worker 우회)
  */
-import { cpSync, existsSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -43,13 +43,28 @@ if (existsSync(uploadsSrc)) {
   console.log('⚠️  public/uploads 없음 — 건너뜀')
 }
 
-/** Vite copyPublicDir 외에도 단일 HTML 도구가 dist 루트에 반드시 있도록 보강 */
+/** Vite copyPublicDir 외에도 단일 HTML 도구가 dist 루트에 반드시 있도록 보강 (기존 파일 삭제 후 강제 덮어쓰기) */
+function forceCopyFile(src, dest) {
+  if (existsSync(dest)) {
+    rmSync(dest, { force: true })
+  }
+  copyFileSync(src, dest)
+}
+
 const forestHtml = join(publicDir, 'forest.html')
+const forestHtmlDest = join(dist, 'forest.html')
 if (existsSync(forestHtml)) {
-  cpSync(forestHtml, join(dist, 'forest.html'))
-  console.log('✅ forest.html → dist 루트 명시 복사')
+  forceCopyFile(forestHtml, forestHtmlDest)
+  console.log('✅ forest.html → dist 루트 명시 복사(덮어쓰기)')
 } else {
   console.log('⚠️  public/forest.html 없음 — /forest.html 404 가능')
+}
+
+const forestQbanks = join(publicDir, 'forest-question-banks.js')
+const forestQbanksDest = join(dist, 'forest-question-banks.js')
+if (existsSync(forestQbanks)) {
+  forceCopyFile(forestQbanks, forestQbanksDest)
+  console.log('✅ forest-question-banks.js → dist 루트 명시 복사(덮어쓰기)')
 }
 
 writeFileSync(join(dist, '_routes.json'), JSON.stringify(ROUTES, null, 2) + '\n', 'utf8')

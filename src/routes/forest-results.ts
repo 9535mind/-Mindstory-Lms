@@ -47,9 +47,18 @@ forestResults.post('/', async (c) => {
     return c.json({ success: false, error: 'scores is required', message: 'scores is required' }, 400)
   }
 
+  /** 요청 본문 최상단 target_group 은 scores JSON 에 없을 때만 병합(D1 scores 컬럼에 보존). */
+  let scoresForDb: unknown = scoresVal
+  if (scoresVal !== null && typeof scoresVal === 'object' && !Array.isArray(scoresVal)) {
+    const o = { ...(scoresVal as Record<string, unknown>) }
+    const tgTop = typeof b.target_group === 'string' ? b.target_group.trim().slice(0, 32) : ''
+    if (tgTop && o.target_group === undefined) o.target_group = tgTop
+    scoresForDb = o
+  }
+
   let scoresJson: string
   try {
-    scoresJson = JSON.stringify(scoresVal)
+    scoresJson = JSON.stringify(scoresForDb)
   } catch {
     return c.json(
       { success: false, error: 'scores must be JSON-serializable', message: 'scores must be JSON-serializable' },
