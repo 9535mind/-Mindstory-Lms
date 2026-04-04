@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 공식 접속 URL: https://mindstory.kr/forest.html (마인드스토리 유아숲 행동관찰 단일 페이지 도구) -->
+<!-- 공식 접속 URL: https://mindstory.kr/forest.html (어린이 4계절 Temperament TEST · 4STT 단일 페이지 도구) -->
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -170,7 +170,7 @@
             z-index: 1;
         }
 
-        .ms-watermark-4gun {
+        .ms-watermark-4stt {
             pointer-events: none;
             position: absolute;
             inset: 0;
@@ -299,7 +299,7 @@
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
-            .ms-watermark-4gun {
+            .ms-watermark-4stt {
                 color: rgba(45, 74, 62, 0.07);
             }
             .ms-mindstory-seal {
@@ -312,7 +312,7 @@
 <body class="ms-hanji min-h-screen p-4 md:p-10 flex flex-col">
 
 <div id="app" class="max-w-2xl mx-auto fade-in w-full flex flex-col flex-1 min-h-0 transition-[max-width] duration-300">
-    <header class="text-center mb-8 print-hidden shrink-0">
+    <header id="ms-app-header" class="text-center mb-8 print-hidden shrink-0">
         <div class="inline-block px-4 py-1 border-2 border-[#2D4A3E] text-[#2D4A3E] text-[9px] font-bold rounded-full mb-3 tracking-[0.18em]">MINDSTORY</div>
         <h1 class="text-2xl md:text-3xl font-black text-[#2D4A3E] tracking-tight leading-tight px-1">어린이 4계절 Temperament TEST (4STT)</h1>
         <div id="ms-header-age-tabs" class="print-hidden max-w-md mx-auto w-full px-2 mt-5 mb-1" aria-label="연령·문항 세트 선택"></div>
@@ -331,7 +331,7 @@
     'use strict';
 
     /**
-     * 유아숲 관찰 전용 · 로컬 금고 + 서버(D1) + 구글 시트 웹훅 전송
+     * 4STT(숲·현장 관찰) 전용 · 로컬 금고 + 서버(D1) + 구글 시트 웹훅 전송
      * 공식 URL: https://mindstory.kr/forest.html — 저장 키는 파일명과 무관(동일 origin이면 동일 금고).
      */
     const STORAGE_KEY = 'ms_forest_v1';
@@ -580,7 +580,7 @@
                 psychDeep:
                     '이 기질의 아이는 관계 안에서 타인의 표정·목소리·작은 침묵까지 빠르게 읽어 내는 마음결을 타고났어요. 이것은 나약함이 아니라 연결을 소중히 여기는 따뜻한 감수성의 숲길입니다. 그래서 친구의 작은 흔들림도 얼굴 색으로 느껴지곤 하며, 마음이 먼저 반응하는 속도가 몸보다 앞설 수 있어요.',
                 forestPortrait:
-                    '유아숲에서는 벌레 한 마리, 갓 돋은 새싹 앞에서 발걸음을 살짝 멈추고 숨소리까지 낮춰 보는 순간이 자주 보입니다. 친구가 넘어졌을 때 시선이 먼저 그쪽으로 향하거나, 누군가의 이름을 조심스레 부르는 장면도 같은 마음결의 연장선이에요. 놀이가 한창일 때도 잠깐 고개를 돌려 누군가의 표정을 살피는 섬세한 호흡이 숲바람처럼 스쳐 지나갑니다.',
+                    '현장에서는 벌레 한 마리, 갓 돋은 새싹 앞에서 발걸음을 살짝 멈추고 숨소리까지 낮춰 보는 순간이 자주 보입니다. 친구가 넘어졌을 때 시선이 먼저 그쪽으로 향하거나, 누군가의 이름을 조심스레 부르는 장면도 같은 마음결의 연장선이에요. 놀이가 한창일 때도 잠깐 고개를 돌려 누군가의 표정을 살피는 섬세한 호흡이 SPRT(봄) 기질의 전형적인 흐름으로 스쳐 지나갑니다.',
                 parentHeart:
                     '집에서는 아이가 말로 다 꺼내지 못할 수 있다는 믿음을 먼저 품어 주세요. 설명보다 이름을 불러 주며 「지금 몸이 어디까지를 말해 주고 있니」처럼 천천히 곁을 지키는 태도가 큰 위로가 됩니다. 아이의 마음은 지시가 아니라 함께 숨 쉬는 시간 속에서 더 크게 피어올라요.',
                 actionGuide:
@@ -590,7 +590,7 @@
                         badge: '빛나는 강점',
                         quote: '따뜻한 공감의 숲길이 온몸으로 피어오르고 있어요.',
                         narrative:
-                            '「따뜻한 공감의 난초」에너지가 이번 관찰에서 아주 빛나는 곳에 서 있어요. 아이는 주변의 작은 감정 변화를 귀 기울여 듣는 힘이 있고, 그 힘이 곧 관계를 풍성하게 만드는 고운 재능입니다.\n\n이 에너지를 더 키우려면 성공만이 아니라 과정을 스토리로 남겨 주세요. 「네가 친구 마음을 살핀 순간」을 날짜와 함께 적어 두면 아이는 자신의 강점을 몸으로 기억하게 됩니다. 숲에서 만난 작은 생명에게 건넨 배려도 「네 마음이 숲에 닿았구나」라고 번역해 주면 재능이 더 넓은 숲으로 뻗어 갑니다.'
+                            '「SPRT(봄) 🌸」의 따뜻한 공감 에너지가 이번 관찰에서 아주 빛나는 곳에 서 있어요. 아이는 주변의 작은 감정 변화를 귀 기울여 듣는 힘이 있고, 그 힘이 곧 관계를 풍성하게 만드는 고운 재능입니다.\n\n이 에너지를 더 키우려면 성공만이 아니라 과정을 스토리로 남겨 주세요. 「네가 친구 마음을 살핀 순간」을 날짜와 함께 적어 두면 아이는 자신의 강점을 몸으로 기억하게 됩니다. 현장에서 만난 작은 생명에게 건넨 배려도 「네 마음이 오늘의 활동에 닿았구나」라고 번역해 주면 재능이 더 넓게 뻗어 갑니다.'
                     },
                     mid: {
                         badge: '고른 균형',
@@ -799,7 +799,7 @@
             return sum;
         },
 
-        /** 각 기질 총점 / 4기질 총점 합 × 100 (정수 %) */
+        /** 각 축(SPRT·SUMT·AUTT·WINT) 총점 / 네 축 총점 합 × 100 (정수 %) */
         temperamentDensityPercent(totals) {
             const grand =
                 (totals.SPRT || 0) +
@@ -815,7 +815,7 @@
 
         /**
          * 누적 총점 내림차순 순위. 동점: temperamentTieOrder(W→S→A→M) 앞선 유형이 상위.
-         * density_pct: 전체 슬롯(4기질 총점 합) 대비 해당 기질 비중.
+         * density_pct: 전체 슬롯(네 축 총점 합) 대비 해당 기질 축 비중.
          */
         rankTemperamentsByRawO(totals) {
             const order = this.temperamentTieOrder;
@@ -1402,6 +1402,24 @@
             });
         },
 
+        /** 문항 한 줄: O·X 모두 숫자 입력됨(0 포함) */
+        hasInputRowComplete(row) {
+            const y = String((row && row.yes) || '').trim();
+            const n = String((row && row.no) || '').trim();
+            if (y === '' || n === '') return false;
+            const yi = parseInt(y, 10);
+            const ni = parseInt(n, 10);
+            return !Number.isNaN(yi) && !Number.isNaN(ni) && yi >= 0 && ni >= 0;
+        },
+        /** 현재 연령 문항 세트 전체 입력 완료 */
+        allInputQuestionsFilled(inst) {
+            if (!inst) return false;
+            STATE.ensureCounts(inst);
+            const tg = SCHEMA.getTargetGroup(inst);
+            const qs = SCHEMA.questionsForGroup(tg);
+            return qs.every((q) => this.hasInputRowComplete(inst.counts[q.id]));
+        },
+
         render() {
             if (typeof MS !== 'undefined' && MS.clearAdvanceTimers) MS.clearAdvanceTimers();
             const app = document.getElementById('app');
@@ -1438,12 +1456,24 @@
             this.renderDataFooter();
             this.renderToast();
             this.renderHeaderAgeTabs();
+            const appHdr = document.getElementById('ms-app-header');
+            if (appHdr) {
+                const hideHdr = STATE.step === 'input';
+                appHdr.classList.toggle('hidden', hideHdr);
+                appHdr.setAttribute('aria-hidden', hideHdr ? 'true' : 'false');
+            }
         },
 
         /** 헤더: 연령·문항 세트 탭 (전역 STATE.targetGroup 과 동기화) — 유아 #03C75A · 초등 #FF9800 */
         renderHeaderAgeTabs() {
             const host = document.getElementById('ms-header-age-tabs');
             if (!host) return;
+            if (STATE.step === 'input') {
+                host.innerHTML = '';
+                host.classList.add('hidden');
+                return;
+            }
+            host.classList.remove('hidden');
             const tg = STATE.targetGroup === 'elementary' ? 'elementary' : 'preschool';
             const base =
                 'ms-btn flex-1 min-h-[48px] px-4 py-3 font-bold text-xs rounded-full transition-colors duration-200 ease-out';
@@ -2444,7 +2474,7 @@
             el.innerHTML = `
                 <div class="ms-consulting-hero rounded-[2rem] border-2 border-[#2D4A3E]/15 shadow-xl overflow-hidden mb-6">
                     <div class="ms-consulting-symbol-layer min-h-[200px]">
-                        <div class="ms-watermark-4gun" aria-hidden="true">난 · 대 · 국 · 매</div>
+                        <div class="ms-watermark-4stt" aria-hidden="true">SPRT · SUMT · AUTT · WINT</div>
                         <div class="ms-consulting-inner p-6 md:p-10 lg:p-12">
                             <button type="button" class="print-hidden ms-btn text-xs font-bold text-ms-muted hover:text-[#2D4A3E] mb-6"
                                 onclick="MS.backFromInstitutionReport()">← 기관 허브</button>
@@ -2538,7 +2568,7 @@
                 <div class="ms-consulting-hero rounded-[2rem] border-2 border-[rgba(212,163,115,0.35)] shadow-xl overflow-hidden mb-6 relative">
                     <div class="ms-mindstory-seal" aria-hidden="true">성과<br />인장</div>
                     <div class="ms-consulting-symbol-layer min-h-[200px]">
-                        <div class="ms-watermark-4gun" aria-hidden="true">난 · 대 · 국 · 매</div>
+                        <div class="ms-watermark-4stt" aria-hidden="true">SPRT · SUMT · AUTT · WINT</div>
                         <div class="ms-consulting-inner p-6 md:p-10 lg:p-12">
                             <button type="button" class="print-hidden ms-btn text-xs font-bold text-ms-muted hover:text-[#2D4A3E] mb-6"
                                 onclick="MS.backFromInstitutionPrePostReport()">← 기관 허브</button>
@@ -2642,7 +2672,7 @@
                 <div class="ms-consulting-hero rounded-[2rem] border-2 border-[#2D4A3E]/18 shadow-xl overflow-hidden mb-6 relative">
                     <div class="ms-mindstory-seal" aria-hidden="true">MACRO<br />리포트</div>
                     <div class="ms-consulting-symbol-layer min-h-[180px]">
-                        <div class="ms-watermark-4gun" aria-hidden="true">난 · 대 · 국 · 매</div>
+                        <div class="ms-watermark-4stt" aria-hidden="true">SPRT · SUMT · AUTT · WINT</div>
                         <div class="ms-consulting-inner p-6 md:p-10 lg:p-12">
                             <button type="button" class="print-hidden ms-btn text-xs font-bold text-ms-muted hover:text-[#2D4A3E] mb-6"
                                 onclick="MS.backFromInstitutionTypeMacroReport()">← 대시보드</button>
@@ -2834,28 +2864,25 @@
             STATE.targetGroup = tg;
             inst.targetGroup = tg;
             const name = this.esc(inst.name);
+            const gn = String(inst.groupName || '').trim();
+            const groupPart = gn ? ` · ${this.esc(gn)}` : '';
             const qs = SCHEMA.questionsForGroup(tg);
-            const base =
-                'ms-btn flex-1 min-h-[48px] px-4 py-3 font-bold text-xs rounded-full transition-colors duration-200 ease-out';
-            const tabPs = tg === 'preschool' ? TAB_AGE_PS_ON : TAB_AGE_PS_OFF;
-            const tabEl = tg === 'elementary' ? TAB_AGE_EL_ON : TAB_AGE_EL_OFF;
+            const ageLine =
+                tg === 'elementary' ? `초등부 · ${qs.length}문항` : `유아·유치부 · ${qs.length}문항`;
+            const canComplete = this.allInputQuestionsFilled(inst);
 
             el.innerHTML = `
-                <div class="max-w-lg mx-auto">
-                    <div class="mb-5 flex justify-between items-center print-hidden">
-                        <span class="font-bold text-[#2D4A3E] text-sm">📍 ${name}</span>
-                        <div class="flex gap-2">
-                            <button type="button" class="text-xs text-ms-muted underline ms-btn px-2" onclick="MS.goSetup()">기관 설정</button>
-                            <button type="button" class="text-xs text-ms-muted underline ms-btn px-2" onclick="MS.goDashboard()">대시보드</button>
-                        </div>
+                <div class="max-w-lg mx-auto pt-1">
+                    <div class="mb-4 flex items-center justify-between gap-2 print-hidden">
+                        <button type="button" class="text-sm font-bold text-[#2D4A3E] hover:underline py-1.5 px-2 -ml-2 rounded-xl bg-transparent border-0 cursor-pointer"
+                            onclick="MS.goSetup()">← 뒤로</button>
+                        <button type="button" class="text-[11px] text-ms-muted underline ms-btn px-2 py-1.5" onclick="MS.goDashboard()">대시보드</button>
                     </div>
-                    <div class="mb-4 flex gap-2 print-hidden max-w-md mx-auto">
-                        <button type="button" class="${base} ${tabPs}"
-                            onclick="MS.setTargetGroup('preschool')">유아·유치부</button>
-                        <button type="button" class="${base} ${tabEl}"
-                            onclick="MS.setTargetGroup('elementary')">초등부</button>
+                    <div class="mb-5 text-center px-1 print-hidden">
+                        <p class="text-sm font-black text-[#2D4A3E] leading-snug">📍 ${name}${groupPart}</p>
+                        <p class="text-[11px] text-ms-muted mt-1.5">${ageLine}</p>
                     </div>
-                    <div class="space-y-5 md:space-y-4 max-h-[56vh] overflow-y-auto pr-1 custom-scrollbar mb-6">
+                    <div class="space-y-5 md:space-y-4 max-h-[min(56vh,32rem)] md:max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar mb-6">
                         ${qs
                             .map(
                                 (q, idx) => `
@@ -2894,10 +2921,15 @@
                             )
                             .join('')}
                     </div>
-                    <button type="button" class="ms-btn w-full bg-[#D4A373] text-white font-bold py-5 text-base shadow-lg"
-                        onclick="MS.goResult()">분석 보고서 만들기</button>
+                    <button type="button" id="ms-input-submit-btn"
+                        class="ms-btn w-full bg-[#2D4A3E] text-white font-black py-5 text-base shadow-lg hover:brightness-95 ${canComplete ? '' : 'opacity-45 cursor-not-allowed'}"
+                        ${canComplete ? '' : 'disabled '}
+                        onclick="MS.goResult()">검사 완료 및 전송</button>
                 </div>
             `;
+            requestAnimationFrame(() => {
+                if (typeof MS !== 'undefined' && MS.refreshInputSubmitButton) MS.refreshInputSubmitButton();
+            });
         },
 
         renderResult(el) {
@@ -5368,11 +5400,24 @@
             STATE.isPreviewSample = false;
             STATE.touchSelected();
             STATE.persist();
+            if (STATE.step === 'input') MS.refreshInputSubmitButton();
+        },
+        /** 입력 중 전체 완료 시에만 하단 버튼 활성화 (전체 리렌더 없이) */
+        refreshInputSubmitButton() {
+            if (STATE.step !== 'input') return;
+            const inst = STATE.selected();
+            const btn = document.getElementById('ms-input-submit-btn');
+            if (!inst || !btn) return;
+            const ok = UI.allInputQuestionsFilled(inst);
+            btn.disabled = !ok;
+            btn.classList.toggle('opacity-45', !ok);
+            btn.classList.toggle('cursor-not-allowed', !ok);
+            btn.setAttribute('aria-disabled', ok ? 'false' : 'true');
         },
         goResult() {
             const inst = STATE.selected();
-            if (!inst || !UI.hasAnyCount(inst.counts)) {
-                alert('최소 한 문항에 O 또는 X 인원 수를 넣어 주세요.');
+            if (!inst || !UI.allInputQuestionsFilled(inst)) {
+                alert('모든 문항에 O·X 인원 수를 입력해 주세요.');
                 return;
             }
             STATE.touchSelected();
