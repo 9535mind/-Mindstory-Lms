@@ -389,6 +389,8 @@
      */
     const INSTITUTION_DATABASE = [
         '삼계중앙어린이집',
+        '서울중앙어린이집',
+        '서울한빛어린이집',
         '사창유치원',
         '장성중앙초 병설유치원',
         '장성성산초병설유치원',
@@ -423,7 +425,23 @@
 
     function isHangulConsonantJamoChar(ch) {
         const c = ch.charCodeAt(0);
-        return c >= 0x3131 && c <= 0x314e;
+        /** 호환 자모 ㄱ…ㅎ (U+3131–U+314E) + 조합용 초성 자모 U+1100–U+1112 (IME에 따라 ㅅ이 여기로 들어옴) */
+        return (c >= 0x3131 && c <= 0x314e) || (c >= 0x1100 && c <= 0x1112);
+    }
+
+    /** 조합용 초성(U+1100…) → extractChoseongSequenceFromName 과 동일한 호환 자모 문자열로 통일 */
+    function normalizeChoseongQueryToCompatibilityJamo(str) {
+        let out = '';
+        const s = String(str || '');
+        for (let i = 0; i < s.length; i++) {
+            const c = s.charCodeAt(i);
+            if (c >= 0x1100 && c <= 0x1112) {
+                out += CHOSEONG_JAMO[c - 0x1100] || '';
+            } else {
+                out += s[i];
+            }
+        }
+        return out;
     }
 
     /** 검색어가 호환 자음(ㄱ~ㅎ)만으로 이루어졌는지 — 초성 검색 모드 */
@@ -3782,7 +3800,7 @@
             const el = document.getElementById('ms-modal-inst-name');
             if (el) MS.applyModalInstNameSync(el);
         },
-        /** 조합 완료 후에만 STATE·모달·자동완성 갱신 (조합 중 전체 재렌더 금지) */
+        /** 조합 완료 후에만 STATE·자동완성 갱신. 매 글자마다 모달 전체를 다시 그리지 않음(드롭다운·초성 검색이 깨지지 않게). 대상/유형이 키워드로 바뀔 때만 전체 재렌더. */
         applyModalInstNameSync(el) {
             const v = String((el && el.value) || '');
             let start = 0;
@@ -3793,6 +3811,8 @@
             } catch (_) {
                 /* ignore */
             }
+            const prevGroup = STATE.targetGroup;
+            const prevSetup = STATE.setupTypeOverride;
             MS._modalInstDropdownAll = false;
             STATE.searchTerm = v;
             const match = STATE.institutions.find((i) => String(i.name).trim() === v.trim());
@@ -3807,20 +3827,26 @@
             } catch (_) {
                 /* ignore */
             }
-            MS.openNewExamPrepModal();
-            requestAnimationFrame(() => {
-                const n = document.getElementById('ms-modal-inst-name');
-                if (!n) return;
-                n.focus();
-                try {
-                    if (typeof start === 'number' && typeof end === 'number') {
-                        n.setSelectionRange(start, end);
+            const needFullRefresh =
+                STATE.targetGroup !== prevGroup || STATE.setupTypeOverride !== prevSetup;
+            if (needFullRefresh) {
+                MS.openNewExamPrepModal();
+                requestAnimationFrame(() => {
+                    const n = document.getElementById('ms-modal-inst-name');
+                    if (!n) return;
+                    n.focus();
+                    try {
+                        if (typeof start === 'number' && typeof end === 'number') {
+                            n.setSelectionRange(start, end);
+                        }
+                    } catch (_) {
+                        /* ignore */
                     }
-                } catch (_) {
-                    /* ignore */
-                }
+                    MS.updateModalInstDropdown();
+                });
+            } else {
                 MS.updateModalInstDropdown();
-            });
+            }
         },
         setPrepModalType(ty) {
             let t = ty === '방과후학교' ? '방과후교실' : ty;
@@ -3934,10 +3960,11 @@
             root.className = 'print-hidden fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4';
             root.innerHTML = `
                 <div class="absolute inset-0 bg-black/45" onclick="MS.closeForestModal()" aria-hidden="true"></div>
-                <div class="relative w-full max-w-md max-h-[90vh] overflow-y-auto overscroll-contain rounded-t-[1.75rem] sm:rounded-[1.75rem] bg-[#FDFBF7] shadow-2xl border border-[#2D4A3E]/12 p-3 sm:p-4 md:p-5 custom-scrollbar pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:pb-4" onclick="event.stopPropagation()">
+                <div class="relative w-full max-w-md max-h-[90vh] flex flex-col rounded-t-[1.75rem] sm:rounded-[1.75rem] bg-[#FDFBF7] shadow-2xl border border-[#2D4A3E]/12 overflow-x-hidden" onclick="event.stopPropagation()">
+                    <div class="shrink-0 px-3 sm:px-4 md:px-5 pt-3 sm:pt-4 md:pt-5">
                     <h2 id="ms-modal-title" class="text-base md:text-lg font-black text-[#2D4A3E] mb-2 text-center leading-tight">검사 설정</h2>
                     <label for="ms-modal-inst-name" class="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest">기관명 검색</label>
-                    <div class="relative z-40 mb-1.5">
+                    <div class="relative z-[80] mb-1.5">
                         <input id="ms-modal-inst-name" type="text" maxlength="120" autocomplete="organization" placeholder="초성·부분 검색 가능 (예: 삼계중앙어린이집)"
                             class="w-full pl-4 pr-[7.25rem] py-2.5 md:py-3 text-center font-bold rounded-lg border-2 border-[#03C75A] bg-white text-[#111] text-base md:text-lg shadow-[0_2px_8px_rgba(3,199,90,0.12)] outline-none focus:ring-2 focus:ring-[#03C75A]/35 focus:border-[#03C75A]"
                             value="${UI.esc(instDraft)}"
@@ -3962,12 +3989,14 @@
                             onclick="MS.toggleModalInstListAll(event)">
                             <span class="text-base font-bold leading-none select-none" aria-hidden="true">▼</span>
                         </button>
-                        <div id="ms-modal-inst-dropdown" class="hidden absolute left-0 right-0 top-full mt-2 z-[60] max-h-[min(42vh,18rem)] overflow-y-auto rounded-2xl border-2 border-[#5D4037]/25 bg-white shadow-[0_12px_40px_rgba(93,64,55,0.12)] custom-scrollbar"
+                        <div id="ms-modal-inst-dropdown" class="hidden absolute left-0 right-0 top-full mt-2 z-[90] max-h-[min(42vh,18rem)] overflow-y-auto rounded-2xl border-2 border-[#5D4037]/25 bg-white shadow-[0_12px_40px_rgba(93,64,55,0.12)] custom-scrollbar"
                             role="listbox" aria-label="기관 자동완성"></div>
                     </div>
                     <p class="text-[10px] text-ms-muted mb-2 leading-relaxed rounded-lg bg-[rgba(45,74,62,0.04)] px-2 py-1.5 border border-[rgba(45,74,62,0.07)]">
                         기관을 고르면 유형이 맞춰지고, 이름에 <span class="font-bold text-[#03C75A]">어린이집·유치원</span>·<span class="font-bold text-[#FF9800]">지역아동·방과후·초등학교</span> 등이 들어가면 자동 감지됩니다.
                     </p>
+                    </div>
+                    <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-5 custom-scrollbar pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:pb-4">
                     <span class="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest">대상 (문항뱅크)</span>
                     <div class="flex gap-2 mb-2">
                         <button type="button" class="${base} ${tabPs}"
@@ -4014,6 +4043,7 @@
                         onclick="MS.submitUnifiedSetupFromModal()">검사 입력으로 이동</button>
                     <div class="flex justify-center">
                         <button type="button" class="ms-btn text-sm font-bold text-ms-muted py-2" onclick="MS.closeForestModal()">취소</button>
+                    </div>
                     </div>
                 </div>
             `;
@@ -4586,9 +4616,10 @@
                 if (allMode) return true;
                 if (qt.length < 1) return false;
                 if (choseongMode) {
-                    /** 음절 초성열에 검색어가 **부분 문자열**로 포함되면 일치 (예: ㅅ → 사창·장성·삼계…) */
+                    /** 음절 초성열에 검색어가 **부분 문자열**로 포함되면 일치 (예: ㅅ → 서울·사창·삼계…). 조합 자모 ㅅ(U+1109)와 호환 ㅅ(U+3145) 통일 */
                     const seq = extractChoseongSequenceFromName(nm);
-                    return seq.includes(qt);
+                    const qNorm = normalizeChoseongQueryToCompatibilityJamo(qt);
+                    return seq.includes(qNorm);
                 }
                 return nameKey(nm).includes(ql);
             };
