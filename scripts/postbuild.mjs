@@ -24,6 +24,7 @@ const ROUTES = {
     /** 유아숲 도구: Worker 미개입 — Clean URL /forest·/forest.html 정적만 (루프 방지) */
     '/forest',
     '/forest.html',
+    /** /forest_v9.html 은 Worker에서 ASSETS.fetch 로 명시 서빙(배포 누락·라우팅 꼬임 완화) */
     '/유아숲 행동관찰.html',
     '/build.txt',
     '/google7186e759c88da5d4.html',
@@ -60,6 +61,15 @@ if (existsSync(forestHtml)) {
   console.log('⚠️  public/forest.html 없음 — /forest.html 404 가능')
 }
 
+const forestV9Html = join(publicDir, 'forest_v9.html')
+const forestV9HtmlDest = join(dist, 'forest_v9.html')
+if (existsSync(forestV9Html)) {
+  forceCopyFile(forestV9Html, forestV9HtmlDest)
+  console.log('✅ forest_v9.html → dist 루트 명시 복사(덮어쓰기)')
+} else {
+  console.log('⚠️  public/forest_v9.html 없음')
+}
+
 const forestQbanks = join(publicDir, 'forest-question-banks.js')
 const forestQbanksDest = join(dist, 'forest-question-banks.js')
 if (existsSync(forestQbanks)) {
@@ -70,10 +80,23 @@ if (existsSync(forestQbanks)) {
 writeFileSync(join(dist, '_routes.json'), JSON.stringify(ROUTES, null, 2) + '\n', 'utf8')
 console.log('✅ dist/_routes.json 작성 (정적 exclude: /pg-business-info.html 등)')
 
-// 배포 후 브라우저에서 https://(도메인)/build.txt 로 최신 빌드 시각 확인
+// 배포 후 브라우저에서 https://(도메인)/build.txt 로 최신 빌드 시각 확인 (npm run build 시 postbuild에서 매번 갱신)
+const now = new Date()
+const builtAtISO = now.toISOString()
+const builtAtLocal = now.toLocaleString('ko-KR', {
+  timeZone: 'Asia/Seoul',
+  dateStyle: 'medium',
+  timeStyle: 'medium',
+})
 const buildMeta = {
-  builtAt: new Date().toISOString(),
-  note: 'npm run build 출력. 푸터 변경이 안 보이면 이 시각이 배포 후 갱신되는지 확인.',
+  stamp: '[REAL V10.0 - NAVER GREEN]',
+  builtAt: builtAtISO,
+  builtAtKorea: builtAtLocal,
+  note: 'npm run build → postbuild.mjs 가 이 파일을 덮어씁니다. 시각이 안 바뀌면 dist 미배포 또는 캐시 의심.',
 }
-writeFileSync(join(dist, 'build.txt'), JSON.stringify(buildMeta, null, 2) + '\n', 'utf8')
-console.log('✅ dist/build.txt 작성 (배포 반영 확인용)')
+const buildTxtBody =
+  `# ${buildMeta.stamp}\n# builtAt (ISO): ${builtAtISO}\n# builtAt (Asia/Seoul): ${builtAtLocal}\n\n` +
+  JSON.stringify(buildMeta, null, 2) +
+  '\n'
+writeFileSync(join(dist, 'build.txt'), buildTxtBody, 'utf8')
+console.log('✅ dist/build.txt 작성 (배포 반영 확인용)', builtAtISO)

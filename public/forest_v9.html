@@ -289,11 +289,12 @@
     <header class="text-center mb-8 print-hidden shrink-0">
         <div class="inline-block px-4 py-1 border-2 border-[#2D4A3E] text-[#2D4A3E] text-[9px] font-bold rounded-full mb-3 tracking-[0.18em]">MINDSTORY</div>
         <h1 class="text-2xl md:text-3xl font-black text-[#2D4A3E] tracking-tight leading-tight px-1">어린이 4군자 기질검사</h1>
+        <div id="ms-examiner-header" class="print-hidden max-w-md mx-auto w-full px-2 mt-3 mb-1" aria-label="진행자 이름"></div>
         <div id="ms-header-age-tabs" class="print-hidden max-w-md mx-auto w-full px-2 mt-4 mb-1" aria-label="연령·문항 세트 선택"></div>
         <p class="mt-2 text-sm text-ms-body font-semibold">마인드스토리 유아숲 행동관찰</p>
         <p class="mt-1 text-sm text-ms-body font-medium">축령산 편백숲 유아학교 · 따뜻한 관찰 기록</p>
-        <p class="mt-1 text-[10px] text-ms-muted">통합 엔진 v1.5 · v9.1 스키마 · 보고서 v2.0 · 기기 안에서만 저장 · 오프라인</p>
-        <p class="mt-2 text-[10px] text-ms-muted leading-snug px-2 max-w-sm mx-auto">기관 검색·최근 기록·목록은 아래 본문에서 시작합니다. (이 줄은 헤더 안내입니다.)</p>
+        <p class="mt-1 text-[10px] text-ms-muted">통합 엔진 v1.5 · <span class="font-black text-[#1B5E20] tracking-wide">[REAL V10.0 - NAVER GREEN]</span> · 보고서 v2.0 · 기기 안에서만 저장 · 오프라인</p>
+        <p class="mt-2 text-[10px] text-ms-muted leading-snug px-2 max-w-sm mx-auto">관리자 인증 후에만 기관 목록·대시보드·백업이 열립니다.</p>
     </header>
 
     <div id="view-content" class="flex-1 min-h-0"></div>
@@ -320,6 +321,11 @@
     const LEGACY_V86 = 'ms_mindstory_4gunja_v86';
     const LEGACY_V2 = 'ms_4gunja_v2';
 
+    /** v12.0 진행자 이름 · 관리자 대시보드 잠금 */
+    const LS_EXAMINER_NAME = 'ms_examiner_name';
+    const LS_ADMIN_UNLOCKED = 'ms_forest_admin_unlocked_v12';
+    const ADMIN_PASSWORDS = ['9535', '0000'];
+
     function newVaultRecordId() {
         try {
             if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -330,11 +336,11 @@
     }
 
     /**
-     * SCHEMA — v9.1 유아·초등 이중 문항뱅크 + 성장 단계별 기질 추적
+     * SCHEMA — v12.0 진행자·권한 분리 + v10 빌더
      * 톤: MINDSTORY V1 · 관찰과 공감 · 따뜻한 어휘
      */
     const SCHEMA = {
-        version: '9.1',
+        version: '12.0',
         categories: ['난초', '대나무', '국화', '매화'],
         /** 동점 시 정렬: 매(매화) → 란(난초) → 국(국화) → 죽(대나무) */
         temperamentTieOrder: ['매화', '난초', '국화', '대나무'],
@@ -816,11 +822,25 @@
             };
         },
 
-        /** 기관 유형 필드(type) 기준 정규화 — 병설 등은 유치원으로 */
-        institutionTypeNorm(inst) {
+        /** 유아부 기관 성격 (type) — 병설 등은 유치원으로 */
+        preschoolKindNorm(inst) {
             const t = String(inst.type || '').trim();
             if (t === '유치원' || t.includes('병설')) return '유치원';
+            if (t === '기타') return '기타';
             return '어린이집';
+        },
+
+        /** 초등부 기관 성격 */
+        elementaryTypeNorm(inst) {
+            const t = String(inst.type || '').trim();
+            if (t.includes('지역아동') || t === '지역아동센터') return '지역아동센터';
+            return '방과후학교';
+        },
+
+        /** 표시·호환: 대상군에 따라 유아(3분류) 또는 초등(2분류) 라벨 */
+        institutionTypeNorm(inst) {
+            if (this.getTargetGroup(inst) === 'elementary') return this.elementaryTypeNorm(inst);
+            return this.preschoolKindNorm(inst);
         },
 
         /**
@@ -828,8 +848,9 @@
          * 유형별 평균 = 해당 유형 관찰(입력 완료) 점수 합 / 해당 유형 관찰 수
          */
         aggregateGlobalByInstitutionType(institutions, hasDataFn) {
-            const day = institutions.filter((i) => this.institutionTypeNorm(i) === '어린이집');
-            const kg = institutions.filter((i) => this.institutionTypeNorm(i) === '유치원');
+            const preschool = institutions.filter((i) => this.getTargetGroup(i) === 'preschool');
+            const day = preschool.filter((i) => this.preschoolKindNorm(i) === '어린이집');
+            const kg = preschool.filter((i) => this.preschoolKindNorm(i) === '유치원');
             const dayAgg = this.aggregateMeanScores(day, hasDataFn);
             const kgAgg = this.aggregateMeanScores(kg, hasDataFn);
             if (!dayAgg || !kgAgg) return null;
@@ -858,6 +879,41 @@
                 signedDiff,
                 absDiff
             };
+        },
+
+        /** 유아부 vs 초등부 집단 간 평균 비교 (문항뱅크는 각 레코드 targetGroup 기준) */
+        aggregatePreschoolVsElementary(institutions, hasDataFn) {
+            const pre = institutions.filter((i) => this.getTargetGroup(i) === 'preschool');
+            const el = institutions.filter((i) => this.getTargetGroup(i) === 'elementary');
+            const preAgg = this.aggregateMeanScores(pre, hasDataFn);
+            const elAgg = this.aggregateMeanScores(el, hasDataFn);
+            if (!preAgg || !elAgg) return null;
+            if (preAgg.nWithData < 1 || elAgg.nWithData < 1) return null;
+            const absDiff = {};
+            const signedDiff = {};
+            this.categories.forEach((c) => {
+                const d = (preAgg.mean[c] || 0) - (elAgg.mean[c] || 0);
+                absDiff[c] = Math.abs(d);
+                signedDiff[c] = (elAgg.mean[c] || 0) - (preAgg.mean[c] || 0);
+            });
+            let rsiCat = this.categories[0];
+            let rsiVal = -1;
+            this.categories.forEach((c) => {
+                if (absDiff[c] > rsiVal) {
+                    rsiVal = absDiff[c];
+                    rsiCat = c;
+                }
+            });
+            return {
+                meanDay: preAgg.mean,
+                meanKg: elAgg.mean,
+                nDay: preAgg.nWithData,
+                nKg: elAgg.nWithData,
+                rsiCat,
+                rsiVal,
+                signedDiff,
+                absDiff
+            };
         }
     };
 
@@ -877,14 +933,30 @@
         /** 홈 이동 직후 토스트 문구 */
         toastMessage: null,
         _toastTimer: null,
-        /** 대시보드: 관리 대시보드(보고서 3종) 패널 펼침 */
+        /** 대시보드: 분석 센터(관리 대시보드) 패널 펼침 */
         dashboardReportsExpanded: false,
+        /** 맞춤 보고서 빌더: 기관명(trim) 또는 ''=전체 */
+        dashboardBuilderInst: '',
+        /** all | preschool_daycare | preschool_kg | preschool_other | elem_community | elem_afterschool | cmp_dk | cmp_pe */
+        dashboardBuilderTypeFilter: 'all',
+        /** single | prepost | group */
+        dashboardBuilderMode: 'single',
+        /** 집단 거시: dk 어린이집↔유치원 · pe 유아↔초등 */
+        macroVariant: 'dk',
+        reportAggregateMembers: null,
+        reportAggregateTitle: '',
+        reportFromDashboard: false,
         /** 입력 화면: preschool | elementary (기록별 inst.targetGroup과 동기화) */
         targetGroup: 'preschool',
 
         guessType(name) {
             const s = String(name);
-            return s.includes('유치원') || s.includes('병설') ? '유치원' : '어린이집';
+            if (this.targetGroup === 'elementary') {
+                if (s.includes('지역아동') || s.includes('아동센터')) return '지역아동센터';
+                return '방과후학교';
+            }
+            if (s.includes('유치원') || s.includes('병설')) return '유치원';
+            return '어린이집';
         },
 
         ensureCounts(inst) {
@@ -922,7 +994,10 @@
                         v: SCHEMA.version,
                         targetGroup: this.targetGroup === 'elementary' ? 'elementary' : 'preschool',
                         institutions: this.institutions,
-                        selectedId: this.selectedId
+                        selectedId: this.selectedId,
+                        dashboardBuilderInst: this.dashboardBuilderInst || '',
+                        dashboardBuilderTypeFilter: this.dashboardBuilderTypeFilter || 'all',
+                        dashboardBuilderMode: this.dashboardBuilderMode || 'single'
                     })
                 );
             } catch (_) {}
@@ -1003,6 +1078,13 @@
                     this.selectedId = o.selectedId || (this.institutions[0] && this.institutions[0].id) || null;
                     if (o.targetGroup === 'elementary' || o.targetGroup === 'preschool') {
                         this.targetGroup = o.targetGroup;
+                    }
+                    if (typeof o.dashboardBuilderInst === 'string') this.dashboardBuilderInst = o.dashboardBuilderInst;
+                    if (typeof o.dashboardBuilderTypeFilter === 'string') {
+                        this.dashboardBuilderTypeFilter = o.dashboardBuilderTypeFilter;
+                    }
+                    if (o.dashboardBuilderMode === 'single' || o.dashboardBuilderMode === 'prepost' || o.dashboardBuilderMode === 'group') {
+                        this.dashboardBuilderMode = o.dashboardBuilderMode;
                     }
                     this.institutions.forEach((i) => this.ensureCounts(i));
                     if (fromKey !== STORAGE_KEY) {
@@ -1148,6 +1230,7 @@
             const el = document.getElementById('view-content');
             if (!el) return;
             if (STATE.step === 'dashboard') this.renderDashboard(el);
+            else if (STATE.step === 'guide') this.renderGuide(el);
             else if (STATE.step === 'institution-hub') this.renderInstitutionHub(el);
             else if (STATE.step === 'institution-report') this.renderInstitutionReport(el);
             else if (STATE.step === 'institution-prepost-report') this.renderInstitutionPrePostReport(el);
@@ -1162,28 +1245,53 @@
             }
             this.renderDataFooter();
             this.renderToast();
+            this.renderExaminerHeader();
             this.renderHeaderAgeTabs();
         },
 
-        /** 헤더: 연령·문항 세트 탭 (전역 STATE.targetGroup 과 동기화) */
+        /** 헤더: 진행자 이름 (localStorage ms_examiner_name) */
+        renderExaminerHeader() {
+            const wrap = document.getElementById('ms-examiner-header');
+            if (!wrap || typeof MS === 'undefined' || !MS.getExaminerName) return;
+            const name = String(MS.getExaminerName() || '').trim();
+            const greet = name ? `안녕하세요, ${name} 해설사님` : '진행자 이름을 입력해 주세요';
+            const inp = document.getElementById('ms-examiner-name');
+            if (inp && document.activeElement === inp) {
+                const p = document.getElementById('ms-examiner-greeting');
+                if (p) p.textContent = greet;
+                return;
+            }
+            wrap.innerHTML = `
+                <p id="ms-examiner-greeting" class="text-sm text-[#2D4A3E] font-bold mb-2 text-center">${this.esc(greet)}</p>
+                <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-center max-w-md mx-auto">
+                    <label for="ms-examiner-name" class="text-xs font-bold text-ms-muted shrink-0 self-center text-center sm:text-left">진행자 이름</label>
+                    <input id="ms-examiner-name" type="text" maxlength="40" autocomplete="name" placeholder="한 번 입력하면 이 기기에 저장됩니다"
+                        class="flex-1 min-h-[48px] rounded-2xl border-2 border-[#2D4A3E]/20 bg-white/90 px-4 py-2.5 text-sm font-bold text-[#2D4A3E] text-center"
+                        value="${this.esc(name)}"
+                        oninput="MS.onExaminerNameInput(this.value)" />
+                </div>
+            `;
+        },
+
+        /** 헤더: 연령·문항 세트 탭 (전역 STATE.targetGroup 과 동기화) — 유아 #03C75A · 초등 #FF9800 */
         renderHeaderAgeTabs() {
             const host = document.getElementById('ms-header-age-tabs');
             if (!host) return;
             const tg = STATE.targetGroup === 'elementary' ? 'elementary' : 'preschool';
-            const tabPs =
-                tg === 'preschool'
-                    ? 'border-[#2D4A3E] bg-[rgba(240,253,244,0.5)] text-[#2D4A3E]'
-                    : 'border-ms text-ms-muted';
-            const tabEl =
-                tg === 'elementary'
-                    ? 'border-[#2D4A3E] bg-[rgba(240,253,244,0.5)] text-[#2D4A3E]'
-                    : 'border-ms text-ms-muted';
+            const base =
+                'ms-btn flex-1 min-h-[48px] px-4 py-3 font-bold text-xs rounded-full transition-colors duration-200 ease-out';
+            const psOn = 'bg-[#03C75A] text-white border-0 shadow-md shadow-[#03C75A]/25';
+            const psOff = 'bg-transparent text-[#03C75A] border border-solid border-[#03C75A]';
+            const elOn = 'bg-[#FF9800] text-white border-0 shadow-md shadow-[#FF9800]/25';
+            const elOff = 'bg-transparent text-[#FF9800] border border-solid border-[#FF9800]';
+            const tabPs = tg === 'preschool' ? psOn : psOff;
+            const tabEl = tg === 'elementary' ? elOn : elOff;
             host.innerHTML = `
-                <div class="flex gap-2 justify-center">
-                    <button type="button" class="ms-btn flex-1 py-3 font-bold border-2 text-xs rounded-[2rem] ${tabPs}"
+                <div class="flex gap-2 justify-center max-w-md mx-auto">
+                    <button type="button" class="${base} ${tabPs}"
                         onclick="MS.setTargetGroup('preschool')">유아·유치부</button>
-                    <button type="button" class="ms-btn flex-1 py-3 font-bold border-2 text-xs rounded-[2rem] ${tabEl}"
-                        onclick="MS.setTargetGroup('elementary')">지역아동센터(초등)</button>
+                    <button type="button" class="${base} ${tabEl}"
+                        onclick="MS.setTargetGroup('elementary')">초등부</button>
                 </div>
             `;
         },
@@ -1731,6 +1839,74 @@
             };
         },
 
+        /** 거시: 유아부 vs 초등부 (동일 RSI 구조, 서술만 교체) */
+        buildPreschoolElementaryMacroNarrative(ctx) {
+            const { meanDay, meanKg, nDay, nKg, rsiCat, rsiVal, absDiff, signedDiff } = ctx;
+            const cats = SCHEMA.categories;
+            const cn = (c) =>
+                ({ 난초: '난초(공감·정서)', 대나무: '대나무(에너지·탐구)', 국화: '국화(안전·신중)', 매화: '매화(원칙·과업·마무리)' })[c] ||
+                c;
+
+            const rsiLine =
+                `**상대적 강점 지표(RSI)**로 본 이번 표본에서 **유아부**와 **초등부** 관찰의 거리가 가장 넓게 벌어진 축은 **${cn(rsiCat)}**이며, 평균 절대 차이는 약 **${rsiVal}퍼센트포인트**입니다. ` +
+                (signedDiff[rsiCat] > 0
+                    ? `현재 데이터에서는 초등부 집단의 ${cn(rsiCat)} 평균이 유아부보다 높게 나타났습니다. 누리·과제 구조·또래 규범이 서로 다른 발달 과제와 맞닿아 있어요.\n\n`
+                    : signedDiff[rsiCat] < 0
+                      ? `현재 데이터에서는 유아부 집단의 ${cn(rsiCat)} 평균이 초등부보다 높게 나타났습니다. 보육·애착·일상 예측 가능성이 이 축을 부각했을 수 있습니다.\n\n`
+                      : `두 집단이 이 축에서 매우 가깝습니다.\n\n`);
+
+            const maturity =
+                `**발달 맥락 비교** 측면에서, 유아부는 **유아·유치 문항뱅크**로, 초등부는 **초등 문항뱅크**로 각각 산출됩니다. 같은 4축 언어로 읽되, **질문 맥락이 다르므로** 절대값 비교는 참고용이며, **집단 간 상대 패턴**에 주목해 주세요.`;
+
+            const cardDay =
+                `(유아부 관찰 ${nDay}건 평균)\n\n` +
+                `보육·누리 환경에서의 기질 분포는 **애착·일상 루틴·소그룹 돌봄**과 연결되어 읽히는 경우가 많습니다. ` +
+                `현재 표본 평균은 **난초 ${meanDay['난초']}% · 대나무 ${meanDay['대나무']}% · 국화 ${meanDay['국화']}% · 매화 ${meanDay['매화']}%**입니다.`;
+
+            const cardKg =
+                `(초등부 관찰 ${nKg}건 평균)\n\n` +
+                `방과 후·지역아동센터 등 초등 맥락에서는 **과제 지속·협동·규칙**과 연결된 기질 발현이 두드러질 수 있습니다. ` +
+                `현재 표본 평균은 **난초 ${meanKg['난초']}% · 대나무 ${meanKg['대나무']}% · 국화 ${meanKg['국화']}% · 매화 ${meanKg['매화']}%**입니다.`;
+
+            const gapParts = cats
+                .filter((c) => (absDiff[c] || 0) >= 10)
+                .map((c) => {
+                    const sd = signedDiff[c] || 0;
+                    const higher = sd > 0 ? '초등부' : '유아부';
+                    return (
+                        `**${cn(c)}** 축에서 두 집단의 평균 차이가 **${absDiff[c]}포인트**에 달합니다(초등 − 유아 기준 **${sd >= 0 ? '+' : ''}${sd}**). ` +
+                        `이 간극은 **문항뱅크 차이**와 **환경적 요구**가 함께 작용했을 수 있으므로, 해석 시 현장 맥락을 병행해 주세요.`
+                    );
+                });
+            const gapAnalysis =
+                gapParts.length > 0
+                    ? gapParts.join('\n\n')
+                    : `네 축 모두에서 두 집단의 평균 차이가 10퍼센트포인트 미만으로, **기질적 분포가 서로 멀지 않게 겹치는** 구간입니다.`;
+
+            const solDay =
+                `**유아부 맞춤 · 안정적 애착을 강화하는 숲 산책법**\n\n` +
+                `① 출발 전 **같은 문장으로 약속 고정**하기. ② **속도 맞추기 걷기**로 안전기지를 몸으로 기억하게 하기. ③ **오감 정지 1분**으로 정서 레이블링 연습.`;
+
+            const solKg =
+                `**초등부 맞춤 · 협동과 과업을 숲에 심기**\n\n` +
+                `① **숲 역할 배지**로 사회적 역할 연습. ② **미니 미션 카드**로 협동 과업. ③ 마무리 **서클**에서 오늘 지킨 약속 한 가지 공유.`;
+
+            const researchFooter =
+                `본 자료는 **유아부·초등부 문항뱅크**로 각각 산출된 평균을 한 화면에 겹쳐 읽는 **탐색용 거시 지도**입니다. ` +
+                `“어느 쪽이 우수”가 아니라 **각 집단이 숲에서 어떤 기질 언어를 드러내는가**를 존중하는 해석을 지향합니다.`;
+
+            return {
+                rsiLine,
+                maturity,
+                cardDay,
+                cardKg,
+                gapAnalysis,
+                solDay,
+                solKg,
+                researchFooter
+            };
+        },
+
         consultingSectionHtml(title, bodyMdLike, size) {
             const pClass =
                 size === 'lg'
@@ -1814,10 +1990,14 @@
             `;
         },
 
-        /** 최하단 · 검사 흐름 방해 최소화 (작고 심플) */
+        /** 최하단 · 검사 흐름 방해 최소화 (작고 심플) — 관리자만 백업 도구 */
         renderDataFooter() {
             const foot = document.getElementById('ms-data-footer');
             if (!foot) return;
+            if (typeof MS !== 'undefined' && MS.isAdminUnlocked && !MS.isAdminUnlocked()) {
+                foot.innerHTML = '';
+                return;
+            }
             if (
                 STATE.step === 'institution-hub' ||
                 STATE.step === 'institution-report' ||
@@ -1843,6 +2023,27 @@
                     <p class="text-[9px] text-gray-400 text-center mt-2 px-3 leading-relaxed max-w-md mx-auto">
                         본 시스템은 <span class="text-gray-500 font-semibold">폐쇄형 저장</span> 방식을 사용합니다. 모든 데이터는 <span class="text-gray-500 font-semibold">현재 기기</span>에만 안전하게 보관됩니다.
                     </p>
+                </div>
+            `;
+        },
+
+        renderGuide(el) {
+            el.innerHTML = `
+                <div class="max-w-lg mx-auto space-y-6 print-hidden">
+                    <button type="button" class="ms-btn text-xs font-bold text-ms-muted hover:text-[#2D4A3E]"
+                        onclick="MS.leaveGuide()">← 홈으로</button>
+                    <div class="ms-card p-8 md:p-10 border-2 border-[rgba(45,74,62,0.12)]">
+                        <p class="text-[10px] font-black text-[#D4A373] tracking-[0.2em] mb-2">MINDSTORY · 검사 설명서</p>
+                        <h2 class="text-xl md:text-2xl font-black text-[#2D4A3E] mb-6">현장 해설사용 안내</h2>
+                        <div class="space-y-4 text-sm text-ms-body leading-relaxed text-left">
+                            <p><strong class="text-[#2D4A3E]">1. 연령 선택</strong> — 상단에서 유아·유치부 또는 초등부를 선택하면 문항 세트가 바뀝니다.</p>
+                            <p><strong class="text-[#2D4A3E]">2. 새 검사 시작</strong> — 기관명·유형·사전·사후를 지정한 뒤 입력 화면에서 O/X 인원을 넣습니다.</p>
+                            <p><strong class="text-[#2D4A3E]">3. 진행자 이름</strong> — 헤더에 입력하면 이 기기에 저장되며, 서버 전송 시 함께 기록됩니다.</p>
+                            <p><strong class="text-[#2D4A3E]">4. 결과</strong> — 「분석 보고서 만들기」 후 인쇄·PDF 저장이 가능합니다. 전송이 완료되면 안내가 뜹니다.</p>
+                            <p><strong class="text-[#2D4A3E]">5. 관리자</strong> — 기관 목록·대시보드·백업은 관리자 인증 후에만 열립니다.</p>
+                        </div>
+                        <p class="text-[10px] text-ms-muted mt-8 text-center">※ 본 문구는 현장 안내용입니다. 세부 운영은 기관 정책을 따릅니다.</p>
+                    </div>
                 </div>
             `;
         },
@@ -1909,12 +2110,62 @@
                     </div>`
                 : '';
 
-            el.innerHTML = `
-                <div class="max-w-lg mx-auto">
-                    ${migrateNote}
-                    <div class="ms-card p-8 md:p-10 mb-6">
-                        <button type="button" class="ms-btn w-full rounded-[2rem] bg-[#D4A373] text-white font-black py-6 md:py-7 text-lg md:text-xl shadow-lg shadow-[rgba(212,163,115,0.35)] mb-5 ring-2 ring-[#D4A373]/30 hover:brightness-95 active:scale-[0.99] transition-all"
-                            onclick="MS.goSetup()">새 검사 시작</button>
+            const showAdmin = MS.isAdminUnlocked();
+            const hasRecent = !!MS.getMostRecentInstWithData();
+
+            let bm = 'single';
+            let btf = 'all';
+            let typeOptsHtml = '';
+            let instOptsHtml = '';
+            if (showAdmin) {
+                bm =
+                    STATE.dashboardBuilderMode === 'prepost' || STATE.dashboardBuilderMode === 'group'
+                        ? STATE.dashboardBuilderMode
+                        : 'single';
+                btf = STATE.dashboardBuilderTypeFilter || 'all';
+                if (bm === 'group' && btf !== 'cmp_pe' && btf !== 'cmp_dk') btf = 'cmp_dk';
+                if (bm !== 'group' && (btf === 'cmp_pe' || btf === 'cmp_dk')) btf = 'all';
+                const instSel = String(STATE.dashboardBuilderInst || '').trim();
+                const typeOptsGroup = `
+                            <option value="cmp_dk"${btf === 'cmp_dk' ? ' selected' : ''}>어린이집 ↔ 유치원</option>
+                            <option value="cmp_pe"${btf === 'cmp_pe' ? ' selected' : ''}>유아부 ↔ 초등부</option>`;
+                const typeOptsFilter = `
+                            <option value="all"${btf === 'all' ? ' selected' : ''}>전체</option>
+                            <option value="preschool_daycare"${btf === 'preschool_daycare' ? ' selected' : ''}>어린이집</option>
+                            <option value="preschool_kg"${btf === 'preschool_kg' ? ' selected' : ''}>유치원</option>
+                            <option value="preschool_other"${btf === 'preschool_other' ? ' selected' : ''}>기타 (유아)</option>
+                            <option value="elem_community"${btf === 'elem_community' ? ' selected' : ''}>지역아동센터</option>
+                            <option value="elem_afterschool"${btf === 'elem_afterschool' ? ' selected' : ''}>방과후·기타</option>`;
+                typeOptsHtml = bm === 'group' ? typeOptsGroup : typeOptsFilter;
+                instOptsHtml = keys
+                    .map((k) => {
+                        const escaped = encodeURIComponent(k);
+                        return `<option value="${escaped}"${instSel === k ? ' selected' : ''}>${this.esc(k)}</option>`;
+                    })
+                    .join('');
+                STATE.dashboardBuilderMode = bm;
+                STATE.dashboardBuilderTypeFilter = btf;
+            }
+
+            const facilitatorActions = `
+                        <div class="space-y-3 mb-2 print:hidden">
+                            <button type="button" class="ms-btn w-full !rounded-xl border-2 border-[#2D4A3E]/25 bg-white text-[#2D4A3E] font-black py-4 text-sm shadow-sm hover:bg-[rgba(45,74,62,0.04)]"
+                                onclick="MS.runPreview()">문항 예시 보기</button>
+                            ${
+                                hasRecent
+                                    ? `<button type="button" class="ms-btn w-full !rounded-xl bg-[#5D4037] text-white font-black py-4 text-sm md:text-base shadow-[0_5px_16px_rgba(0,0,0,0.15)] hover:bg-[#4E342E]"
+                                onclick="MS.navigateToLatestResult()">직전 검사 결과 보기</button>`
+                                    : ''
+                            }
+                            <button type="button" class="ms-btn w-full !rounded-xl border-2 border-[#D4A373]/50 bg-[rgba(212,163,115,0.08)] text-[#2D4A3E] font-black py-4 text-sm"
+                                onclick="MS.goGuide()">검사설명서 보기</button>
+                        </div>
+                        <p class="text-center mt-5 pt-3 border-t border-[#2D4A3E]/10 print:hidden">
+                            <button type="button" class="text-[10px] font-semibold text-[#5D4037]/70 hover:text-[#5D4037] underline underline-offset-2"
+                                onclick="MS.openAdminUnlockModal()">관리자 · 대시보드 잠금 해제</button>
+                        </p>`;
+
+            const adminDashboardPanel = `
                         <button type="button" id="ms-dashboard-toggle"
                             class="ms-btn w-full rounded-2xl border-2 border-[#2D4A3E]/20 bg-white text-[#2D4A3E] font-black py-3.5 text-sm shadow-sm flex items-center justify-center gap-2 hover:bg-[rgba(45,74,62,0.05)] print:hidden"
                             onclick="MS.toggleDashboardReports()"
@@ -1923,25 +2174,65 @@
                             <span>관리 대시보드</span>
                             <span class="text-ms-muted text-xs font-bold" aria-hidden="true">${STATE.dashboardReportsExpanded ? '▲' : '▼'}</span>
                         </button>
-                        <div id="ms-dashboard-reports-panel" role="region" aria-label="집단 보고서"
+                        <div id="ms-dashboard-reports-panel" role="region" aria-label="분석 센터"
                             class="grid transition-[grid-template-rows] duration-300 ease-out ${STATE.dashboardReportsExpanded ? '[grid-template-rows:1fr]' : '[grid-template-rows:0fr]'} print:!grid-rows-[1fr] mb-1">
                             <div class="min-h-0 overflow-hidden print:overflow-visible">
-                                <div class="space-y-3 pt-4 border-t border-[rgba(45,74,62,0.1)] mt-3 print:border-t-0 print:mt-0 print:pt-2">
-                                    <p class="text-center text-sm text-ms-body mb-4 px-1">기관명을 누르면 <strong class="text-[#2D4A3E]">집단 종합 분석</strong> 허브로 이동합니다. 같은 이름으로 여러 관찰을 두면 자동으로 한 기관으로 묶여 평균이 계산돼요.</p>
-                                    <button type="button" class="ms-btn w-full border-2 border-[#2D4A3E] bg-[rgba(45,74,62,0.04)] text-[#2D4A3E] font-black py-4 text-sm shadow-md hover:bg-[rgba(45,74,62,0.08)]"
-                                        onclick="MS.openInstitutionTypeMacroReport()">어린이집 vs 유치원 · 거시 비교 보고서</button>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 print:hidden">
-                                        <button type="button" class="ms-btn border-2 border-ms bg-white/90 text-[#2D4A3E] font-black py-3.5 text-xs shadow-sm"
-                                            onclick="MS.openDashboardGroupReport()">기관 전체 성향 보고서</button>
-                                        <button type="button" class="ms-btn border-2 border-[#D4A373] bg-[rgba(212,163,115,0.1)] text-[#2D4A3E] font-black py-3.5 text-xs shadow-sm"
-                                            onclick="MS.openDashboardPrePostReport()">사전·사후 비교 보고서</button>
+                                <div class="pt-4 border-t border-[#5D4037]/12 mt-3 print:border-t-0 print:mt-0 print:pt-2 space-y-4">
+                                    <div class="rounded-2xl border-2 border-[#5D4037]/25 bg-[#FAF6F0] p-4 md:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+                                        <button type="button"
+                                            class="ms-btn w-full !rounded-xl bg-[#5D4037] text-white font-black py-4 text-sm md:text-base shadow-[0_5px_16px_rgba(0,0,0,0.18)] hover:bg-[#4E342E] active:bg-[#4E342E] transition-colors duration-200"
+                                            onclick="MS.navigateToLatestResult()">방금 완료한 검사 바로가기</button>
+                                        <p class="text-[10px] text-[#5D4037]/65 text-center mt-2 leading-relaxed">가장 최근에 저장된 관찰 기록(숫자 입력 완료)의 분석 보고서로 이동합니다.</p>
+                                        <div class="mt-5 pt-4 border-t border-[#5D4037]/15">
+                                            <p class="text-[10px] font-black text-[#5D4037] tracking-[0.18em] mb-3 uppercase text-center">맞춤 보고서 빌더 · v${SCHEMA.version}</p>
+                                            <div class="space-y-4">
+                                                <div>
+                                                    <label for="ms-db-inst" class="block text-xs font-bold text-[#5D4037] mb-2">기관 선택</label>
+                                                    <select id="ms-db-inst" class="w-full min-h-[52px] rounded-xl border-2 border-[#5D4037]/30 bg-white px-4 py-3 text-sm font-bold text-[#5D4037] shadow-sm"
+                                                        onchange="MS.setDashboardBuilderInstFromSelect(this)">
+                                                        <option value="">${keys.length ? '전체 (필터 집계)' : '등록된 기관 없음'}</option>
+                                                        ${instOptsHtml}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label for="ms-db-type" class="block text-xs font-bold text-[#5D4037] mb-2">${bm === 'group' ? '집단 비교 축' : '유형 (기관 성격)'}</label>
+                                                    <select id="ms-db-type" class="w-full min-h-[52px] rounded-xl border-2 border-[#5D4037]/30 bg-white px-4 py-3 text-sm font-bold text-[#5D4037] shadow-sm"
+                                                        onchange="MS.setDashboardBuilderType(this.value)">
+                                                        ${typeOptsHtml}
+                                                    </select>
+                                                    <p class="text-[10px] text-[#5D4037]/55 mt-1.5 leading-snug">${bm === 'group' ? '집단 간 비교: 로컬 전체 표본으로 두 축을 나란히 봅니다.' : '유아부: 어린이집·유치원·기타 · 초등부: 지역아동센터·방과후 등'}</p>
+                                                </div>
+                                                <div>
+                                                    <label for="ms-db-mode" class="block text-xs font-bold text-[#5D4037] mb-2">분석 방법</label>
+                                                    <select id="ms-db-mode" class="w-full min-h-[52px] rounded-xl border-2 border-[#5D4037]/30 bg-white px-4 py-3 text-sm font-bold text-[#5D4037] shadow-sm"
+                                                        onchange="MS.setDashboardBuilderMode(this.value)">
+                                                        <option value="single"${bm === 'single' ? ' selected' : ''}>단일 결과</option>
+                                                        <option value="prepost"${bm === 'prepost' ? ' selected' : ''}>사전·사후 비교</option>
+                                                        <option value="group"${bm === 'group' ? ' selected' : ''}>집단 간 비교</option>
+                                                    </select>
+                                                </div>
+                                                <button type="button"
+                                                    class="ms-btn w-full !rounded-xl bg-[#5D4037] text-white font-black py-4 text-sm md:text-base shadow-[0_5px_16px_rgba(0,0,0,0.18)] hover:bg-[#4E342E] active:bg-[#4E342E] transition-colors duration-200"
+                                                    onclick="MS.runCustomReportBuilder()">맞춤 보고서 생성</button>
+                                            </div>
+                                            <p class="text-[10px] text-[#5D4037]/55 text-center leading-relaxed mt-4 print:hidden">기관이 여러 개일 때 일부 보고서는 아래 목록에서 기관명을 눌러 허브로 들어간 뒤 열어 주세요.</p>
+                                        </div>
                                     </div>
-                                    <p class="text-[10px] text-ms-muted text-center print:hidden leading-relaxed px-1">기관이 <strong class="text-[#2D4A3E]">여러 개</strong>면 목록에서 기관명을 눌러 허브로 들어가 같은 보고서를 여세요.</p>
                                 </div>
                             </div>
-                        </div>
-                        ${listHint}
-                        <div class="rounded-[3rem] overflow-hidden border border-ms bg-ms-soft/50">
+                        </div>`;
+
+            el.innerHTML = `
+                <div class="max-w-lg mx-auto">
+                    ${migrateNote}
+                    <div class="ms-card p-8 md:p-10 mb-6">
+                        <button type="button" class="ms-btn w-full !rounded-2xl md:!rounded-3xl bg-[#5D4037] text-[#FFFFFF] font-black py-6 md:py-7 text-lg md:text-xl mb-5 shadow-[0_5px_18px_rgba(0,0,0,0.22)] hover:bg-[#4E342E] active:bg-[#4E342E] active:scale-[0.99] transition-colors duration-200 ease-out"
+                            onclick="MS.goSetup()">새 검사 시작</button>
+                        ${showAdmin ? adminDashboardPanel : facilitatorActions}
+                        ${showAdmin ? listHint : ''}
+                        ${
+                            showAdmin
+                                ? `<div class="rounded-[3rem] overflow-hidden border border-ms bg-ms-soft/50">
                             <table class="w-full text-left text-sm">
                                 <tbody class="divide-y divide-[rgba(45,74,62,0.08)]">${rows || '<tr><td class="p-6 text-center text-ms-muted">등록된 기관이 없어요. 위 버튼으로 추가해 주세요.</td></tr>'}</tbody>
                             </table>
@@ -1949,7 +2240,9 @@
                         <p class="text-center mt-4 print-hidden">
                             <button type="button" class="text-[10px] font-semibold text-gray-400 hover:text-[#D4A373] underline underline-offset-2"
                                 onclick="MS.clearVaultEntirely()">이 기기 금고 비우기 · 전체 기록 삭제</button>
-                        </p>
+                        </p>`
+                                : ''
+                        }
                     </div>
                     <p class="text-center text-xs text-ms-muted mb-2">개인정보는 이 기기 브라우저와 직접 저장한 파일에만 남아요.</p>
                 </div>
@@ -2042,21 +2335,29 @@
         },
 
         renderInstitutionReport(el) {
-            const name = String(STATE.selectedGroupName || '').trim();
-            const members = SCHEMA.membersByInstitutionName(STATE.institutions, name);
+            const nameKey = String(STATE.selectedGroupName || '').trim();
+            const members =
+                STATE.reportAggregateMembers && STATE.reportAggregateMembers.length
+                    ? STATE.reportAggregateMembers
+                    : SCHEMA.membersByInstitutionName(STATE.institutions, nameKey);
+            const displayName = String(STATE.reportAggregateTitle || nameKey || '필터 집계').trim();
             const agg = SCHEMA.aggregateMeanScores(members, (c) => this.hasAnyCount(c));
             const pie = SCHEMA.dominantTypeTally(members, (c) => this.hasAnyCount(c));
-            if (!name || !members.length || !agg) {
-                STATE.step = 'institution-hub';
-                STATE.selectedGroupName = name || '';
+            if (!members.length || !agg) {
+                const backDash = STATE.reportFromDashboard;
+                STATE.reportAggregateMembers = null;
+                STATE.reportAggregateTitle = '';
+                STATE.reportFromDashboard = false;
+                STATE.step = backDash ? 'dashboard' : 'institution-hub';
+                if (!backDash) STATE.selectedGroupName = nameKey || '';
                 UI.render();
                 return;
             }
             const { mean, nWithData, nTotal } = agg;
             const { tally, n: nPie } = pie;
-            const type0 = members[0].type || STATE.guessType(name);
+            const type0 = members[0].type || STATE.guessType(displayName || nameKey);
             const narrative = this.buildInstitutionConsultingNarrative({
-                groupName: name,
+                groupName: displayName,
                 mean,
                 tally,
                 nPie,
@@ -2076,7 +2377,7 @@
                                 onclick="MS.backFromInstitutionReport()">← 기관 허브</button>
                             <p class="text-[10px] font-black text-[#D4A373] tracking-[0.2em] mb-2">MINDSTORY · GROUP PROFILE</p>
                             <h2 class="text-2xl md:text-3xl font-black text-[#2D4A3E] mb-2 leading-tight">기관 종합 분석 보고서</h2>
-                            <p class="text-lg font-bold text-[#2D4A3E] mb-1">${this.esc(name)}</p>
+                            <p class="text-lg font-bold text-[#2D4A3E] mb-1">${this.esc(displayName)}</p>
                             <p class="text-sm text-ms-muted mb-6">[${this.esc(type0)}] · 관찰 데이터 ${nWithData}명 기준 집계 · 등록 건수 ${nTotal}건</p>
                             <blockquote class="border-l-[6px] border-[#2D4A3E] pl-5 py-2 mb-8 rounded-r-xl bg-white/60 text-[#2D4A3E] font-bold text-sm md:text-base leading-relaxed">
                                 집단 기질 점수(평균): 참여 아동 각각의 네 축 백분율을 더한 뒤, 데이터가 있는 아동 수로 나눈 값입니다.<br />
@@ -2117,19 +2418,27 @@
         },
 
         renderInstitutionPrePostReport(el) {
-            const name = String(STATE.selectedGroupName || '').trim();
-            const members = SCHEMA.membersByInstitutionName(STATE.institutions, name);
+            const nameKey = String(STATE.selectedGroupName || '').trim();
+            const members =
+                STATE.reportAggregateMembers && STATE.reportAggregateMembers.length
+                    ? STATE.reportAggregateMembers
+                    : SCHEMA.membersByInstitutionName(STATE.institutions, nameKey);
+            const displayName = String(STATE.reportAggregateTitle || nameKey || '필터 집계').trim();
             const cmp = SCHEMA.aggregatePrePostComparison(members, (c) => this.hasAnyCount(c));
-            if (!name || !members.length || !cmp) {
-                STATE.step = 'institution-hub';
-                STATE.selectedGroupName = name || '';
+            if (!members.length || !cmp) {
+                const backDash = STATE.reportFromDashboard;
+                STATE.reportAggregateMembers = null;
+                STATE.reportAggregateTitle = '';
+                STATE.reportFromDashboard = false;
+                STATE.step = backDash ? 'dashboard' : 'institution-hub';
+                if (!backDash) STATE.selectedGroupName = nameKey || '';
                 UI.render();
                 return;
             }
             const { meanPre, meanPost, growthIndex, nPre, nPost } = cmp;
-            const type0 = members[0].type || STATE.guessType(name);
+            const type0 = members[0].type || STATE.guessType(displayName || nameKey);
             const narrative = this.buildPrePostNarrative({
-                groupName: name,
+                groupName: displayName,
                 typeLabel: type0,
                 meanPre,
                 meanPost,
@@ -2164,7 +2473,7 @@
                             <h2 class="text-xl md:text-2xl lg:text-3xl font-black text-[#2D4A3E] mb-3 leading-tight pr-16">
                                 마인드스토리 유아숲 행동관찰 성과 보고서<br class="hidden sm:block" /><span class="text-lg md:text-xl font-bold text-ms-muted">(사전/사후 비교)</span>
                             </h2>
-                            <p class="text-lg font-bold text-[#2D4A3E] mb-1">${this.esc(name)}</p>
+                            <p class="text-lg font-bold text-[#2D4A3E] mb-1">${this.esc(displayName)}</p>
                             <p class="text-sm text-ms-muted mb-6">[${this.esc(type0)}] · 사전 데이터 ${nPre}건 · 사후 데이터 ${nPost}건 평균 비교 · 성장 지수(Δ)=사후−사전</p>
                             <div class="ms-prepost-page-1 ms-print-avoid-break mb-10">
                                 <div class="ms-prepost-chart-grid gap-6 md:gap-8">
@@ -2212,14 +2521,21 @@
         },
 
         renderInstitutionTypeMacroReport(el) {
-            const macro = SCHEMA.aggregateGlobalByInstitutionType(STATE.institutions, (c) => this.hasAnyCount(c));
+            const variant = STATE.macroVariant === 'pe' ? 'pe' : 'dk';
+            const macro =
+                variant === 'pe'
+                    ? SCHEMA.aggregatePreschoolVsElementary(STATE.institutions, (c) => this.hasAnyCount(c))
+                    : SCHEMA.aggregateGlobalByInstitutionType(STATE.institutions, (c) => this.hasAnyCount(c));
             if (!macro) {
                 STATE.step = 'dashboard';
                 UI.render();
                 return;
             }
             const { meanDay, meanKg, nDay, nKg, signedDiff } = macro;
-            const nar = this.buildMacroTypeComparisonNarrative(macro);
+            const nar =
+                variant === 'pe'
+                    ? this.buildPreschoolElementaryMacroNarrative(macro)
+                    : this.buildMacroTypeComparisonNarrative(macro);
             const radarHtml = this.buildInstitutionTypeCompareRadarSvg(meanDay, meanKg);
             const tableRows = SCHEMA.categories
                 .map((c) => {
@@ -2233,6 +2549,22 @@
                     </tr>`;
                 })
                 .join('');
+            const titleMain =
+                variant === 'pe'
+                    ? '마인드스토리 유아부 vs 초등부 기질 분포 비교 보고서'
+                    : '마인드스토리 기관 유형별 유아 기질 분포 비교 보고서';
+            const subLine =
+                variant === 'pe'
+                    ? `로컬 저장소 전체 기준 · 유아부 관찰 <strong class="text-[#5c4a3a]">${nDay}건</strong> · 초등부 관찰 <strong class="text-[#2D4A3E]">${nKg}건</strong> 평균 비교 · Δ = 초등 − 유아`
+                    : `로컬 저장소 전체 기준 · 어린이집 관찰 <strong class="text-[#5c4a3a]">${nDay}건</strong> · 유치원 관찰 <strong class="text-[#2D4A3E]">${nKg}건</strong> 평균 비교 · Δ = 유치원 − 어린이집`;
+            const radarCap =
+                variant === 'pe'
+                    ? '브라운 점선 = 유아부 평균 · 심산녹 실선 = 초등부 평균'
+                    : '브라운 점선 = 어린이집 평균 · 심산녹 실선 = 유치원 평균';
+            const thA = variant === 'pe' ? '유아부' : '어린이집';
+            const thB = variant === 'pe' ? '초등부' : '유치원';
+            const cardA = variant === 'pe' ? '집단 요약 — 유아부' : '유형별 특징 요약 — 어린이집';
+            const cardB = variant === 'pe' ? '집단 요약 — 초등부' : '유형별 특징 요약 — 유치원';
             el.innerHTML = `
                 <div class="ms-consulting-hero rounded-[2rem] border-2 border-[#2D4A3E]/18 shadow-xl overflow-hidden mb-6 relative">
                     <div class="ms-mindstory-seal" aria-hidden="true">MACRO<br />리포트</div>
@@ -2243,17 +2575,17 @@
                                 onclick="MS.backFromInstitutionTypeMacroReport()">← 대시보드</button>
                             <p class="text-[10px] font-black text-[#D4A373] tracking-[0.22em] mb-2">MINDSTORY · MACRO INSIGHT</p>
                             <h2 class="text-xl md:text-2xl lg:text-3xl font-black text-[#2D4A3E] mb-3 leading-tight pr-16">
-                                마인드스토리 기관 유형별 유아 기질 분포 비교 보고서
+                                ${this.esc(titleMain)}
                             </h2>
                             <p class="text-sm text-ms-muted mb-2 leading-relaxed">
-                                로컬 저장소 전체 기준 · 어린이집 관찰 <strong class="text-[#5c4a3a]">${nDay}건</strong> · 유치원 관찰 <strong class="text-[#2D4A3E]">${nKg}건</strong> 평균 비교 · Δ = 유치원 − 어린이집
+                                ${subLine}
                             </p>
                             <div class="mb-8 ms-print-avoid-break">${this.consultingSectionHtml('상대적 강점 지표 (RSI)', nar.rsiLine, 'lg')}</div>
                             <div class="grid md:grid-cols-2 gap-6 mb-10 ms-print-avoid-break">
                                 <div class="rounded-2xl border-2 border-[rgba(139,110,84,0.2)] bg-[rgba(255,250,245,0.9)] p-5 md:p-6 ms-print-avoid-break">
                                     <h3 class="text-sm font-black text-[#5c4a3a] mb-3 tracking-wide">듀얼 레이더 (오버레이)</h3>
                                     <div class="flex justify-center mb-4 overflow-x-auto">${radarHtml}</div>
-                                    <p class="text-[11px] text-ms-muted text-center leading-relaxed">브라운 점선 = 어린이집 평균 · 심산녹 실선 = 유치원 평균</p>
+                                    <p class="text-[11px] text-ms-muted text-center leading-relaxed">${this.esc(radarCap)}</p>
                                 </div>
                                 <div class="rounded-2xl border-2 border-[rgba(45,74,62,0.15)] bg-white/85 p-5 md:p-6 ms-print-avoid-break">
                                     <h3 class="text-sm font-black text-[#2D4A3E] mb-3 tracking-wide">축별 평균 &amp; 편차</h3>
@@ -2262,8 +2594,8 @@
                                             <thead class="bg-[rgba(45,74,62,0.06)] text-[10px] font-black text-[#2D4A3E]">
                                                 <tr>
                                                     <th class="text-left py-2.5 px-3">기질</th>
-                                                    <th class="text-center py-2.5">어린이집</th>
-                                                    <th class="text-center py-2.5">유치원</th>
+                                                    <th class="text-center py-2.5">${this.esc(thA)}</th>
+                                                    <th class="text-center py-2.5">${this.esc(thB)}</th>
                                                     <th class="text-right py-2.5 px-3">Δ</th>
                                                 </tr>
                                             </thead>
@@ -2273,16 +2605,16 @@
                                 </div>
                             </div>
                             <div class="bg-white/88 rounded-2xl border border-[#2D4A3E]/10 p-6 md:p-8 space-y-2">
-                                ${this.consultingSectionHtml('집단 성숙도·발달 맥락 비교', nar.maturity, 'lg')}
+                                ${this.consultingSectionHtml(variant === 'pe' ? '발달 맥락 (문항뱅크 안내)' : '집단 성숙도·발달 맥락 비교', nar.maturity, 'lg')}
                                 <div class="rounded-2xl border-l-[6px] border-[#8d6e54] bg-[rgba(255,248,240,0.65)] p-4 md:p-5 ms-print-avoid-break">
-                                    ${this.consultingSectionHtml('유형별 특징 요약 — 어린이집', nar.cardDay, 'lg')}
+                                    ${this.consultingSectionHtml(cardA, nar.cardDay, 'lg')}
                                 </div>
                                 <div class="rounded-2xl border-l-[6px] border-[#2D4A3E] bg-[rgba(240,253,244,0.35)] p-4 md:p-5 ms-print-avoid-break">
-                                    ${this.consultingSectionHtml('유형별 특징 요약 — 유치원', nar.cardKg, 'lg')}
+                                    ${this.consultingSectionHtml(cardB, nar.cardKg, 'lg')}
                                 </div>
-                                ${this.consultingSectionHtml('환경 요인과 기질 발현 — 차이 심층 분석 (|Δ|≥10%p)', nar.gapAnalysis, 'lg')}
-                                ${this.consultingSectionHtml('맞춤형 교육 솔루션 — 어린이집', nar.solDay, 'lg')}
-                                ${this.consultingSectionHtml('맞춤형 교육 솔루션 — 유치원', nar.solKg, 'lg')}
+                                ${this.consultingSectionHtml(variant === 'pe' ? '축별 차이 심층 분석 (|Δ|≥10%p)' : '환경 요인과 기질 발현 — 차이 심층 분석 (|Δ|≥10%p)', nar.gapAnalysis, 'lg')}
+                                ${this.consultingSectionHtml(variant === 'pe' ? '맞춤 솔루션 — 유아부' : '맞춤형 교육 솔루션 — 어린이집', nar.solDay, 'lg')}
+                                ${this.consultingSectionHtml(variant === 'pe' ? '맞춤 솔루션 — 초등부' : '맞춤형 교육 솔루션 — 유치원', nar.solKg, 'lg')}
                                 <div class="rounded-2xl border-2 border-[#D4A373]/40 bg-[rgba(253,251,247,0.95)] p-4 md:p-6 mt-6">
                                     ${this.consultingSectionHtml('마인드스토리 교육 연구소 · 총평', nar.researchFooter, 'lg')}
                                 </div>
@@ -2306,9 +2638,33 @@
             const sel = STATE.selected();
             const nameVal = STATE.searchTerm || (sel ? sel.name : '');
             const type = sel ? sel.type : STATE.setupTypeOverride || STATE.guessType(nameVal);
+            const tgSetup = STATE.targetGroup === 'elementary' ? 'elementary' : 'preschool';
+            let typeForUi = type;
+            if (tgSetup === 'elementary' && (type === '어린이집' || type === '유치원' || type === '기타')) {
+                typeForUi = '방과후학교';
+            }
+            if (tgSetup === 'preschool' && (type === '지역아동센터' || type === '방과후학교')) {
+                typeForUi = '어린이집';
+            }
             const phaseVal =
                 (sel && (sel.obsPhase === 'pre' || sel.obsPhase === 'post') ? sel.obsPhase : null) ||
                 (STATE.setupObsPhase === 'pre' || STATE.setupObsPhase === 'post' ? STATE.setupObsPhase : '');
+            const typeBlock =
+                tgSetup === 'elementary'
+                    ? `<div class="flex flex-wrap gap-2 mb-6">
+                            <button type="button" class="ms-btn flex-1 min-w-[140px] min-h-[52px] py-3 font-bold border-2 text-sm ${typeForUi === '지역아동센터' ? 'border-[#FF9800] bg-[rgba(255,152,0,0.12)] text-[#2D4A3E]' : 'border-ms text-ms-muted'}"
+                                onclick="MS.setType('지역아동센터')">지역아동센터</button>
+                            <button type="button" class="ms-btn flex-1 min-w-[140px] min-h-[52px] py-3 font-bold border-2 text-sm ${typeForUi === '방과후학교' ? 'border-[#FF9800] bg-[rgba(255,152,0,0.12)] text-[#2D4A3E]' : 'border-ms text-ms-muted'}"
+                                onclick="MS.setType('방과후학교')">방과후·기타</button>
+                        </div>`
+                    : `<div class="flex flex-wrap gap-2 mb-6">
+                            <button type="button" class="ms-btn flex-1 min-w-[100px] min-h-[52px] py-3 font-bold border-2 text-sm ${typeForUi === '어린이집' ? 'border-[#2D4A3E] bg-[rgba(240,253,244,0.5)] text-[#2D4A3E]' : 'border-ms text-ms-muted'}"
+                                onclick="MS.setType('어린이집')">어린이집</button>
+                            <button type="button" class="ms-btn flex-1 min-w-[100px] min-h-[52px] py-3 font-bold border-2 text-sm ${typeForUi === '유치원' ? 'border-[#2D4A3E] bg-[rgba(240,253,244,0.5)] text-[#2D4A3E]' : 'border-ms text-ms-muted'}"
+                                onclick="MS.setType('유치원')">유치원</button>
+                            <button type="button" class="ms-btn flex-1 min-w-[100px] min-h-[52px] py-3 font-bold border-2 text-sm ${typeForUi === '기타' ? 'border-[#2D4A3E] bg-[rgba(240,253,244,0.5)] text-[#2D4A3E]' : 'border-ms text-ms-muted'}"
+                                onclick="MS.setType('기타')">기타</button>
+                        </div>`;
 
             el.innerHTML = `
                 <div class="max-w-lg mx-auto space-y-6">
@@ -2354,12 +2710,17 @@
                                 aria-label="반 이름 또는 생략">
                         </div>
                         ${this.buildRecentHistorySectionHtml()}
-                        <div class="flex gap-3 mb-6">
-                            <button type="button" class="ms-btn flex-1 py-4 font-bold border-2 text-sm ${type === '어린이집' ? 'border-[#2D4A3E] bg-[rgba(240,253,244,0.5)] text-[#2D4A3E]' : 'border-ms text-ms-muted'}"
-                                onclick="MS.setType('어린이집')">어린이집</button>
-                            <button type="button" class="ms-btn flex-1 py-4 font-bold border-2 text-sm ${type === '유치원' ? 'border-[#2D4A3E] bg-[rgba(240,253,244,0.5)] text-[#2D4A3E]' : 'border-ms text-ms-muted'}"
-                                onclick="MS.setType('유치원')">유치원</button>
+                        <p class="text-[11px] text-ms-muted mb-3 text-center leading-relaxed">유아부는 <strong class="text-[#03C75A]">어린이집·유치원·기타</strong> 중 하나를, 초등부는 <strong class="text-[#FF9800]">지역아동센터·방과후·기타</strong> 중 하나를 골라 주세요.</p>
+                        <div class="mb-4">
+                            <span class="block text-xs font-bold text-ms-muted mb-2 ml-1 tracking-widest">대상 (문항뱅크)</span>
+                            <div class="flex gap-2">
+                                <button type="button" class="ms-btn flex-1 min-h-[52px] py-3 font-bold border-2 text-sm ${tgSetup === 'preschool' ? 'border-[#03C75A] bg-[rgba(3,199,90,0.1)] text-[#2D4A3E]' : 'border-ms text-ms-muted'}"
+                                    onclick="MS.setSetupTargetGroup('preschool')">유아부</button>
+                                <button type="button" class="ms-btn flex-1 min-h-[52px] py-3 font-bold border-2 text-sm ${tgSetup === 'elementary' ? 'border-[#FF9800] bg-[rgba(255,152,0,0.12)] text-[#2D4A3E]' : 'border-ms text-ms-muted'}"
+                                    onclick="MS.setSetupTargetGroup('elementary')">초등부</button>
+                            </div>
                         </div>
+                        ${typeBlock}
                         <button type="button" class="ms-btn w-full bg-[#2D4A3E] text-white font-black py-6 md:py-7 text-lg md:text-xl shadow-xl hover:brightness-95"
                             onclick="MS.startTest()">검사 입력으로 이동</button>
                     </div>
@@ -2401,14 +2762,14 @@
             inst.targetGroup = tg;
             const name = this.esc(inst.name);
             const qs = SCHEMA.questionsForGroup(tg);
-            const tabPs =
-                tg === 'preschool'
-                    ? 'border-[#2D4A3E] bg-[rgba(240,253,244,0.5)] text-[#2D4A3E]'
-                    : 'border-ms text-ms-muted';
-            const tabEl =
-                tg === 'elementary'
-                    ? 'border-[#2D4A3E] bg-[rgba(240,253,244,0.5)] text-[#2D4A3E]'
-                    : 'border-ms text-ms-muted';
+            const base =
+                'ms-btn flex-1 min-h-[48px] px-4 py-3 font-bold text-xs rounded-full transition-colors duration-200 ease-out';
+            const psOn = 'bg-[#03C75A] text-white border-0 shadow-md shadow-[#03C75A]/25';
+            const psOff = 'bg-transparent text-[#03C75A] border border-solid border-[#03C75A]';
+            const elOn = 'bg-[#FF9800] text-white border-0 shadow-md shadow-[#FF9800]/25';
+            const elOff = 'bg-transparent text-[#FF9800] border border-solid border-[#FF9800]';
+            const tabPs = tg === 'preschool' ? psOn : psOff;
+            const tabEl = tg === 'elementary' ? elOn : elOff;
 
             el.innerHTML = `
                 <div class="max-w-lg mx-auto">
@@ -2419,11 +2780,11 @@
                             <button type="button" class="text-xs text-ms-muted underline ms-btn px-2" onclick="MS.goDashboard()">대시보드</button>
                         </div>
                     </div>
-                    <div class="mb-4 flex gap-2 print-hidden">
-                        <button type="button" class="ms-btn flex-1 py-3 font-bold border-2 text-xs rounded-[2rem] ${tabPs}"
+                    <div class="mb-4 flex gap-2 print-hidden max-w-md mx-auto">
+                        <button type="button" class="${base} ${tabPs}"
                             onclick="MS.setTargetGroup('preschool')">유아·유치부</button>
-                        <button type="button" class="ms-btn flex-1 py-3 font-bold border-2 text-xs rounded-[2rem] ${tabEl}"
-                            onclick="MS.setTargetGroup('elementary')">지역아동센터(초등)</button>
+                        <button type="button" class="${base} ${tabEl}"
+                            onclick="MS.setTargetGroup('elementary')">초등부</button>
                     </div>
                     <div class="space-y-5 md:space-y-4 max-h-[56vh] overflow-y-auto pr-1 custom-scrollbar mb-6">
                         ${qs
@@ -2577,7 +2938,7 @@
                         ${preview}
                         <p class="text-base md:text-lg font-black text-[#2D4A3E] mb-2 leading-snug">마인드스토리 유아숲 행동관찰</p>
                         <h2 class="text-2xl font-black text-[#2D4A3E] mb-1">${name}</h2>
-                        <p class="text-ms-muted text-xs mb-5">4기질 관찰 기록 · ${tgRes === 'elementary' ? '지역아동센터(초등)' : '유아·유치부'} · 스키마 v9.1 · 보고서 v2.0</p>
+                        <p class="text-ms-muted text-xs mb-5">4기질 관찰 기록 · ${tgRes === 'elementary' ? '초등부' : '유아·유치부'} · 스키마 v9.2 · 보고서 v2.0</p>
                         <button type="button" class="print-hidden w-full mb-5 rounded-full bg-[#2D4A3E] text-white font-black py-4 px-6 text-sm md:text-base shadow-lg hover:brightness-95 active:scale-[0.99] transition-all"
                             onclick="MS.openForestMapModal()">4군자 종합 지도 보기</button>
                         ${rankSectionHtml}
@@ -2720,6 +3081,104 @@
         _instDropdownAll: false,
         _instSuggestCloseBound: false,
 
+        getExaminerName() {
+            try {
+                return localStorage.getItem(LS_EXAMINER_NAME) || '';
+            } catch (_) {
+                return '';
+            }
+        },
+        onExaminerNameInput(v) {
+            try {
+                localStorage.setItem(LS_EXAMINER_NAME, String(v || '').slice(0, 40));
+            } catch (_) {
+                /* ignore */
+            }
+            const p = document.getElementById('ms-examiner-greeting');
+            if (p) {
+                const name = String(v || '').trim();
+                p.textContent = name ? `안녕하세요, ${name} 해설사님` : '진행자 이름을 입력해 주세요';
+            }
+        },
+        isAdminUnlocked() {
+            try {
+                return localStorage.getItem(LS_ADMIN_UNLOCKED) === '1';
+            } catch (_) {
+                return false;
+            }
+        },
+        openAdminUnlockModal() {
+            const root = document.getElementById('ms-modal-root');
+            if (!root) return;
+            root.className = 'print-hidden fixed inset-0 z-[200] flex items-center justify-center p-4';
+            root.innerHTML = `
+                <div class="absolute inset-0 bg-black/45" onclick="MS.closeForestModal()" aria-hidden="true"></div>
+                <div class="relative w-full max-w-sm rounded-[2rem] bg-[#FDFBF7] shadow-2xl border border-[#2D4A3E]/12 p-6 md:p-8" onclick="event.stopPropagation()">
+                    <h2 id="ms-modal-title" class="text-lg font-black text-[#2D4A3E] mb-4 text-center">관리자 인증</h2>
+                    <p class="text-xs text-ms-muted mb-3 text-center leading-relaxed">대시보드·기관 목록·백업을 열려면 비밀번호를 입력하세요.</p>
+                    <input id="ms-admin-pw" type="password" autocomplete="new-password" placeholder="비밀번호"
+                        class="w-full ms-input px-4 py-3.5 text-center font-bold rounded-2xl mb-4" />
+                    <div class="flex gap-2">
+                        <button type="button" class="ms-btn flex-1 rounded-full border-2 border-ms text-[#2D4A3E] font-bold py-3 text-sm" onclick="MS.closeForestModal()">취소</button>
+                        <button type="button" class="ms-btn flex-1 rounded-full bg-[#5D4037] text-white font-black py-3 text-sm" onclick="MS.tryAdminUnlock()">확인</button>
+                    </div>
+                </div>
+            `;
+            document.body.style.overflow = 'hidden';
+            requestAnimationFrame(() => document.getElementById('ms-admin-pw')?.focus());
+        },
+        tryAdminUnlock() {
+            const el = document.getElementById('ms-admin-pw');
+            const v = String((el && el.value) || '').trim();
+            if (ADMIN_PASSWORDS.includes(v)) {
+                try {
+                    localStorage.setItem(LS_ADMIN_UNLOCKED, '1');
+                } catch (_) {
+                    /* ignore */
+                }
+                MS.closeForestModal();
+                UI.render();
+            } else {
+                alert('비밀번호가 올바르지 않습니다.');
+            }
+        },
+        closeForestModal() {
+            const root = document.getElementById('ms-modal-root');
+            if (root) {
+                root.className = 'hidden print-hidden';
+                root.innerHTML = '';
+            }
+            document.body.style.overflow = '';
+        },
+        showForestTransmitSuccessModal() {
+            const root = document.getElementById('ms-modal-root');
+            if (!root) return;
+            root.className = 'print-hidden fixed inset-0 z-[200] flex items-center justify-center p-4';
+            root.innerHTML = `
+                <div class="absolute inset-0 bg-black/45" onclick="MS.closeForestTransmitModal()" aria-hidden="true"></div>
+                <div class="relative w-full max-w-md rounded-[2rem] bg-[#FDFBF7] shadow-2xl border-2 border-[#5D4037]/20 p-6 md:p-8 text-center" onclick="event.stopPropagation()">
+                    <p class="text-lg font-black text-[#2D4A3E] mb-2">전송 성공</p>
+                    <p class="text-sm text-ms-body mb-6 leading-relaxed">서버에 결과가 저장되었습니다. 아래에서 보고서를 인쇄하거나 공유할 수 있어요.</p>
+                    <button type="button" class="ms-btn w-full !rounded-2xl bg-[#5D4037] text-white font-black py-5 text-base shadow-lg mb-3"
+                        onclick="MS.closeForestTransmitModal()">결과 보고서 보기</button>
+                    <button type="button" class="text-xs text-ms-muted underline underline-offset-2" onclick="MS.closeForestTransmitModal()">닫기</button>
+                </div>
+            `;
+            document.body.style.overflow = 'hidden';
+        },
+        closeForestTransmitModal() {
+            MS.closeForestModal();
+        },
+        goGuide() {
+            STATE.step = 'guide';
+            STATE.persist();
+            UI.render();
+        },
+        leaveGuide() {
+            STATE.step = 'dashboard';
+            UI.render();
+        },
+
         activeQuestionIds() {
             const inst = STATE.selected();
             const tg = inst ? SCHEMA.getTargetGroup(inst) : STATE.targetGroup || 'preschool';
@@ -2795,15 +3254,18 @@
             const test_type =
                 inst.obsPhase === 'pre' || inst.obsPhase === 'post' ? inst.obsPhase : 'unspecified';
             const group_name = String(inst.groupName || inst.childLabel || inst.studentName || '').trim();
+            const examiner = String(MS.getExaminerName() || '').trim();
             const payload = {
                 institution_name: iname,
                 group_name: group_name,
                 test_type: test_type,
                 target_group: tg,
+                examiner: examiner,
                 scores: {
                     schema_version: SCHEMA.version,
                     target_group: tg,
                     institution_type: inst.type || '',
+                    examiner_name: examiner,
                     record_id: inst.id,
                     updated_at: inst.updatedAt || '',
                     scoring_model: 'o_x_routed_v1',
@@ -2832,6 +3294,11 @@
                     try {
                         const key = 'ms_forest_submitted:' + inst.id + ':' + String(inst.updatedAt || '');
                         if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(key, '1');
+                    } catch (_) {
+                        /* ignore */
+                    }
+                    try {
+                        MS.showForestTransmitSuccessModal();
                     } catch (_) {
                         /* ignore */
                     }
@@ -2959,6 +3426,7 @@
             if (!inst) return;
             STATE.selectedId = inst.id;
             STATE.searchTerm = inst.name;
+            STATE.targetGroup = SCHEMA.getTargetGroup(inst);
             STATE.setupObsPhase =
                 inst.obsPhase === 'pre' || inst.obsPhase === 'post' ? inst.obsPhase : '';
             MS._instDropdownAll = false;
@@ -3101,6 +3569,9 @@
         openInstitutionReport() {
             const key = String(STATE.selectedGroupName || '').trim();
             if (!key) return;
+            STATE.reportAggregateMembers = null;
+            STATE.reportAggregateTitle = '';
+            STATE.reportFromDashboard = false;
             const members = SCHEMA.membersByInstitutionName(STATE.institutions, key);
             const agg = SCHEMA.aggregateMeanScores(members, (c) => UI.hasAnyCount(c));
             if (!agg) {
@@ -3113,7 +3584,11 @@
         },
 
         backFromInstitutionReport() {
-            STATE.step = 'institution-hub';
+            STATE.reportAggregateMembers = null;
+            STATE.reportAggregateTitle = '';
+            const backDash = STATE.reportFromDashboard;
+            STATE.reportFromDashboard = false;
+            STATE.step = backDash ? 'dashboard' : 'institution-hub';
             UI.render();
         },
 
@@ -3129,6 +3604,9 @@
         openInstitutionPrePostReport() {
             const key = String(STATE.selectedGroupName || '').trim();
             if (!key) return;
+            STATE.reportAggregateMembers = null;
+            STATE.reportAggregateTitle = '';
+            STATE.reportFromDashboard = false;
             const members = SCHEMA.membersByInstitutionName(STATE.institutions, key);
             const cmp = SCHEMA.aggregatePrePostComparison(members, (c) => UI.hasAnyCount(c));
             if (!cmp) {
@@ -3141,7 +3619,11 @@
         },
 
         backFromInstitutionPrePostReport() {
-            STATE.step = 'institution-hub';
+            STATE.reportAggregateMembers = null;
+            STATE.reportAggregateTitle = '';
+            const backDash = STATE.reportFromDashboard;
+            STATE.reportFromDashboard = false;
+            STATE.step = backDash ? 'dashboard' : 'institution-hub';
             UI.render();
         },
 
@@ -3153,6 +3635,7 @@
                 );
                 return;
             }
+            STATE.macroVariant = 'dk';
             STATE.step = 'institution-type-macro-report';
             UI.render();
         },
@@ -3210,6 +3693,7 @@
         },
 
         backFromInstitutionTypeMacroReport() {
+            STATE.macroVariant = 'dk';
             STATE.step = 'dashboard';
             UI.render();
         },
@@ -3217,12 +3701,223 @@
             STATE.dashboardReportsExpanded = !STATE.dashboardReportsExpanded;
             UI.render();
         },
+
+        setDashboardBuilderInstFromSelect(sel) {
+            try {
+                STATE.dashboardBuilderInst = sel.value ? decodeURIComponent(sel.value) : '';
+            } catch (_) {
+                STATE.dashboardBuilderInst = sel.value || '';
+            }
+            STATE.persist();
+        },
+        setDashboardBuilderType(v) {
+            STATE.dashboardBuilderTypeFilter = v;
+            STATE.persist();
+        },
+        setDashboardBuilderMode(v) {
+            STATE.dashboardBuilderMode = v === 'prepost' || v === 'group' ? v : 'single';
+            if (STATE.dashboardBuilderMode === 'group') {
+                if (STATE.dashboardBuilderTypeFilter !== 'cmp_pe' && STATE.dashboardBuilderTypeFilter !== 'cmp_dk') {
+                    STATE.dashboardBuilderTypeFilter = 'cmp_dk';
+                }
+            } else if (STATE.dashboardBuilderTypeFilter === 'cmp_pe' || STATE.dashboardBuilderTypeFilter === 'cmp_dk') {
+                STATE.dashboardBuilderTypeFilter = 'all';
+            }
+            STATE.persist();
+            UI.render();
+        },
+        matchesBuilderKind(inst, tf) {
+            if (tf === 'all') return true;
+            const tg = SCHEMA.getTargetGroup(inst);
+            if (tf === 'preschool_daycare') return tg === 'preschool' && SCHEMA.preschoolKindNorm(inst) === '어린이집';
+            if (tf === 'preschool_kg') return tg === 'preschool' && SCHEMA.preschoolKindNorm(inst) === '유치원';
+            if (tf === 'preschool_other') return tg === 'preschool' && SCHEMA.preschoolKindNorm(inst) === '기타';
+            if (tf === 'elem_community') return tg === 'elementary' && SCHEMA.elementaryTypeNorm(inst) === '지역아동센터';
+            if (tf === 'elem_afterschool') return tg === 'elementary' && SCHEMA.elementaryTypeNorm(inst) === '방과후학교';
+            return true;
+        },
+        filterMembersByKindFilter(members, tf) {
+            if (tf === 'all') return members;
+            return members.filter((m) => MS.matchesBuilderKind(m, tf));
+        },
+        _builderKindLabel(tf) {
+            const map = {
+                all: '전체',
+                preschool_daycare: '어린이집',
+                preschool_kg: '유치원',
+                preschool_other: '기타',
+                elem_community: '지역아동센터',
+                elem_afterschool: '방과후·기타',
+                cmp_dk: '어린이집↔유치원',
+                cmp_pe: '유아부↔초등부'
+            };
+            return map[tf] || tf;
+        },
+        _builderAggregateTitle(tf) {
+            return MS._builderKindLabel(tf) + ' · 전체 집계';
+        },
+        _builderReportTitle(instKey, tf, kind) {
+            const kl = MS._builderKindLabel(tf);
+            if (kind === 'prepost') return instKey + (tf === 'all' ? '' : ' · ' + kl) + ' · 사전·사후';
+            return instKey + (tf === 'all' ? '' : ' · ' + kl);
+        },
+        runCustomReportBuilder() {
+            const instKey = String(STATE.dashboardBuilderInst || '').trim();
+            const mode = STATE.dashboardBuilderMode;
+            const tf = STATE.dashboardBuilderTypeFilter;
+
+            if (mode === 'group') {
+                if (instKey) {
+                    alert('집단 간 비교는 기관을「전체」로 두어 주세요.');
+                    return;
+                }
+                if (tf === 'cmp_pe') {
+                    const macro = SCHEMA.aggregatePreschoolVsElementary(STATE.institutions, (c) => UI.hasAnyCount(c));
+                    if (!macro) {
+                        alert('유아부와 초등부 각각에서 숫자가 입력된 관찰이 한 건 이상씩 있어야 비교합니다.');
+                        return;
+                    }
+                    STATE.macroVariant = 'pe';
+                    STATE.step = 'institution-type-macro-report';
+                    STATE.persist();
+                    UI.render();
+                    return;
+                }
+                STATE.macroVariant = 'dk';
+                MS.openInstitutionTypeMacroReport();
+                return;
+            }
+
+            if (mode === 'prepost') {
+                if (!instKey) {
+                    alert('사전·사후 비교는 기관명을 선택해 주세요.');
+                    return;
+                }
+                let members = SCHEMA.membersByInstitutionName(STATE.institutions, instKey);
+                members = MS.filterMembersByKindFilter(members, tf);
+                const cmp = SCHEMA.aggregatePrePostComparison(members, (c) => UI.hasAnyCount(c));
+                if (!cmp) {
+                    alert(
+                        '필터 조건에 맞는 사전·사후 관찰이 각각 한 건 이상, 그리고 숫자 입력이 완료되어야 합니다.'
+                    );
+                    return;
+                }
+                STATE.selectedGroupName = instKey;
+                STATE.reportAggregateMembers = members;
+                STATE.reportAggregateTitle = MS._builderReportTitle(instKey, tf, 'prepost');
+                STATE.reportFromDashboard = true;
+                STATE.step = 'institution-prepost-report';
+                STATE.persist();
+                UI.render();
+                return;
+            }
+
+            if (instKey && tf === 'all') {
+                const members = SCHEMA.membersByInstitutionName(STATE.institutions, instKey);
+                const agg = SCHEMA.aggregateMeanScores(members, (c) => UI.hasAnyCount(c));
+                if (!agg) {
+                    alert('관찰 숫자가 입력된 기록이 없어요.');
+                    return;
+                }
+                STATE.selectedGroupName = instKey;
+                STATE.reportAggregateMembers = null;
+                STATE.reportAggregateTitle = '';
+                STATE.reportFromDashboard = true;
+                STATE.step = 'institution-report';
+                STATE.persist();
+                UI.render();
+                return;
+            }
+            if (instKey && tf !== 'all') {
+                let members = SCHEMA.membersByInstitutionName(STATE.institutions, instKey);
+                members = MS.filterMembersByKindFilter(members, tf);
+                const agg = SCHEMA.aggregateMeanScores(members, (c) => UI.hasAnyCount(c));
+                if (!agg) {
+                    alert('선택한 유형에 해당하는 기록이 없거나 숫자 입력이 없어요.');
+                    return;
+                }
+                STATE.selectedGroupName = instKey;
+                STATE.reportAggregateMembers = members;
+                STATE.reportAggregateTitle = MS._builderReportTitle(instKey, tf, 'single');
+                STATE.reportFromDashboard = true;
+                STATE.step = 'institution-report';
+                STATE.persist();
+                UI.render();
+                return;
+            }
+            if (!instKey && tf !== 'all') {
+                const members = STATE.institutions.filter((i) => MS.matchesBuilderKind(i, tf));
+                const agg = SCHEMA.aggregateMeanScores(members, (c) => UI.hasAnyCount(c));
+                if (!agg) {
+                    alert('해당 유형에 맞는 관찰 데이터가 충분하지 않아요.');
+                    return;
+                }
+                STATE.selectedGroupName = '';
+                STATE.reportAggregateMembers = members;
+                STATE.reportAggregateTitle = MS._builderAggregateTitle(tf);
+                STATE.reportFromDashboard = true;
+                STATE.step = 'institution-report';
+                STATE.persist();
+                UI.render();
+                return;
+            }
+            alert('기관을 선택하거나, 유형 필터를 지정해 주세요.');
+        },
+        setSetupTargetGroup(tg) {
+            STATE.targetGroup = tg === 'elementary' ? 'elementary' : 'preschool';
+            STATE.setupTypeOverride = null;
+            const sel = STATE.selected();
+            if (sel) {
+                sel.targetGroup = STATE.targetGroup;
+                if (STATE.targetGroup === 'elementary') {
+                    sel.type = '방과후학교';
+                } else {
+                    sel.type = '어린이집';
+                }
+            }
+            STATE.persist();
+            UI.render();
+        },
+
+        /** 관찰 숫자가 있는 기록 중 updatedAt 최신 1건 */
+        getMostRecentInstWithData() {
+            const list = STATE.institutions.filter((i) => UI.hasAnyCount(i.counts));
+            if (!list.length) return null;
+            list.sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+            return list[0];
+        },
+
+        navigateToLatestResult() {
+            const pick = MS.getMostRecentInstWithData();
+            if (!pick) {
+                alert('먼저 기관에 관찰 숫자를 입력해 주세요.');
+                return;
+            }
+            STATE.selectedId = pick.id;
+            STATE.isPreviewSample = false;
+            STATE.step = 'result';
+            STATE.persist();
+            UI.render();
+        },
+
+        /** 최근 데이터 기관명으로 기관 종합 리포트(기존 openInstitutionReport) */
+        openDashboardLatestInstitutionReport() {
+            const pick = MS.getMostRecentInstWithData();
+            if (!pick) {
+                alert('관찰 숫자가 입력된 기록이 없어요.');
+                return;
+            }
+            STATE.selectedGroupName = String(pick.name || '').trim();
+            STATE.persist();
+            MS.openInstitutionReport();
+        },
         goSetup() {
             STATE.step = 'setup';
             STATE.isPreviewSample = false;
             MS._instDropdownAll = false;
             const sel = STATE.selected();
             STATE.searchTerm = sel ? sel.name : '';
+            if (sel) STATE.targetGroup = SCHEMA.getTargetGroup(sel);
             STATE.setupObsPhase =
                 sel && (sel.obsPhase === 'pre' || sel.obsPhase === 'post') ? sel.obsPhase : '';
             STATE.persist();
@@ -3259,6 +3954,14 @@
                 phaseEl && (phaseEl.value === 'pre' || phaseEl.value === 'post') ? phaseEl.value : '';
             let inst = STATE.institutions.find((i) => String(i.name).trim() === name);
             if (!inst) {
+                if (STATE.targetGroup === 'preschool' && !STATE.setupTypeOverride) {
+                    alert('유아부는 기관 유형(어린이집·유치원·기타)을 선택해 주세요.');
+                    return;
+                }
+                if (STATE.targetGroup === 'elementary' && !STATE.setupTypeOverride) {
+                    alert('초등부는 기관 유형(지역아동센터·방과후·기타)을 선택해 주세요.');
+                    return;
+                }
                 inst = STATE.addInstitution(name);
                 inst.type = STATE.setupTypeOverride || STATE.guessType(name);
                 inst.obsPhase = phase;
@@ -3268,6 +3971,7 @@
                 if (STATE.setupTypeOverride) inst.type = STATE.setupTypeOverride;
                 if (phase === 'pre' || phase === 'post') inst.obsPhase = phase;
             }
+            inst.targetGroup = STATE.targetGroup === 'elementary' ? 'elementary' : 'preschool';
             const gEl = document.getElementById('ms-group-name');
             const gn = gEl && gEl.value.trim() ? gEl.value.trim().slice(0, 120) : '';
             inst.groupName = gn;

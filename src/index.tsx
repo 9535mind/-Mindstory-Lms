@@ -227,6 +227,24 @@ app.get('/admin-users.html', (c) => c.redirect('/admin/members', 302))
 app.get('/admin-users', (c) => c.redirect('/admin/members', 302))
 app.get('/pg-business-info.html', (c) => c.redirect('/pg-business-info', 302))
 
+/** 유아숲 v9 테스트 URL: 정적 exclude만으로 404 나는 경우 ASSETS 번들에서 명시 로드 */
+app.get('/forest_v9.html', async (c) => {
+  const assets = c.env.ASSETS
+  if (!assets) return c.text('Not Found', 404)
+  const u = new URL(c.req.url)
+  u.pathname = '/forest_v9.html'
+  const res = await assets.fetch(new Request(u.toString(), { method: c.req.method, headers: c.req.raw.headers }))
+  return res
+})
+app.get('/forest_v9', async (c) => {
+  const assets = c.env.ASSETS
+  if (!assets) return c.text('Not Found', 404)
+  const u = new URL(c.req.url)
+  u.pathname = '/forest_v9.html'
+  const res = await assets.fetch(new Request(u.toString(), { method: c.req.method, headers: c.req.raw.headers }))
+  return res
+})
+
 // 페이지 라우트 (약관·개인정보·환불은 다른 / 라우터보다 먼저 등록)
 app.route('/', landing)  // 신규 랜딩 페이지 (Phase 3)
 app.route('/', pagesLegal) // /terms, /privacy, /refund

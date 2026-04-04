@@ -53,6 +53,8 @@ forestResults.post('/', async (c) => {
     const o = { ...(scoresVal as Record<string, unknown>) }
     const tgTop = typeof b.target_group === 'string' ? b.target_group.trim().slice(0, 32) : ''
     if (tgTop && o.target_group === undefined) o.target_group = tgTop
+    const obsTop = typeof b.observation_stage === 'string' ? b.observation_stage.trim().slice(0, 16) : ''
+    if (obsTop && o.observation_stage === undefined) o.observation_stage = obsTop
     scoresForDb = o
   }
 
