@@ -3703,7 +3703,13 @@
                         attachAndPlay();
                     })
                     .catch(function () {
-                        onErr();
+                        v.src = url;
+                        try {
+                            v.load();
+                        } catch (_) {
+                            /* ignore */
+                        }
+                        attachAndPlay();
                     });
             } catch (_) {
                 onErr();
