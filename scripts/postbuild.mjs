@@ -3,7 +3,7 @@
  * - uploads 복사
  * - _routes.json (정적 사업자 안내 페이지는 Worker 우회)
  */
-import { copyFileSync, cpSync, existsSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -11,6 +11,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
 const dist = join(root, 'dist')
 const publicDir = join(root, 'public')
+
+/** Cloudflare Pages: 단일 정적 자산 최대 25 MiB — 초과 시 업로드에서 제외되어 프로덕션 404 가능 */
+const CF_PAGES_MAX_ASSET_BYTES = 25 * 1024 * 1024
 
 /** exclude: Worker가 아닌 정적 자산만 나열(리다이렉트 아님). .html 파일명은 실제 public 정적 파일. */
 const ROUTES = {
@@ -90,6 +93,17 @@ if (existsSync(assetsDir)) {
     console.warn(
       '⚠️  dist/assets/forest_test.mp4 없음 — 프로덕션에서 /assets/forest_test.mp4 가 404일 수 있음 (public/assets에 추가 후 빌드)'
     )
+  } else {
+    try {
+      const st = statSync(introMp4)
+      if (st.size > CF_PAGES_MAX_ASSET_BYTES) {
+        console.warn(
+          `⚠️  forest_test.mp4 가 ${(st.size / (1024 * 1024)).toFixed(2)} MiB — Cloudflare Pages 단일 파일 한도 25 MiB 초과. 배포 시 이 파일이 빠져 /assets/forest_test.mp4 가 404가 됩니다. public/assets/README.md 의 ffmpeg 예시로 25 MiB 이하로 줄이거나, R2 등 외부 HTTPS URL을 관리자 비주얼 설정에 넣으세요.`
+        )
+      }
+    } catch {
+      /* ignore */
+    }
   }
 }
 
