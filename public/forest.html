@@ -3731,13 +3731,8 @@
                         attachAndPlay();
                     })
                     .catch(function () {
-                        v.src = url;
-                        try {
-                            v.load();
-                        } catch (_) {
-                            /* ignore */
-                        }
-                        attachAndPlay();
+                        /* HEAD 실패 시 v.src를 넣지 않음 — 없는 파일에 대한 GET 404가 콘솔에 찍히는 것을 막음 */
+                        onErr();
                     });
             } catch (_) {
                 onErr();
