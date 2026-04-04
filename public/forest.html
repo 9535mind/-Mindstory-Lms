@@ -2332,7 +2332,7 @@
                                 <p class="text-[10px] text-[#5D4037]/65 text-center mt-2 leading-relaxed">가장 최근에 저장된 관찰 기록(숫자 입력 완료)의 분석 보고서로 이동합니다.</p>
                                 <div class="mt-5 pt-4 border-t border-[#5D4037]/15">
                                     <p class="text-[10px] font-black text-[#5D4037] tracking-[0.12em] mb-3 uppercase text-center">대문 비주얼 (숏츠)</p>
-                                    <p class="text-[10px] text-[#5D4037]/65 text-center mb-3 leading-relaxed">기본 영상: <code class="text-[#5D4037] font-bold">public/assets/forest_intro.mp4</code> 배포 후 재생됩니다. 영상이 없으면 아래 포스터 이미지가 표시됩니다.</p>
+                                    <p class="text-[10px] text-[#5D4037]/65 text-center mb-3 leading-relaxed">기본 영상: <code class="text-[#5D4037] font-bold">/assets/forest_intro.mp4</code> (빌드 시 <code class="text-[#5D4037] font-bold">public/assets/</code>에서 복사) · 서버에 파일이 없으면 포스터 사진만 보입니다.</p>
                                     <label for="ms-admin-dash-video-url" class="block text-xs font-bold text-[#5D4037] mb-1.5">영상 URL (MP4, 무음 권장)</label>
                                     <input id="ms-admin-dash-video-url" type="text" inputmode="url" autocomplete="off" placeholder="${this.esc(DEFAULT_FOREST_DASH_VIDEO)}"
                                         class="w-full min-h-[44px] rounded-xl border-2 border-[#5D4037]/30 bg-white px-3 py-2 text-xs font-semibold text-[#5D4037] shadow-sm mb-3"
@@ -2388,13 +2388,13 @@
             const dashboardVisualInner = `
                         <div class="flex flex-col items-center justify-center w-full max-w-[280px] mx-auto">
                             <div class="relative w-full rounded-2xl border-4 border-white shadow-xl overflow-hidden bg-[#1a3d2e] ring-1 ring-black/10">
-                                <div class="aspect-[9/16] w-full max-h-[min(46vh,420px)] relative">
-                                    <video id="ms-dash-visual-video" class="absolute inset-0 w-full h-full object-cover"
-                                        autoplay muted loop playsinline webkit-playsinline
+                                <div class="aspect-[9/16] w-full max-h-[min(38vh,360px)] sm:max-h-[min(42vh,400px)] relative">
+                                    <img src="${this.esc(visCfg.posterUrl)}" width="600" height="1067" class="absolute inset-0 z-0 w-full h-full object-cover" alt="" decoding="async" loading="eager"
+                                        onerror="this.onerror=null;this.style.opacity='0';" />
+                                    <video id="ms-dash-visual-video" class="absolute inset-0 z-10 w-full h-full object-cover opacity-0 pointer-events-none transition-opacity duration-300"
+                                        autoplay muted loop playsinline webkit-playsinline preload="none"
                                         poster="${this.esc(visCfg.posterUrl)}"
-                                        data-poster="${this.esc(visCfg.posterUrl)}"
-                                        src="${this.esc(visCfg.videoUrl)}"></video>
-                                    <img id="ms-dash-visual-fallback" width="600" height="1067" class="hidden absolute inset-0 w-full h-full object-cover" alt="" decoding="async" data-src="${this.esc(visCfg.posterUrl)}" />
+                                        data-video-src="${this.esc(visCfg.videoUrl)}"></video>
                                 </div>
                             </div>
                             <p class="text-[10px] text-ms-muted text-center mt-1.5 mb-0 px-1 leading-snug">숲의 싱그러움을 담은 인트로 · 영상이 없을 때는 사진으로 대체됩니다.</p>
@@ -2402,7 +2402,7 @@
 
             el.innerHTML = `
                 <div class="flex flex-col flex-1 min-h-0 w-full">
-                    <div id="ms-dashboard-visual" class="flex-1 min-h-0 flex flex-col items-center justify-center px-3 pt-0 pb-1 print-hidden" aria-hidden="true">
+                    <div id="ms-dashboard-visual" class="shrink-0 flex flex-col items-center justify-center px-3 pt-0 pb-1 print-hidden" aria-hidden="true">
                         ${dashboardVisualInner}
                     </div>
                     <div class="shrink-0 flex flex-col items-stretch py-1.5 md:py-2.5">
@@ -3597,7 +3597,7 @@
         saveForestDashboardVisual() {
             const vEl = document.getElementById('ms-admin-dash-video-url');
             const pEl = document.getElementById('ms-admin-dash-poster-url');
-            const videoUrl = (vEl && vEl.value.trim()) || DEFAULT_FOREST_DASH_VIDEO;
+            const videoUrl = normalizeForestVideoUrl((vEl && vEl.value.trim()) || DEFAULT_FOREST_DASH_VIDEO);
             const posterUrl = (pEl && pEl.value.trim()) || DEFAULT_FOREST_DASH_POSTER;
             try {
                 localStorage.setItem(LS_FOREST_DASH_VISUAL, JSON.stringify({ videoUrl, posterUrl }));
@@ -3616,30 +3616,97 @@
         },
         onDashboardVideoError(el) {
             if (!el) return;
-            el.classList.add('hidden');
-            const fb = document.getElementById('ms-dash-visual-fallback');
-            if (fb) {
-                const u = fb.getAttribute('data-src') || '';
-                if (u) fb.setAttribute('src', u);
-                fb.classList.remove('hidden');
+            try {
+                el.removeAttribute('src');
+                el.load();
+            } catch (_) {
+                /* ignore */
             }
+            el.classList.add('hidden');
         },
+        /**
+         * MP4가 배포되지 않은 경우 브라우저가 video GET 404를 찍지 않도록,
+         * 초기에는 src 없이 두고 HEAD로 존재할 때만 src 부여.
+         */
         initDashboardVisualVideo() {
             const v = document.getElementById('ms-dash-visual-video');
             if (!v) return;
-            const onErr = () => {
+            const raw = v.getAttribute('data-video-src') || '';
+            const url = String(raw).trim();
+            const onErr = function () {
                 MS.onDashboardVideoError(v);
             };
             v.addEventListener('error', onErr);
-            try {
-                const p = v.play && v.play();
-                if (p && typeof p.catch === 'function') {
-                    p.catch(function () {
-                        /* autoplay 정책 등 — 재생만 실패한 경우는 유지 */
-                    });
+            v.addEventListener(
+                'loadeddata',
+                function () {
+                    v.classList.remove('opacity-0', 'pointer-events-none');
+                },
+                { once: true }
+            );
+            const attachAndPlay = function () {
+                try {
+                    const p = v.play && v.play();
+                    if (p && typeof p.catch === 'function') {
+                        p.catch(function () {
+                            /* autoplay 정책 */
+                        });
+                    }
+                } catch (_) {
+                    /* ignore */
                 }
+            };
+            if (!url) {
+                onErr();
+                return;
+            }
+            let origin = '';
+            try {
+                origin = location.origin || '';
             } catch (_) {
-                /* ignore */
+                origin = '';
+            }
+            const isExternal = /^https?:\/\//i.test(url) && origin && url.indexOf(origin) !== 0;
+            if (isExternal) {
+                v.src = url;
+                try {
+                    v.load();
+                } catch (_) {
+                    /* ignore */
+                }
+                attachAndPlay();
+                return;
+            }
+            try {
+                fetch(url, { method: 'HEAD', cache: 'no-store', credentials: 'same-origin' })
+                    .then(function (res) {
+                        if (!res.ok && res.status !== 405 && res.status !== 501) {
+                            onErr();
+                            return;
+                        }
+                        if (!res.ok) {
+                            v.src = url;
+                            try {
+                                v.load();
+                            } catch (_) {
+                                /* ignore */
+                            }
+                            attachAndPlay();
+                            return;
+                        }
+                        v.src = url;
+                        try {
+                            v.load();
+                        } catch (_) {
+                            /* ignore */
+                        }
+                        attachAndPlay();
+                    })
+                    .catch(function () {
+                        onErr();
+                    });
+            } catch (_) {
+                onErr();
             }
         },
         /** 기관명 키워드로 대상·세부 유형 자동 설정(입력 시). 수동으로 언제든 변경 가능 */
