@@ -7,7 +7,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>마인드스토리 유아숲 행동관찰</title>
+    <title>어린이 4계절 Temperament TEST (4STT) · 마인드스토리</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap');
@@ -145,7 +145,7 @@
             border-radius: 3rem;
         }
 
-        /* 기관 종합 보고서 · 은은한 수묵·4군자 무늬 느낌 */
+        /* 기관 종합 보고서 · 은은한 수묵·4STT 무늬 느낌 */
         .ms-consulting-hero {
             background-color: #FAF9F5;
             background-image:
@@ -314,24 +314,24 @@
 <div id="app" class="max-w-2xl mx-auto fade-in w-full flex flex-col flex-1 min-h-0 transition-[max-width] duration-300">
     <header class="text-center mb-8 print-hidden shrink-0">
         <div class="inline-block px-4 py-1 border-2 border-[#2D4A3E] text-[#2D4A3E] text-[9px] font-bold rounded-full mb-3 tracking-[0.18em]">MINDSTORY</div>
-        <h1 class="text-2xl md:text-3xl font-black text-[#2D4A3E] tracking-tight leading-tight px-1">어린이 4군자 기질검사</h1>
+        <h1 class="text-2xl md:text-3xl font-black text-[#2D4A3E] tracking-tight leading-tight px-1">어린이 4계절 Temperament TEST (4STT)</h1>
         <div id="ms-header-age-tabs" class="print-hidden max-w-md mx-auto w-full px-2 mt-5 mb-1" aria-label="연령·문항 세트 선택"></div>
     </header>
 
-    <div id="view-content" class="flex-1 min-h-0"></div>
+    <div id="view-content" class="flex-1 min-h-0 flex flex-col"></div>
     <footer id="ms-data-footer" class="print-hidden shrink-0 pt-8 pb-2 mt-auto" aria-label="데이터 백업"></footer>
 </div>
 
 <input type="file" id="ms-import-input" accept=".json,application/json" class="hidden" aria-hidden="true" />
 <div id="ms-modal-root" class="hidden print-hidden" role="dialog" aria-modal="true" aria-labelledby="ms-modal-title"></div>
 
-<script src="forest-question-banks.js"></script>
+<script src="/forest-question-banks.js"></script>
 <script>
 (function () {
     'use strict';
 
     /**
-     * 유아숲 관찰 전용 · 폐쇄형 로컬 금고 (서버 전송 없음)
+     * 유아숲 관찰 전용 · 로컬 금고 + 서버(D1) + 구글 시트 웹훅 전송
      * 공식 URL: https://mindstory.kr/forest.html — 저장 키는 파일명과 무관(동일 origin이면 동일 금고).
      */
     const STORAGE_KEY = 'ms_forest_v1';
@@ -348,6 +348,11 @@
     const ADMIN_PASSWORDS = ['9535', '0000'];
     /** 전역 관찰 단계(사전/사후) — 앱 재시작 후에도 유지 */
     const LS_OBSERVATION_STAGE = 'ms_observation_stage';
+    /** 진행 장소(숲/실내) — 검사 설정 모달과 동기 */
+    const LS_OBS_LOCATION = 'ms_forest_obs_location';
+    /** 구글 앱스 스크립트 Web App — 시트·메일 배달(열 순서: instType…examiner) */
+    const FOREST_SHEETS_WEBHOOK_URL =
+        'https://script.google.com/macros/s/AKfycbz4ADLlzPRw6cMY60plT9_8HZz4x6R-L8YV1xaO3bWoGkTZJcu35AlpcL9ogpUGsNK9/exec';
 
     /** 연령 탭: 선택·비선택 모두 솔리드 바탕 + 흰 글씨(비선택은 동일 색조의 연한 솔리드, 테두리 전용 스타일 없음) */
     const TAB_AGE_PS_ON =
@@ -478,16 +483,16 @@
      * 톤: MINDSTORY V1 · 관찰과 공감 · 따뜻한 어휘
      */
     const SCHEMA = {
-        version: '21.0',
-        categories: ['난초', '대나무', '국화', '매화'],
-        /** 동점 시 정렬: 매(매화) → 란(난초) → 국(국화) → 죽(대나무) */
-        temperamentTieOrder: ['매화', '난초', '국화', '대나무'],
-        temperamentLetter: { 매화: '매', 난초: '란', 국화: '국', 대나무: '죽' },
+        version: '26.0',
+        categories: ['SPRT', 'SUMT', 'AUTT', 'WINT'],
+        /** 동점 시 정렬: WINT → SPRT → AUTT → SUMT */
+        temperamentTieOrder: ['WINT', 'SPRT', 'AUTT', 'SUMT'],
+        temperamentLetter: { WINT: 'W', SPRT: 'S', AUTT: 'A', SUMT: 'M' },
         temperamentRankLabel: {
-            매화: '주도·책임형(매화)',
-            난초: '공감·배려형(난초)',
-            국화: '신중·안정형(국화)',
-            대나무: '활기·탐구형(대나무)'
+            WINT: 'WINT(겨울) ❄️',
+            SPRT: 'SPRT(봄) 🌸',
+            AUTT: 'AUTT(가을) 🌼',
+            SUMT: 'SUMT(여름) 🎋'
         },
         questionsPreschool:
             typeof window !== 'undefined' && window.FOREST_QUESTION_BANKS && window.FOREST_QUESTION_BANKS.preschool
@@ -557,17 +562,17 @@
         },
         /**
          * O(예)=문항이 가리키는 기질(q.cat). X(아니오)=그 상황에서 드러나는 대안 발현 기질에 가산.
-         * (예: 매화 문항 X → 신중·대기·안정 쪽 국화 가산 — ‘숨겨진’ 국화 신호)
+         * (예: WINT 문항 X → AUTT 가산)
          */
         xTemperamentForOCat: {
-            난초: '대나무',
-            대나무: '국화',
-            국화: '대나무',
-            매화: '국화'
+            SPRT: 'SUMT',
+            SUMT: 'AUTT',
+            AUTT: 'SUMT',
+            WINT: 'AUTT'
         },
         interpretations: {
-            난초: {
-                title: '따뜻한 공감의 난초',
+            SPRT: {
+                title: '🌸 SPRT (봄 기질)',
                 harmonySpark:
                     '공감의 씨앗이 주변을 포근히 감싸 안는 힘이 숲에서 잘 드러나고 있어요.',
                 harmonySupport:
@@ -601,8 +606,8 @@
                     }
                 }
             },
-            대나무: {
-                title: '활기찬 탐구의 대나무',
+            SUMT: {
+                title: '🎋 SUMT (여름 기질)',
                 harmonySpark:
                     '새로움을 향한 씩씩한 발걸음과 몸으로 배우는 호기심이 숲에서 크게 드러나고 있어요.',
                 harmonySupport:
@@ -636,8 +641,8 @@
                     }
                 }
             },
-            국화: {
-                title: '신중한 안정의 국화',
+            AUTT: {
+                title: '🌼 AUTT (가을 기질)',
                 harmonySpark:
                     '주변을 살피고 안전을 가늠하는 차분한 지혜가 숲에서 잘 드러나고 있어요.',
                 harmonySupport:
@@ -671,8 +676,8 @@
                     }
                 }
             },
-            매화: {
-                title: '단단한 마무리의 매화',
+            WINT: {
+                title: '❄️ WINT (겨울 기질)',
                 harmonySpark:
                     '한 가지를 끝까지 보려는 끈기와 다시 시작하는 예쁜 마음이 숲에서 드러나고 있어요.',
                 harmonySupport:
@@ -709,9 +714,9 @@
         },
 
         barStyle(cat) {
-            if (cat === '난초') return 'background-color:#D4A373';
-            if (cat === '대나무') return 'background-color:#2D4A3E';
-            if (cat === '국화') return 'background:linear-gradient(90deg,#2D4A3E 0%,#D4A373 100%)';
+            if (cat === 'SPRT') return 'background-color:#D4A373';
+            if (cat === 'SUMT') return 'background-color:#2D4A3E';
+            if (cat === 'AUTT') return 'background:linear-gradient(90deg,#2D4A3E 0%,#D4A373 100%)';
             return 'background-color:#2D4A3E;opacity:0.72';
         },
 
@@ -735,10 +740,10 @@
             const tg = targetGroup === 'elementary' ? 'elementary' : 'preschool';
             const qs = this.questionsForGroup(tg);
             const acc = {
-                난초: { yes: 0, n: 0 },
-                대나무: { yes: 0, n: 0 },
-                국화: { yes: 0, n: 0 },
-                매화: { yes: 0, n: 0 }
+                SPRT: { yes: 0, n: 0 },
+                SUMT: { yes: 0, n: 0 },
+                AUTT: { yes: 0, n: 0 },
+                WINT: { yes: 0, n: 0 }
             };
             qs.forEach((q) => {
                 const row = counts[q.id] || { yes: '', no: '' };
@@ -764,7 +769,7 @@
         rawOTotalsFromCounts(counts, targetGroup) {
             const tg = targetGroup === 'elementary' ? 'elementary' : 'preschool';
             const qs = this.questionsForGroup(tg);
-            const totals = { 난초: 0, 대나무: 0, 국화: 0, 매화: 0 };
+            const totals = { SPRT: 0, SUMT: 0, AUTT: 0, WINT: 0 };
             const xmap = this.xTemperamentForOCat;
             qs.forEach((q) => {
                 const row = counts[q.id] || { yes: '', no: '' };
@@ -797,10 +802,10 @@
         /** 각 기질 총점 / 4기질 총점 합 × 100 (정수 %) */
         temperamentDensityPercent(totals) {
             const grand =
-                (totals.난초 || 0) +
-                    (totals.대나무 || 0) +
-                    (totals.국화 || 0) +
-                    (totals.매화 || 0) || 1;
+                (totals.SPRT || 0) +
+                    (totals.SUMT || 0) +
+                    (totals.AUTT || 0) +
+                    (totals.WINT || 0) || 1;
             const out = {};
             this.categories.forEach((c) => {
                 out[c] = Math.round(((totals[c] || 0) / grand) * 100);
@@ -809,7 +814,7 @@
         },
 
         /**
-         * 누적 총점 내림차순 순위. 동점: temperamentTieOrder(매→란→국→죽) 앞선 유형이 상위.
+         * 누적 총점 내림차순 순위. 동점: temperamentTieOrder(W→S→A→M) 앞선 유형이 상위.
          * density_pct: 전체 슬롯(4기질 총점 합) 대비 해당 기질 비중.
          */
         rankTemperamentsByRawO(totals) {
@@ -817,10 +822,10 @@
             const L = this.temperamentLetter;
             const LB = this.temperamentRankLabel;
             const grand =
-                (totals.난초 || 0) +
-                    (totals.대나무 || 0) +
-                    (totals.국화 || 0) +
-                    (totals.매화 || 0) || 1;
+                (totals.SPRT || 0) +
+                    (totals.SUMT || 0) +
+                    (totals.AUTT || 0) +
+                    (totals.WINT || 0) || 1;
             const rows = order.map((cat) => ({
                 cat,
                 score: totals[cat] || 0,
@@ -1086,6 +1091,8 @@
         setupObsPhase: '',
         /** 전역 기본 관찰 단계: pre | post — localStorage ms_observation_stage */
         observationStage: 'pre',
+        /** 진행 장소: forest(숲) | indoor(실내) — localStorage ms_forest_obs_location */
+        obsLocation: 'forest',
         /** 예전 localStorage 키에서 이행한 경우 1회 안내 */
         migrationBanner: null,
         /** 홈 이동 직후 토스트 문구 */
@@ -1106,6 +1113,8 @@
         reportFromDashboard: false,
         /** 입력 화면: preschool | elementary (기록별 inst.targetGroup과 동기화) */
         targetGroup: 'preschool',
+        /** 원스톱 검사 설정 모달: 반 이름 임시 보관(재렌더 시 유지, persist 대상 아님) */
+        unifiedSetupGroupDraft: '',
 
         guessType(name) {
             const s = String(name);
@@ -1135,6 +1144,7 @@
             }
             if (inst.obsPhase !== 'pre' && inst.obsPhase !== 'post') inst.obsPhase = '';
             if (inst.groupName === undefined) inst.groupName = '';
+            if (inst.obsLocation !== 'indoor' && inst.obsLocation !== 'forest') inst.obsLocation = 'forest';
         },
 
         selected() {
@@ -1285,6 +1295,7 @@
                 type: this.guessType(name),
                 obsPhase: '',
                 groupName: '',
+                obsLocation: STATE.obsLocation === 'indoor' ? 'indoor' : 'forest',
                 targetGroup: this.targetGroup === 'elementary' ? 'elementary' : 'preschool',
                 counts: SCHEMA.emptyCounts(),
                 updatedAt: new Date().toISOString()
@@ -1310,6 +1321,15 @@
             STATE.observationStage = 'pre';
         }
         STATE.setupObsPhase = STATE.observationStage;
+    })();
+
+    (function syncObsLocationFromStorage() {
+        try {
+            const v = localStorage.getItem(LS_OBS_LOCATION);
+            STATE.obsLocation = v === 'indoor' ? 'indoor' : 'forest';
+        } catch (_) {
+            STATE.obsLocation = 'forest';
+        }
     })();
 
     const UI = {
@@ -1434,7 +1454,7 @@
                     ? `<div class="mt-4 flex justify-center px-2">
                     <button type="button"
                         class="ms-btn w-full max-w-md rounded-2xl border-2 border-[#5D4037] bg-[#FDFBF7] px-4 py-3.5 text-sm font-black text-[#5D4037] shadow-sm active:scale-[0.99]"
-                        onclick="MS.goGuide()">검사설명서 보기 (4군자 지표 해설)</button>
+                        onclick="MS.goGuide()">검사설명서 보기 (4STT 지표 해설)</button>
                 </div>`
                     : '';
             host.innerHTML = `
@@ -1533,7 +1553,7 @@
                 const lx = cx + labelR * Math.cos(ang);
                 const ly = cy + labelR * Math.sin(ang);
                 const pct = scores[cat] || 0;
-                labels += `<text x="${lx}" y="${ly - 5}" text-anchor="middle" fill="#2D4A3E" font-size="12" font-weight="800" font-family="Noto Sans KR,sans-serif">${cat}</text>`;
+                labels += `<text x="${lx}" y="${ly - 5}" text-anchor="middle" fill="#2D4A3E" font-size="12" font-weight="800" font-family="Noto Sans KR,sans-serif">${SCHEMA.temperamentRankLabel[cat] || cat}</text>`;
                 labels += `<text x="${lx}" y="${ly + 9}" text-anchor="middle" fill="#9ca3af" font-size="10" font-weight="600" font-family="Noto Sans KR,sans-serif">${pct}%</text>`;
             });
             return `<svg width="240" height="230" viewBox="0 0 240 230" xmlns="http://www.w3.org/2000/svg" class="mx-auto">${grid}${axes}<polygon fill="rgba(45,74,62,0.2)" stroke="#2D4A3E" stroke-width="2" points="${polyPts}" />${labels}</svg>`;
@@ -1580,7 +1600,7 @@
                 const lx = cx + labelR * Math.cos(ang);
                 const ly = cy + labelR * Math.sin(ang);
                 const pct = scores[cat] || 0;
-                labels += `<text x="${lx}" y="${ly - 6}" text-anchor="middle" fill="#2D4A3E" font-size="13" font-weight="800" font-family="Noto Sans KR,sans-serif">${cat}</text>`;
+                labels += `<text x="${lx}" y="${ly - 6}" text-anchor="middle" fill="#2D4A3E" font-size="13" font-weight="800" font-family="Noto Sans KR,sans-serif">${SCHEMA.temperamentRankLabel[cat] || cat}</text>`;
                 labels += `<text x="${lx}" y="${ly + 10}" text-anchor="middle" fill="#9ca3af" font-size="11" font-weight="600" font-family="Noto Sans KR,sans-serif">${pct}%</text>`;
             });
             return `<svg width="300" height="280" viewBox="0 0 300 280" xmlns="http://www.w3.org/2000/svg" class="mx-auto max-w-full h-auto">${grid}${axes}<polygon fill="rgba(45,74,62,0.18)" stroke="#2D4A3E" stroke-width="2.5" points="${polyPts}" />${labels}</svg>`;
@@ -1611,7 +1631,7 @@
                 const xPost = gx + 3;
                 rects += `<rect x="${xPre}" y="${y0 - preH}" width="${barW}" height="${preH}" rx="4" fill="rgba(168,201,184,0.92)" stroke="rgba(45,74,62,0.15)" stroke-width="1" />`;
                 rects += `<rect x="${xPost}" y="${y0 - postH}" width="${barW}" height="${postH}" rx="4" fill="#2D4A3E" stroke="rgba(45,74,62,0.2)" stroke-width="1" />`;
-                rects += `<text x="${gx}" y="${H - 28}" text-anchor="middle" fill="#2D4A3E" font-size="11" font-weight="800" font-family="Noto Sans KR,sans-serif">${cat}</text>`;
+                rects += `<text x="${gx}" y="${H - 28}" text-anchor="middle" fill="#2D4A3E" font-size="11" font-weight="800" font-family="Noto Sans KR,sans-serif">${SCHEMA.temperamentRankLabel[cat] || cat}</text>`;
             });
             const axis = `<line x1="${padL}" y1="${y0}" x2="${W - padR}" y2="${y0}" stroke="rgba(45,74,62,0.25)" stroke-width="1.5" />`;
             const y50 = y0 - innerH * 0.5;
@@ -1662,7 +1682,7 @@
                 const ang = -Math.PI / 2 + (i * Math.PI) / 2;
                 const lx = cx + labelR * Math.cos(ang);
                 const ly = cy + labelR * Math.sin(ang);
-                labels += `<text x="${lx}" y="${ly + 4}" text-anchor="middle" fill="#2D4A3E" font-size="12" font-weight="800" font-family="Noto Sans KR,sans-serif">${cat}</text>`;
+                labels += `<text x="${lx}" y="${ly + 4}" text-anchor="middle" fill="#2D4A3E" font-size="12" font-weight="800" font-family="Noto Sans KR,sans-serif">${SCHEMA.temperamentRankLabel[cat] || cat}</text>`;
             });
             const dual = `<polygon fill="rgba(168,201,184,0.38)" stroke="#6d9a82" stroke-width="2" stroke-dasharray="6 4" points="${polyPre}" /><polygon fill="rgba(45,74,62,0.15)" stroke="#2D4A3E" stroke-width="2.5" points="${polyPost}" />`;
             const leg = `<g transform="translate(20,248)"><line x1="0" y1="6" x2="22" y2="6" stroke="#6d9a82" stroke-width="2" stroke-dasharray="6 4"/><text x="28" y="10" fill="#2D4A3E" font-size="10" font-weight="700" font-family="Noto Sans KR,sans-serif">사전 평균</text><line x1="108" y1="6" x2="130" y2="6" stroke="#2D4A3E" stroke-width="2.5"/><text x="136" y="10" fill="#2D4A3E" font-size="10" font-weight="800" font-family="Noto Sans KR,sans-serif">사후 평균</text></g>`;
@@ -1710,7 +1730,7 @@
                 const ang = -Math.PI / 2 + (i * Math.PI) / 2;
                 const lx = cx + labelR * Math.cos(ang);
                 const ly = cy + labelR * Math.sin(ang);
-                labels += `<text x="${lx}" y="${ly + 4}" text-anchor="middle" fill="#2D4A3E" font-size="12" font-weight="800" font-family="Noto Sans KR,sans-serif">${cat}</text>`;
+                labels += `<text x="${lx}" y="${ly + 4}" text-anchor="middle" fill="#2D4A3E" font-size="12" font-weight="800" font-family="Noto Sans KR,sans-serif">${SCHEMA.temperamentRankLabel[cat] || cat}</text>`;
             });
             const dual =
                 `<polygon fill="rgba(184,150,120,0.42)" stroke="#8d6e54" stroke-width="2.2" stroke-dasharray="5 4" points="${polyDay}" />` +
@@ -1730,10 +1750,10 @@
             }
             const cats = SCHEMA.categories;
             const colors = {
-                난초: '#D4A373',
-                대나무: '#2D4A3E',
-                국화: '#5f7f6f',
-                매화: '#7d6b5a'
+                SPRT: '#D4A373',
+                SUMT: '#2D4A3E',
+                AUTT: '#5f7f6f',
+                WINT: '#7d6b5a'
             };
             const cx = 120;
             const cy = 120;
@@ -1759,7 +1779,7 @@
                     const cnt = tally[cat] || 0;
                     const pct = Math.round((cnt / n) * 100);
                     return `<div class="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-[rgba(45,74,62,0.06)] last:border-0">
-                        <span class="flex items-center gap-2 font-semibold text-[#2D4A3E]"><span class="inline-block w-3.5 h-3.5 rounded-sm shrink-0" style="background:${colors[cat]}"></span>${this.esc(cat)}</span>
+                        <span class="flex items-center gap-2 font-semibold text-[#2D4A3E]"><span class="inline-block w-3.5 h-3.5 rounded-sm shrink-0" style="background:${colors[cat]}"></span>${this.esc(SCHEMA.temperamentRankLabel[cat] || cat)}</span>
                         <span class="text-ms-muted font-bold">${pct}% <span class="text-xs font-semibold">(${cnt}명)</span></span>
                     </div>`;
                 })
@@ -1779,7 +1799,7 @@
             const spread = meanRank[0].v - meanRank[3].v;
 
             const pctLine = cats
-                .map((c) => `${c} 평균 ${mean[c]}%`)
+                .map((c) => `${SCHEMA.temperamentRankLabel[c] || c} 평균 ${mean[c]}%`)
                 .join(', ');
 
             const atmosphere =
@@ -1787,49 +1807,49 @@
                 `숫자는 한 아이의 성격표가 아니라, 지금 이 시기에 모여 있는 **집단 에너지의 결**을 보여 주는 나침반이에요.\n\n` +
                 (spread <= 15
                     ? `네 축이 고르게 펼쳐져 있어 숲 활동에서 다양한 역할이 자연스럽게 돌아갈 수 있는 토양입니다. 한 아이에게만 시선이 머물지 않도록, 오늘의 숲에서 누가 어떤 기질의 씨앗을 드러냈는지 짧은 메모로 남기면 운영이 더 부드러워져요.`
-                    : `평균 에너지는 「${topM}」 쪽으로 조금 더 기울어 있어, 이 원 전체가 품는 숲의 분위기는 ${topM === '대나무' ? '탐험과 움직임' : topM === '난초' ? '정서적 교감과 돌봄' : topM === '국화' ? '안전 확인과 예측 가능한 리듬' : '끝맺음과 다시 시도하는 힘'}에 익숙해지기 쉬운 결을 이룹니다. ` +
-                      `동시에 「${lowM}」 축은 집단이 함께 숨 쉴 여백을 만들어 줄 때 더 단단해질 수 있어요.`) +
-                `\n\n이 기관은 전반적으로 ${topP} 기질이 우세한 아이가 많아, 놀이와 이동을 설계할 때 이 결을 존중하면 현장의 안정감이 커집니다.`;
+                    : `평균 에너지는 「${SCHEMA.temperamentRankLabel[topM] || topM}」 쪽으로 조금 더 기울어 있어, 이 원 전체가 품는 숲의 분위기는 ${topM === 'SUMT' ? '탐험과 움직임' : topM === 'SPRT' ? '정서적 교감과 돌봄' : topM === 'AUTT' ? '안전 확인과 예측 가능한 리듬' : '끝맺음과 다시 시도하는 힘'}에 익숙해지기 쉬운 결을 이룹니다. ` +
+                      `동시에 「${SCHEMA.temperamentRankLabel[lowM] || lowM}」 축은 집단이 함께 숨 쉴 여백을 만들어 줄 때 더 단단해질 수 있어요.`) +
+                `\n\n이 기관은 전반적으로 ${SCHEMA.temperamentRankLabel[topP] || topP} 기질이 우세한 아이가 많아, 놀이와 이동을 설계할 때 이 결을 존중하면 현장의 안정감이 커집니다.`;
 
             const traits =
                 `**우리 기관의 기질적 특징**은 두 층으로 읽을 수 있어요. 첫째, **평균 프로필**(레이더)은 장기적인 교육 방향과 환경 설계에 쓰입니다. 둘째, **우세형 분포**(파이)는 “지금 이 반·이 연령에서 누가 앞장서기 쉬운가”를 보여 줍니다.\n\n` +
-                `현재 집단 평균에서 ${topM}의 비율이 상대적으로 높습니다. 이는 숲에서의 선택과 반응 속도가 그 방향으로 모일 가능성이 있다는 뜻이에요. ` +
-                `파이 차트에서는 ${topP}형 아이가 ${nPie ? Math.round(((tally[topP] || 0) / nPie) * 100) : 0}%를 차지하여, 소그룹 활동을 짤 때 **페이스 메이커** 역할을 맡기기 좋은 기질이 드러납니다.\n\n` +
+                `현재 집단 평균에서 ${SCHEMA.temperamentRankLabel[topM] || topM}의 비율이 상대적으로 높습니다. 이는 숲에서의 선택과 반응 속도가 그 방향으로 모일 가능성이 있다는 뜻이에요. ` +
+                `파이 차트에서는 ${SCHEMA.temperamentRankLabel[topP] || topP}형 아이가 ${nPie ? Math.round(((tally[topP] || 0) / nPie) * 100) : 0}%를 차지하여, 소그룹 활동을 짤 때 **페이스 메이커** 역할을 맡기기 좋은 기질이 드러납니다.\n\n` +
                 (nTotal > nWithData
                     ? `참고로 같은 기관명으로 저장된 기록 ${nTotal}건 중, 아직 숫자가 비어 있는 관찰 ${nTotal - nWithData}건은 평균에서 제외되었습니다. 데이터가 쌓일수록 이 지도는 더 선명해져요.`
                     : `모든 관찰 기록에 입력값이 있어 집단 지도가 완전히 반영된 상태입니다.`);
 
             const strategy =
                 `**교사를 위한 집단 관리 전략**으로는, 먼저 “집단의 공통 리듬”을 하루 일과에 새겨 넣는 것을 권합니다. ` +
-                (topM === '국화'
-                    ? `국화 성향이 평균에서 두드러질 때는 새로운 숲 코스로 이동하기 전에 **사진·지도·짧은 동선 시범**으로 예측 가능성을 높여 주세요. “어디로 갈지, 어디서 쉴지”를 말로 먼저 나누면 아이들의 몸이 한꺼번에 움직여도 마음은 편안합니다.`
-                    : topM === '대나무'
-                      ? `대나무 성향이 강하면 모험적인 숲 놀이에 최적화되어 있으나, **안전 신호와 우리들의 약속**을 활동 전에 짧게 고정하는 것이 중요합니다. 에너지가 크게 솟을수록 멈춤 신호를 친숙한 놀이로 연결해 두세요.`
-                      : topM === '난초'
-                        ? `난초 성향이 두드러지면 정서적 교감이 활동의 중심축이 됩니다. 갈등이 생겼을 때 해결보다 **이름을 부르며 감정 이름 붙이기**를 먼저 시도해 보세요. 집단 전체가 듣는 칭찬도 효과적입니다.`
-                        : `매화 성향이 높으면 마무리와 규칙을 지키는 흐름이 자연스럽습니다. 활동을 나눌 때 **작은 완성 단위**를 미리 알려 주면 스트레스 없이 몰입이 이어져요.`) +
+                (topM === 'AUTT'
+                    ? `AUTT(가을) 성향이 평균에서 두드러질 때는 새로운 숲 코스로 이동하기 전에 **사진·지도·짧은 동선 시범**으로 예측 가능성을 높여 주세요. “어디로 갈지, 어디서 쉴지”를 말로 먼저 나누면 아이들의 몸이 한꺼번에 움직여도 마음은 편안합니다.`
+                    : topM === 'SUMT'
+                      ? `SUMT(여름) 성향이 강하면 모험적인 숲 놀이에 최적화되어 있으나, **안전 신호와 우리들의 약속**을 활동 전에 짧게 고정하는 것이 중요합니다. 에너지가 크게 솟을수록 멈춤 신호를 친숙한 놀이로 연결해 두세요.`
+                      : topM === 'SPRT'
+                        ? `SPRT(봄) 성향이 두드러지면 정서적 교감이 활동의 중심축이 됩니다. 갈등이 생겼을 때 해결보다 **이름을 부르며 감정 이름 붙이기**를 먼저 시도해 보세요. 집단 전체가 듣는 칭찬도 효과적입니다.`
+                        : `WINT(겨울) 성향이 높으면 마무리와 규칙을 지키는 흐름이 자연스럽습니다. 활동을 나눌 때 **작은 완성 단위**를 미리 알려 주면 스트레스 없이 몰입이 이어져요.`) +
                 `\n\n소그룹을 나눌 때는 우세형과 다른 축의 아이를 한 조에 섞어, 서로의 고운 에너지가 번지도록 하면 좋아요.`;
 
             const curriculum =
                 `**교육 커리큘럼 제안**: 이 분포를 바탕으로 유아숲 프로그램을 한 겹 더 풍성하게 쌓아 볼 수 있어요.\n\n` +
-                (topP === '난초'
+                (topP === 'SPRT'
                     ? `• 돌봄·협력 서사가 있는 역할 놀이(작은 숲 생명 돌보기, 친구 초대하기)\n• 감정 카드와 함께하는 원 모임\n• 조용한 관찰 시간(듣기·그리기)`
-                    : topP === '대나무'
+                    : topP === 'SUMT'
                       ? `• 지형이 조금씩 바뀌는 탐험 코스(단계적 난이도)\n• 도구를 바꿔 가며 같은 숲을 새로 보기\n• 짧은 목표 깃발 놀이(도착점 시각화)`
-                      : topP === '국화'
+                      : topP === 'AUTT'
                         ? `• 동선을 미리 밟아 보는 “리허설 산책”\n• 안전한 기지 캠프를 두고 확장하는 놀이\n• 예고가 있는 자유 탐색`
                         : `• 한 과제를 작은 덩어리로 나눈 완성 놀이\n• 정리·마무리를 노래·의식으로 연결\n• 다시 시도하기 루틴(호흡-물-한 블록)`) +
                 `\n\n평균 편차가 ${spread <= 15 ? '크지 않아' : '어느 정도 있어'} 같은 주차 안에 **빠른 코스**와 **느린 코스**를 번갈아 배치하면 집단 전체가 숲의 속도를 체험하게 됩니다.`;
 
             const admin =
                 `**원장님용 · 마인드스토리 교육 제언**\n\n` +
-                (topP === '난초' || topM === '난초'
-                    ? `본 기관은 난초 기질의 비중이 높아 **정서적 교감**이 운영의 중심축이 됩니다. 교사 연수 시 ‘공감 대화법’·‘감정 이름 붙이기’ 비중을 높이고, 평가보다 **관찰 언어를 통일**하는 시간을 마련해 보시길 권합니다.`
-                    : topP === '대나무' || topM === '대나무'
-                      ? `본 기관은 대나무 기질의 에너지가 활기를 이끌기 쉬워 **안전 리더십**과 **활동 설계** 역량을 연수에서 함께 다루면 좋습니다. 모험을 허용하는 만큼 멈춤 신호와 회복 루틴을 매뉴얼로 남겨 두세요.`
-                      : topP === '국화' || topM === '국화'
-                        ? `본 기관은 국화 기질이 집단 리듬을 잡는 데 기여합니다. 새 프로그램 도입 시 **사전 안내 자료**와 **반복 가능한 동선**을 강조하는 연수 구성을 권장합니다.`
-                        : `본 기관은 매화 기질을 통해 **끝맺음과 책임** 문화를 쌓기 좋습니다. 연수에서는 목표 세분화·긍정적 마무리 의식을 팀 단위로 연습해 보세요.`) +
+                (topP === 'SPRT' || topM === 'SPRT'
+                    ? `본 기관은 SPRT(봄) 기질의 비중이 높아 **정서적 교감**이 운영의 중심축이 됩니다. 교사 연수 시 ‘공감 대화법’·‘감정 이름 붙이기’ 비중을 높이고, 평가보다 **관찰 언어를 통일**하는 시간을 마련해 보시길 권합니다.`
+                    : topP === 'SUMT' || topM === 'SUMT'
+                      ? `본 기관은 SUMT(여름) 기질의 에너지가 활기를 이끌기 쉬워 **안전 리더십**과 **활동 설계** 역량을 연수에서 함께 다루면 좋습니다. 모험을 허용하는 만큼 멈춤 신호와 회복 루틴을 매뉴얼로 남겨 두세요.`
+                      : topP === 'AUTT' || topM === 'AUTT'
+                        ? `본 기관은 AUTT(가을) 기질이 집단 리듬을 잡는 데 기여합니다. 새 프로그램 도입 시 **사전 안내 자료**와 **반복 가능한 동선**을 강조하는 연수 구성을 권장합니다.`
+                        : `본 기관은 WINT(겨울) 기질을 통해 **끝맺음과 책임** 문화를 쌓기 좋습니다. 연수에서는 목표 세분화·긍정적 마무리 의식을 팀 단위로 연습해 보세요.`) +
                 `\n\n인력 배치 시 한 반에 **서로 다른 우세형**을 가진 교사가 짝을 이루면, 집단의 결을 균형 있게 받쳐 줄 수 있습니다. 숲은 아이의 속도를 기다리듯, 기관의 결도 천천히 읽어 가시길 바랍니다.`;
 
             return { atmosphere, traits, strategy, curriculum, admin };
@@ -1839,13 +1859,7 @@
         buildPrePostNarrative(ctx) {
             const { groupName, typeLabel, meanPre, meanPost, growthIndex, nPre, nPost } = ctx;
             const cats = SCHEMA.categories;
-            const catLabel = (c) =>
-                ({
-                    난초: '난초(따뜻한 공감)',
-                    대나무: '대나무(활기찬 탐구)',
-                    국화: '국화(신중한 안정)',
-                    매화: '매화(단단한 마무리·원칙)'
-                })[c] || c;
+            const catLabel = (c) => SCHEMA.temperamentRankLabel[c] || c;
 
             const rises = cats.filter((c) => (growthIndex[c] || 0) >= 3);
             const dips = cats.filter((c) => (growthIndex[c] || 0) <= -3);
@@ -1873,7 +1887,7 @@
                 if (d >= 3) {
                     return (
                         `**${catLabel(c)}** · 사전 ${pre}%에서 사후 ${post}%로, 성장 지수 **+${d}**입니다. ` +
-                        `사전 대비 ${c === '매화' ? '매화(원칙·마무리)' : catLabel(c)} 점수가 오른 것은 숲 활동을 통해 아이들의 **자기 주도성·책임감·관계 감각** 중 이 축에 해당하는 고운 에너지가 단단해졌음을 의미합니다. ` +
+                        `사전 대비 ${c === 'WINT' ? 'WINT(원칙·마무리)' : catLabel(c)} 점수가 오른 것은 숲 활동을 통해 아이들의 **자기 주도성·책임감·관계 감각** 중 이 축에 해당하는 고운 에너지가 단단해졌음을 의미합니다. ` +
                         `숲에서의 반복 경험(예고, 선택, 마침표, 돌봄의 말)이 집단의 몸기억으로 남았을 가능성이 큽니다. 앞으로도 이 축을 구체적으로 칭찬 언어로 붙잡아 주면 재능이 더 넓게 퍼집니다.`
                     );
                 }
@@ -1910,9 +1924,7 @@
         buildMacroTypeComparisonNarrative(ctx) {
             const { meanDay, meanKg, nDay, nKg, rsiCat, rsiVal, absDiff, signedDiff } = ctx;
             const cats = SCHEMA.categories;
-            const cn = (c) =>
-                ({ 난초: '난초(공감·정서)', 대나무: '대나무(에너지·탐구)', 국화: '국화(안전·신중)', 매화: '매화(원칙·과업·마무리)' })[c] ||
-                c;
+            const cn = (c) => SCHEMA.temperamentRankLabel[c] || c;
 
             const rsiLine =
                 `**상대적 강점 지표(RSI)**로 본 이번 표본에서 두 집단의 거리가 가장 넓게 벌어진 축은 **${cn(rsiCat)}**이며, 평균 절대 차이는 약 **${rsiVal}퍼센트포인트**입니다. ` +
@@ -1927,23 +1939,23 @@
                 `**집단 성숙도·발달 맥락 비교** 측면에서, 어린이집 표본은 전반적으로 **연령 중심이 낮은 구간**에 가까운 보육 환경의 특성을 띠는 경우가 많고, 유치원 표본은 **또래 집단 규범과 과업 지속**에 더 익숙한 발달 과제를 동시에 안고 있습니다. ` +
                 `발달심리학적으로 보면, **사회정서적 조절**과 **실행기능(주의 유지·순서 지키기)**의 요구 수준이 기관 유형에 따라 달라지며, 이는 관찰 점수의 패턴 차이로 번역될 수 있습니다. ` +
                 `본 보고서는 이러한 차이를 “우열”이 아니라 **각 유형 아이들이 숲에서 어떤 독특한 기질적 분포를 보이는가**에 초점을 맞춥니다.\n\n` +
-                `어린이집 평균은 난초·국화 축에서 따뜻한 정서적 안정감과 신중함이 읽히기 쉬운 구조이고, 유치원 평균은 대나무·매화 축에서 주도성·탐구·과업 마무리가 두드러질 여지가 있습니다—이는 가설이며, 실제 곡선은 아래 레이더와 표가 말해 줍니다.`;
+                `어린이집 평균은 SPRT·AUTT 축에서 따뜻한 정서적 안정감과 신중함이 읽히기 쉬운 구조이고, 유치원 평균은 SUMT·WINT 축에서 주도성·탐구·과업 마무리가 두드러질 여지가 있습니다—이는 가설이며, 실제 곡선은 아래 레이더와 표가 말해 줍니다.`;
 
             const cardDay =
                 `(본 카드는 관찰 ${nDay}건의 산술 평균을 바탕으로 합니다.)\n\n` +
-                `보육 중심 환경에서 자라나는 아이들은 **애착 형성**과 **안전 기지**를 바탕으로 세상을 탐색합니다. v8.6 스키마의 **「따뜻한 공감의 난초」**와 **「신중한 안정의 국화」**는 이러한 맥락에서 특히 의미 있게 읽힐 수 있어요. ` +
+                `보육 중심 환경에서 자라나는 아이들은 **애착 형성**과 **안전 기지**를 바탕으로 세상을 탐색합니다. 4STT의 **SPRT(봄)**와 **AUTT(가을)**는 이러한 맥락에서 특히 의미 있게 읽힐 수 있어요. ` +
                 `일대일·소그룹 돌봄이 잦을수록 **정서 표현의 미세신호**에 민감해지고, 낯선 자극 앞에서는 **예측 가능한 루틴**을 먼저 확인하려는 경향이 강화될 수 있습니다.\n\n` +
                 `숲에서는 이 아이들이 **오감을 통한 정서 교감**(바람 소리, 흙의 질감, 친구의 표정)을 풍부하게 경험할 때, 공감·신중 축의 고운 에너지가 자연스럽게 피어오릅니다. ` +
                 `교사의 **공명적 반응(Reflective responding)**과 **명명하기(Name it to tame it)** 전략을 숲 언어로 옮기면, 기질적 강점이 학습으로 이어지기 쉽습니다.\n\n` +
-                `현재 표본의 네 축 평균은 **난초 ${meanDay['난초']}% · 대나무 ${meanDay['대나무']}% · 국화 ${meanDay['국화']}% · 매화 ${meanDay['매화']}%**로 요약됩니다. 이 프로필은 “조용한 숲”이 아니라 **관계와 안전이 숲길을 열어 주는 타입**으로 읽을 수 있습니다.`;
+                `현재 표본의 네 축 평균은 **SPRT ${meanDay['SPRT']}% · SUMT ${meanDay['SUMT']}% · AUTT ${meanDay['AUTT']}% · WINT ${meanDay['WINT']}%**로 요약됩니다. 이 프로필은 “조용한 숲”이 아니라 **관계와 안전이 숲길을 열어 주는 타입**으로 읽을 수 있습니다.`;
 
             const cardKg =
                 `(본 카드는 관찰 ${nKg}건의 산술 평균을 바탕으로 합니다.)\n\n` +
-                `누리과정과 또래 활동이 중심인 환경에서는 **사회적 참여**와 **과제 지속**이 발달 과제의 전면에 놓입니다. v8.6의 **「활기찬 탐구의 대나무」**와 **「단단한 마무리의 매화」**는 **주도적 탐색**과 **규칙·순서 내면화**의 흐름과 잘 맞닿아 있어요. ` +
+                `누리과정과 또래 활동이 중심인 환경에서는 **사회적 참여**와 **과제 지속**이 발달 과제의 전면에 놓입니다. 4STT의 **SUMT(여름)**와 **WINT(겨울)**는 **주도적 탐색**과 **규칙·순서 내면화**의 흐름과 잘 맞닿아 있어요. ` +
                 `집단 놀이와 프로젝트형 활동이 많을수록 **행동 활성화**와 **목표 지향성**이 동시에 자극될 수 있습니다.\n\n` +
-                `숲에서는 이런 아이들이 **협동·모험·역할 분담** 속에서 탐구 에너지를 분출하고, **작은 완성 경험**을 쌓을 때 매화 축이 단단해지는 경향이 있습니다. ` +
+                `숲에서는 이런 아이들이 **협동·모험·역할 분담** 속에서 탐구 에너지를 분출하고, **작은 완성 경험**을 쌓을 때 WINT 축이 단단해지는 경향이 있습니다. ` +
                 `교사는 **협동학습 구조**와 **시각적 일정표**를 숲에도 가져와, 자극이 커질 때 **실행기능을 지지하는 발달적 비계(Scaffolding)**를 제공하면 좋습니다.\n\n` +
-                `현재 표본 평균은 **난초 ${meanKg['난초']}% · 대나무 ${meanKg['대나무']}% · 국화 ${meanKg['국화']}% · 매화 ${meanKg['매화']}%**입니다. 이 프로필은 **움직임과 과업이 숲을 열어 주는 타입**으로 읽을 수 있습니다.`;
+                `현재 표본 평균은 **SPRT ${meanKg['SPRT']}% · SUMT ${meanKg['SUMT']}% · AUTT ${meanKg['AUTT']}% · WINT ${meanKg['WINT']}%**입니다. 이 프로필은 **움직임과 과업이 숲을 열어 주는 타입**으로 읽을 수 있습니다.`;
 
             const gapParts = cats
                 .filter((c) => (absDiff[c] || 0) >= 10)
@@ -1995,9 +2007,7 @@
         buildPreschoolElementaryMacroNarrative(ctx) {
             const { meanDay, meanKg, nDay, nKg, rsiCat, rsiVal, absDiff, signedDiff } = ctx;
             const cats = SCHEMA.categories;
-            const cn = (c) =>
-                ({ 난초: '난초(공감·정서)', 대나무: '대나무(에너지·탐구)', 국화: '국화(안전·신중)', 매화: '매화(원칙·과업·마무리)' })[c] ||
-                c;
+            const cn = (c) => SCHEMA.temperamentRankLabel[c] || c;
 
             const rsiLine =
                 `**상대적 강점 지표(RSI)**로 본 이번 표본에서 **유아부**와 **초등부** 관찰의 거리가 가장 넓게 벌어진 축은 **${cn(rsiCat)}**이며, 평균 절대 차이는 약 **${rsiVal}퍼센트포인트**입니다. ` +
@@ -2013,12 +2023,12 @@
             const cardDay =
                 `(유아부 관찰 ${nDay}건 평균)\n\n` +
                 `보육·누리 환경에서의 기질 분포는 **애착·일상 루틴·소그룹 돌봄**과 연결되어 읽히는 경우가 많습니다. ` +
-                `현재 표본 평균은 **난초 ${meanDay['난초']}% · 대나무 ${meanDay['대나무']}% · 국화 ${meanDay['국화']}% · 매화 ${meanDay['매화']}%**입니다.`;
+                `현재 표본 평균은 **SPRT ${meanDay['SPRT']}% · SUMT ${meanDay['SUMT']}% · AUTT ${meanDay['AUTT']}% · WINT ${meanDay['WINT']}%**입니다.`;
 
             const cardKg =
                 `(초등부 관찰 ${nKg}건 평균)\n\n` +
                 `방과 후·지역아동센터 등 초등 맥락에서는 **과제 지속·협동·규칙**과 연결된 기질 발현이 두드러질 수 있습니다. ` +
-                `현재 표본 평균은 **난초 ${meanKg['난초']}% · 대나무 ${meanKg['대나무']}% · 국화 ${meanKg['국화']}% · 매화 ${meanKg['매화']}%**입니다.`;
+                `현재 표본 평균은 **SPRT ${meanKg['SPRT']}% · SUMT ${meanKg['SUMT']}% · AUTT ${meanKg['AUTT']}% · WINT ${meanKg['WINT']}%**입니다.`;
 
             const gapParts = cats
                 .filter((c) => (absDiff[c] || 0) >= 10)
@@ -2102,15 +2112,7 @@
                 return tb - ta;
             });
             if (!keys.length) {
-                return `
-                    <div class="ms-vault-panel p-5 md:p-6 mb-2 print-hidden">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-lg leading-none" aria-hidden="true">🔐</span>
-                            <h3 class="text-xs font-black text-[#2D4A3E] tracking-[0.18em]">최근 검사 기록</h3>
-                        </div>
-                        <p class="text-[11px] text-ms-muted leading-relaxed">아직 금고에 쌓인 검사가 없어요. 기관을 정하고 숫자를 입력·저장하면 여기에 기관별로 나타나요.</p>
-                    </div>
-                `;
+                return '';
             }
             const rows = keys.slice(0, 25).map((k) => {
                 const members = byName[k];
@@ -2146,6 +2148,17 @@
         renderDataFooter() {
             const foot = document.getElementById('ms-data-footer');
             if (!foot) return;
+            const footClsDefault = 'print-hidden shrink-0 pt-8 pb-2 mt-auto';
+            const footClsDashboard = 'print-hidden shrink-0 pt-0 pb-1 mt-0';
+
+            if (STATE.step === 'dashboard') {
+                foot.innerHTML = '';
+                foot.className = footClsDashboard;
+                foot.setAttribute('aria-label', '데이터 백업');
+                return;
+            }
+            foot.className = footClsDefault;
+
             if (typeof MS !== 'undefined' && MS.isAdminUnlocked && !MS.isAdminUnlocked()) {
                 foot.innerHTML = '';
                 return;
@@ -2193,6 +2206,7 @@
         },
 
         renderDashboard(el) {
+            const showAdmin = MS.isAdminUnlocked();
             const byName = {};
             STATE.institutions.forEach((inst) => {
                 const k = String(inst.name).trim();
@@ -2200,61 +2214,6 @@
                 byName[k].push(inst);
             });
             const keys = Object.keys(byName).sort((a, b) => a.localeCompare(b, 'ko'));
-            const rows = keys
-                .map((key) => {
-                    const members = byName[key];
-                    const sorted = members.slice().sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
-                    const latest = sorted[0];
-                    const firstType = latest.type || STATE.guessType(key);
-                    const n = members.length;
-                    const anyFilled = members.some((m) => this.hasAnyCount(m.counts));
-                    const dot = anyFilled
-                        ? 'bg-[#2D4A3E] shadow-[0_0_10px_rgba(45,74,62,0.35)]'
-                        : 'bg-ms-soft border border-ms';
-                    const enc = encodeURIComponent(key);
-                    const safeId = String(latest.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-                    const countBadge =
-                        n > 1
-                            ? `<span class="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(212,163,115,0.2)] text-[#2D4A3E]">기록 ${n}건</span>`
-                            : '';
-                    return `
-                        <tr class="hover:bg-ms-soft/80 transition-colors">
-                            <td class="px-4 py-4 md:px-5">
-                                <span class="inline-block w-2.5 h-2.5 rounded-full ${dot} mr-2 align-middle"></span>
-                                <button type="button" class="font-black text-[#2D4A3E] text-left text-sm md:text-base hover:underline decoration-[#D4A373] underline-offset-4"
-                                    onclick="MS.goInstitutionHub(decodeURIComponent('${enc}'))"
-                                    title="기관 허브 · 명단과 종합 분석">${this.esc(key)}</button>
-                                ${countBadge}
-                                <span class="text-xs text-ms-muted ml-2">[${this.esc(firstType)}]</span>
-                            </td>
-                            <td class="px-4 py-4 md:px-5 text-right whitespace-nowrap">
-                                <button type="button" class="text-xs md:text-sm font-bold text-[#2D4A3E] hover:opacity-80 ms-btn px-2 py-1 border border-ms rounded-full mr-1"
-                                    onclick="MS.goInstitutionHub(decodeURIComponent('${enc}'))">명단</button>
-                                <button type="button" class="text-xs md:text-sm font-bold text-[#D4A373] hover:opacity-80 ms-btn px-2 py-1"
-                                    onclick="MS.openInput('${safeId}')">${n > 1 ? '최근 입력' : '입력 · 편집'}</button>
-                            </td>
-                        </tr>
-                    `;
-                })
-                .join('');
-
-            const listHint =
-                keys.length > 0
-                    ? `<p class="text-[10px] text-ms-muted text-center mb-3 leading-relaxed print-hidden px-2">
-                            이 목록에서 없애려면 <strong class="text-[#2D4A3E]">분석 결과</strong> 화면 맨 아래
-                            <strong class="text-[#2D4A3E]">「홈으로 — 대시보드」</strong>를 눌러 주세요.
-                            (입력 화면에서 「대시보드」만 누르면 글자가 그대로 남습니다.)
-                        </p>`
-                    : '';
-
-            const migrateNote = STATE.migrationBanner
-                ? `<div class="ms-card p-4 mb-4 border border-[#D4A373] bg-[rgba(212,163,115,0.12)] text-sm text-ms-body print-hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <span>${this.esc(STATE.migrationBanner)}</span>
-                        <button type="button" class="ms-btn shrink-0 text-xs font-bold text-[#2D4A3E] px-4 py-2 border border-ms bg-white/80" onclick="MS.dismissMigrationBanner()">확인</button>
-                    </div>`
-                : '';
-
-            const showAdmin = MS.isAdminUnlocked();
 
             let bm = 'single';
             let btf = 'all';
@@ -2290,108 +2249,76 @@
                 STATE.dashboardBuilderTypeFilter = btf;
             }
 
-            const recentLabel = MS.getLatestExamResultButtonLabel();
-            const recentResultBtnHtml = recentLabel
-                ? `<button type="button"
-                        class="ms-btn w-full rounded-2xl border-2 border-[#5D4037]/35 bg-[#FAF6F0] text-[#5D4037] font-black py-4 text-sm mt-5 leading-snug text-center shadow-sm active:scale-[0.99] hover:bg-[rgba(93,64,55,0.08)]"
-                        onclick="MS.navigateToLatestResult()">${this.esc(recentLabel)}</button>`
-                : '';
-
-            const adminOpenInCardHtml = showAdmin
-                ? ''
-                : `<div class="mt-8 pt-5 border-t border-[#5D4037]/12 text-center">
-                        <button type="button"
-                            class="text-[10px] font-semibold text-[#5D4037]/75 hover:text-[#5D4037] underline underline-offset-2 decoration-[#5D4037]/40"
-                            onclick="MS.openAdminUnlockModal()">관리자 전용: 대시보드 열기</button>
-                    </div>`;
-
-            const adminDashboardPanel = `
-                        <button type="button" id="ms-dashboard-toggle"
-                            class="ms-btn w-full rounded-2xl border-2 border-[#2D4A3E]/20 bg-white text-[#2D4A3E] font-black py-3.5 text-sm shadow-sm flex items-center justify-center gap-2 hover:bg-[rgba(45,74,62,0.05)] print:hidden"
-                            onclick="MS.toggleDashboardReports()"
-                            aria-expanded="${STATE.dashboardReportsExpanded ? 'true' : 'false'}"
-                            aria-controls="ms-dashboard-reports-panel">
-                            <span>관리 대시보드</span>
-                            <span class="text-ms-muted text-xs font-bold" aria-hidden="true">${STATE.dashboardReportsExpanded ? '▲' : '▼'}</span>
-                        </button>
-                        <div id="ms-dashboard-reports-panel" role="region" aria-label="분석 센터"
-                            class="grid transition-[grid-template-rows] duration-300 ease-out ${STATE.dashboardReportsExpanded ? '[grid-template-rows:1fr]' : '[grid-template-rows:0fr]'} print:!grid-rows-[1fr] mb-1">
-                            <div class="min-h-0 overflow-hidden print:overflow-visible">
-                                <div class="pt-4 border-t border-[#5D4037]/12 mt-3 print:border-t-0 print:mt-0 print:pt-2 space-y-4">
-                                    <div class="rounded-2xl border-2 border-[#5D4037]/25 bg-[#FAF6F0] p-4 md:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+            const dashChevron = showAdmin && STATE.dashboardReportsExpanded ? '▲' : '▼';
+            const adminPanelHtml =
+                showAdmin && STATE.dashboardReportsExpanded
+                    ? `<div id="ms-admin-dashboard-panel" role="region" aria-label="관리 대시보드" class="mb-6 print:hidden">
+                            <div class="rounded-2xl border-2 border-[#5D4037]/25 bg-[#FAF6F0] p-4 md:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+                                <button type="button"
+                                    class="ms-btn w-full !rounded-xl bg-[#5D4037] text-white font-black py-4 text-sm md:text-base shadow-[0_5px_16px_rgba(0,0,0,0.18)] hover:bg-[#4E342E] active:bg-[#4E342E] transition-colors duration-200"
+                                    onclick="MS.navigateToLatestResult()">방금 완료한 검사 바로가기</button>
+                                <p class="text-[10px] text-[#5D4037]/65 text-center mt-2 leading-relaxed">가장 최근에 저장된 관찰 기록(숫자 입력 완료)의 분석 보고서로 이동합니다.</p>
+                                <div class="mt-5 pt-4 border-t border-[#5D4037]/15">
+                                    <p class="text-[10px] font-black text-[#5D4037] tracking-[0.18em] mb-3 uppercase text-center">맞춤 보고서 빌더 · v${SCHEMA.version}</p>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label for="ms-db-inst" class="block text-xs font-bold text-[#5D4037] mb-2">기관 선택</label>
+                                            <select id="ms-db-inst" class="w-full min-h-[52px] rounded-xl border-2 border-[#5D4037]/30 bg-white px-4 py-3 text-sm font-bold text-[#5D4037] shadow-sm"
+                                                onchange="MS.setDashboardBuilderInstFromSelect(this)">
+                                                <option value="">${keys.length ? '전체 (필터 집계)' : '등록된 기관 없음'}</option>
+                                                ${instOptsHtml}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="ms-db-type" class="block text-xs font-bold text-[#5D4037] mb-2">${bm === 'group' ? '집단 비교 축' : '유형 (기관 성격)'}</label>
+                                            <select id="ms-db-type" class="w-full min-h-[52px] rounded-xl border-2 border-[#5D4037]/30 bg-white px-4 py-3 text-sm font-bold text-[#5D4037] shadow-sm"
+                                                onchange="MS.setDashboardBuilderType(this.value)">
+                                                ${typeOptsHtml}
+                                            </select>
+                                            <p class="text-[10px] text-[#5D4037]/55 mt-1.5 leading-snug">${bm === 'group' ? '집단 간 비교: 로컬 전체 표본으로 두 축을 나란히 봅니다.' : '유아부: 어린이집·유치원·기타 · 초등부: 지역아동센터·방과후 등'}</p>
+                                        </div>
+                                        <div>
+                                            <label for="ms-db-mode" class="block text-xs font-bold text-[#5D4037] mb-2">분석 방법</label>
+                                            <select id="ms-db-mode" class="w-full min-h-[52px] rounded-xl border-2 border-[#5D4037]/30 bg-white px-4 py-3 text-sm font-bold text-[#5D4037] shadow-sm"
+                                                onchange="MS.setDashboardBuilderMode(this.value)">
+                                                <option value="single"${bm === 'single' ? ' selected' : ''}>단일 결과</option>
+                                                <option value="prepost"${bm === 'prepost' ? ' selected' : ''}>사전·사후 비교</option>
+                                                <option value="group"${bm === 'group' ? ' selected' : ''}>집단 간 비교</option>
+                                            </select>
+                                        </div>
                                         <button type="button"
                                             class="ms-btn w-full !rounded-xl bg-[#5D4037] text-white font-black py-4 text-sm md:text-base shadow-[0_5px_16px_rgba(0,0,0,0.18)] hover:bg-[#4E342E] active:bg-[#4E342E] transition-colors duration-200"
-                                            onclick="MS.navigateToLatestResult()">방금 완료한 검사 바로가기</button>
-                                        <p class="text-[10px] text-[#5D4037]/65 text-center mt-2 leading-relaxed">가장 최근에 저장된 관찰 기록(숫자 입력 완료)의 분석 보고서로 이동합니다.</p>
-                                        <div class="mt-5 pt-4 border-t border-[#5D4037]/15">
-                                            <p class="text-[10px] font-black text-[#5D4037] tracking-[0.18em] mb-3 uppercase text-center">맞춤 보고서 빌더 · v${SCHEMA.version}</p>
-                                            <div class="space-y-4">
-                                                <div>
-                                                    <label for="ms-db-inst" class="block text-xs font-bold text-[#5D4037] mb-2">기관 선택</label>
-                                                    <select id="ms-db-inst" class="w-full min-h-[52px] rounded-xl border-2 border-[#5D4037]/30 bg-white px-4 py-3 text-sm font-bold text-[#5D4037] shadow-sm"
-                                                        onchange="MS.setDashboardBuilderInstFromSelect(this)">
-                                                        <option value="">${keys.length ? '전체 (필터 집계)' : '등록된 기관 없음'}</option>
-                                                        ${instOptsHtml}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label for="ms-db-type" class="block text-xs font-bold text-[#5D4037] mb-2">${bm === 'group' ? '집단 비교 축' : '유형 (기관 성격)'}</label>
-                                                    <select id="ms-db-type" class="w-full min-h-[52px] rounded-xl border-2 border-[#5D4037]/30 bg-white px-4 py-3 text-sm font-bold text-[#5D4037] shadow-sm"
-                                                        onchange="MS.setDashboardBuilderType(this.value)">
-                                                        ${typeOptsHtml}
-                                                    </select>
-                                                    <p class="text-[10px] text-[#5D4037]/55 mt-1.5 leading-snug">${bm === 'group' ? '집단 간 비교: 로컬 전체 표본으로 두 축을 나란히 봅니다.' : '유아부: 어린이집·유치원·기타 · 초등부: 지역아동센터·방과후 등'}</p>
-                                                </div>
-                                                <div>
-                                                    <label for="ms-db-mode" class="block text-xs font-bold text-[#5D4037] mb-2">분석 방법</label>
-                                                    <select id="ms-db-mode" class="w-full min-h-[52px] rounded-xl border-2 border-[#5D4037]/30 bg-white px-4 py-3 text-sm font-bold text-[#5D4037] shadow-sm"
-                                                        onchange="MS.setDashboardBuilderMode(this.value)">
-                                                        <option value="single"${bm === 'single' ? ' selected' : ''}>단일 결과</option>
-                                                        <option value="prepost"${bm === 'prepost' ? ' selected' : ''}>사전·사후 비교</option>
-                                                        <option value="group"${bm === 'group' ? ' selected' : ''}>집단 간 비교</option>
-                                                    </select>
-                                                </div>
-                                                <button type="button"
-                                                    class="ms-btn w-full !rounded-xl bg-[#5D4037] text-white font-black py-4 text-sm md:text-base shadow-[0_5px_16px_rgba(0,0,0,0.18)] hover:bg-[#4E342E] active:bg-[#4E342E] transition-colors duration-200"
-                                                    onclick="MS.runCustomReportBuilder()">맞춤 보고서 생성</button>
-                                            </div>
-                                            <p class="text-[10px] text-[#5D4037]/55 text-center leading-relaxed mt-4 print:hidden">기관이 여러 개일 때 일부 보고서는 아래 목록에서 기관명을 눌러 허브로 들어간 뒤 열어 주세요.</p>
-                                        </div>
+                                            onclick="MS.runCustomReportBuilder()">맞춤 보고서 생성</button>
                                     </div>
                                 </div>
                             </div>
-                        </div>`;
+                        </div>`
+                    : '';
 
             el.innerHTML = `
-                <div class="max-w-lg mx-auto">
-                    <p class="mb-1 text-[10px] text-ms-muted leading-snug px-2 text-center print-hidden">
-                        통합 엔진 v1.5 · <span class="font-black text-[#1B5E20] tracking-wide">[SCHEMA v21.0 - 8Q FINAL]</span> · 보고서 v2.0
-                    </p>
-                    <p class="mb-4 text-[9px] text-ms-muted leading-relaxed px-3 text-center print-hidden max-w-md mx-auto opacity-95">
-                        ※ 개인정보 보호를 위해 전체 대시보드는 관리자 인증 후 열립니다.
-                    </p>
-                    ${migrateNote}
-                    <div id="dashboard" class="ms-card p-8 md:p-10 mb-6 shadow-[0_12px_40px_rgba(45,74,62,0.1)] border-2 border-[rgba(45,74,62,0.1)]">
-                        <button type="button" class="ms-btn w-full !rounded-2xl md:!rounded-3xl bg-[#5D4037] text-[#FFFFFF] font-black py-6 md:py-7 text-lg md:text-xl shadow-[0_5px_18px_rgba(0,0,0,0.22)] hover:bg-[#4E342E] active:bg-[#4E342E] active:scale-[0.99] transition-colors duration-200 ease-out"
-                            onclick="MS.openNewExamPrepModal({ cleanInst: true })">새 검사 시작</button>
-                        ${recentResultBtnHtml}
-                        ${adminOpenInCardHtml}
-                    </div>
-                    ${
-                        showAdmin
-                            ? `${listHint}
-                        ${adminDashboardPanel}
-                        <div class="rounded-[3rem] overflow-hidden border border-ms bg-ms-soft/50">
-                            <table class="w-full text-left text-sm">
-                                <tbody class="divide-y divide-[rgba(45,74,62,0.08)]">${rows || '<tr><td class="p-6 text-center text-ms-muted">등록된 기관이 없어요. 위 버튼으로 추가해 주세요.</td></tr>'}</tbody>
-                            </table>
+                <div class="flex flex-col flex-1 min-h-0 w-full">
+                    <div class="flex-1 flex flex-col justify-center items-stretch py-2 md:py-6">
+                        <div class="max-w-lg mx-auto w-full">
+                            <div id="dashboard" class="ms-card p-8 md:p-10 mb-6 shadow-[0_12px_40px_rgba(45,74,62,0.1)] border-2 border-[rgba(45,74,62,0.1)]">
+                                <button type="button" class="ms-btn w-full !rounded-2xl md:!rounded-3xl bg-[#5D4037] text-[#FFFFFF] font-black py-6 md:py-7 text-lg md:text-xl shadow-[0_5px_18px_rgba(0,0,0,0.22)] hover:bg-[#4E342E] active:bg-[#4E342E] active:scale-[0.99] transition-colors duration-200 ease-out"
+                                    onclick="MS.openNewExamPrepModal({ cleanInst: true })">새 검사 시작</button>
+                            </div>
+                            ${adminPanelHtml}
                         </div>
-                        <p class="text-center mt-4 print-hidden">
-                            <button type="button" class="text-[10px] font-semibold text-gray-400 hover:text-[#D4A373] underline underline-offset-2"
-                                onclick="MS.clearVaultEntirely()">이 기기 금고 비우기 · 전체 기록 삭제</button>
-                        </p>`
-                            : ''
-                    }
+                    </div>
+                    <div class="mt-auto shrink-0 print-hidden select-none text-center pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-2">
+                        <p class="inline-flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5 text-[10px] text-gray-300 font-normal tracking-[0.03em] opacity-90">
+                            <span aria-hidden="true">[</span>
+                            <button type="button"
+                                class="bg-transparent border-0 p-0 cursor-pointer text-[10px] text-gray-300 hover:text-gray-400/95 transition-colors"
+                                onclick="MS.onFooterAdminDashboardClick()">관리 대시보드 ${dashChevron}</button>
+                            <span class="mx-0.5 opacity-75" aria-hidden="true">|</span>
+                            <button type="button"
+                                class="bg-transparent border-0 p-0 cursor-pointer text-[10px] text-gray-300 hover:text-gray-400/95 transition-colors"
+                                onclick="MS.clearVaultEntirely()">이전기록 삭제</button>
+                            <span aria-hidden="true">]</span>
+                        </p>
+                    </div>
                 </div>
             `;
         },
@@ -2416,10 +2343,9 @@
                     const dot = filled
                         ? 'bg-[#2D4A3E] shadow-[0_0_8px_rgba(45,74,62,0.3)]'
                         : 'bg-ms-soft border border-ms';
-                    const label =
-                        m.groupName || m.childLabel || m.studentName
-                            ? this.esc(String(m.groupName || m.childLabel || m.studentName))
-                            : `관찰 기록 ${sorted.length - idx}`;
+                    const label = m.groupName
+                        ? this.esc(String(m.groupName))
+                        : `관찰 기록 ${sorted.length - idx}`;
                     const when = m.updatedAt ? this.esc(String(m.updatedAt).slice(0, 10)) : '—';
                     const safeId = String(m.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                     const ph = m.obsPhase === 'pre' || m.obsPhase === 'post' ? m.obsPhase : '';
@@ -2625,7 +2551,7 @@
                             <div class="ms-prepost-page-1 ms-print-avoid-break mb-10">
                                 <div class="ms-prepost-chart-grid gap-6 md:gap-8">
                                     <div class="bg-white/75 rounded-2xl border border-ms p-4 md:p-5 ms-print-avoid-break">
-                                        <h3 class="text-center text-sm font-black text-[#2D4A3E] mb-3">4군자 기질 · 사전/사후 막대 비교</h3>
+                                        <h3 class="text-center text-sm font-black text-[#2D4A3E] mb-3">4STT · 사전/사후 막대 비교</h3>
                                         <div class="flex justify-center overflow-x-auto">${barHtml}</div>
                                     </div>
                                     <div class="bg-white/75 rounded-2xl border border-ms p-4 md:p-5 ms-print-avoid-break">
@@ -3061,11 +2987,11 @@
                     }
                     <p class="text-[11px] text-ms-muted mb-2 leading-relaxed">
                         각 문항마다 <strong class="text-[#2D4A3E]">O(예)</strong>는 해당 문항 기질에,
-                        <strong class="text-[#2D4A3E]">X(아니오)</strong>는 대안 발현 기질(예: 매화 문항의 X → 신중·안정 국화)에 더합니다.
+                        <strong class="text-[#2D4A3E]">X(아니오)</strong>는 대안 발현 기질(예: WINT 문항의 X → AUTT)에 더합니다.
                         관찰 슬롯 합계 <strong class="text-[#2D4A3E]">${totalOXSlots}</strong>명분(O+X 전 합)이 전체 모수입니다.
                     </p>
                     <p class="text-[11px] text-ms-muted mb-5 leading-relaxed">
-                        동점이면 <strong class="text-[#2D4A3E]">매→란→국→죽</strong>(매화·난초·국화·대나무) 순으로 앞선 유형이 위 순위입니다.
+                        동점이면 <strong class="text-[#2D4A3E]">W→S→A→M</strong>(WINT·SPRT·AUTT·SUMT) 순으로 앞선 유형이 위 순위입니다.
                     </p>
                     <ol class="space-y-4 list-none p-0 m-0">
                         ${rankedTemperaments
@@ -3093,7 +3019,7 @@
                         <h2 class="text-2xl font-black text-[#2D4A3E] mb-1">${name}</h2>
                         <p class="text-ms-muted text-xs mb-5">4기질 관찰 기록 · ${tgRes === 'elementary' ? '초등부' : '유아·유치부'} · 스키마 v9.2 · 보고서 v2.0</p>
                         <button type="button" class="print-hidden w-full mb-5 rounded-full bg-[#2D4A3E] text-white font-black py-4 px-6 text-sm md:text-base shadow-lg hover:brightness-95 active:scale-[0.99] transition-all"
-                            onclick="MS.openForestMapModal()">4군자 종합 지도 보기</button>
+                            onclick="MS.openForestMapModal()">4STT 종합 지도 보기</button>
                         ${rankSectionHtml}
                         <div class="print-hidden rounded-2xl border border-ms bg-ms-soft/50 p-4 mb-8 text-left">
                             <p class="text-[10px] font-black text-[#2D4A3E] tracking-[0.15em] mb-1">집단·비교 보고서</p>
@@ -3114,9 +3040,6 @@
                             onclick="window.print()">PDF 저장 · 인쇄</button>
                         <button type="button" class="print-hidden w-full rounded-full border-2 border-[#2D4A3E] bg-[#FDFBF7]/80 text-[#2D4A3E] font-bold py-4 text-sm mt-3 hover:bg-[#FDFBF7] active:scale-[0.99] transition-all"
                             onclick="MS.goHomeToDashboard()">🏠 홈으로 — 대시보드</button>
-                        <p class="text-[10px] text-ms-muted text-center mt-3 print-hidden leading-relaxed px-1">
-                            대시보드 목록에서 이 검사 줄을 없애려면 <strong class="text-[#2D4A3E]">위 버튼</strong>을 눌러 주세요.
-                        </p>
                     </div>
                 </div>
             `;
@@ -3191,9 +3114,6 @@
                         if (!i.name) i.name = '이름 없음';
                         if (!i.type) i.type = STATE.guessType(i.name);
                         if (i.groupName === undefined) i.groupName = '';
-                        if (!String(i.groupName || '').trim() && (i.childLabel || i.studentName)) {
-                            i.groupName = String(i.childLabel || i.studentName || '').trim().slice(0, 120);
-                        }
                         STATE.ensureCounts(i);
                     };
                     let added = 0;
@@ -3231,12 +3151,12 @@
 
     const FOREST_MANUAL_DATA = {
         preschool: {
-            heading: '🌲 유아·유치부 가이드 (8문항)',
+            heading: '🌲 어린이 4계절 Temperament TEST (4STT) 가이드 — 유아·유치부 (8문항)',
             intro: '영유아의 본능적 기질과 첫 사회적 놀이 반응을 측정합니다.',
             groups: [
                 {
                     emoji: '🌸',
-                    name: '난초',
+                    name: 'SPRT (봄 기질)',
                     sub: '공감/배려',
                     items: [
                         {
@@ -3255,7 +3175,7 @@
                 },
                 {
                     emoji: '🎋',
-                    name: '대나무',
+                    name: 'SUMT (여름 기질)',
                     sub: '자유/탐구',
                     items: [
                         {
@@ -3274,7 +3194,7 @@
                 },
                 {
                     emoji: '🌼',
-                    name: '국화',
+                    name: 'AUTT (가을 기질)',
                     sub: '신중/보호',
                     items: [
                         {
@@ -3293,7 +3213,7 @@
                 },
                 {
                     emoji: '❄️',
-                    name: '매화',
+                    name: 'WINT (겨울 기질)',
                     sub: '원칙/과업',
                     items: [
                         {
@@ -3313,12 +3233,12 @@
             ]
         },
         elementary: {
-            heading: '🌲 초등부 가이드 (12문항)',
+            heading: '🌲 4계절 Temperament TEST 가이드 — 초등부 (12문항)',
             intro: '아동의 사회적 역할 수행과 환경 적응 능력을 측정합니다.',
             groups: [
                 {
                     emoji: '❄️',
-                    name: '매화',
+                    name: 'WINT (겨울 기질)',
                     sub: '주도·책임',
                     items: [
                         {
@@ -3343,7 +3263,7 @@
                 },
                 {
                     emoji: '🌸',
-                    name: '난초',
+                    name: 'SPRT (봄 기질)',
                     sub: '공감·배려',
                     items: [
                         {
@@ -3368,7 +3288,7 @@
                 },
                 {
                     emoji: '🌼',
-                    name: '국화',
+                    name: 'AUTT (가을 기질)',
                     sub: '신중·안정',
                     items: [
                         {
@@ -3393,7 +3313,7 @@
                 },
                 {
                     emoji: '🎋',
-                    name: '대나무',
+                    name: 'SUMT (여름 기질)',
                     sub: '활기·탐구',
                     items: [
                         {
@@ -3433,7 +3353,7 @@
         d.groups.forEach((g) => {
             html += `<section class="mb-10 sm:mb-12">
                 <h3 class="text-sm sm:text-base md:text-lg font-black text-[#2D4A3E] mb-4 sm:mb-5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                    <span>${g.emoji} ${e(g.name)} 기질</span>
+                    <span>${g.emoji} ${e(g.name)}</span>
                     <span class="text-sm sm:text-[15px] font-bold text-[#5D4037]/90">(${e(g.sub)})</span>
                 </h3>`;
             g.items.forEach((it) => {
@@ -3471,7 +3391,26 @@
                 /* ignore */
             }
             STATE.persist();
+            if (typeof MS !== 'undefined' && MS.isExamPrepModalOpen && MS.isExamPrepModalOpen()) {
+                MS.openNewExamPrepModal();
+                return;
+            }
             UI.render();
+        },
+
+        setPrepModalObsLocation(loc) {
+            STATE.obsLocation = loc === 'indoor' ? 'indoor' : 'forest';
+            try {
+                localStorage.setItem(LS_OBS_LOCATION, STATE.obsLocation);
+            } catch (_) {
+                /* ignore */
+            }
+            STATE.persist();
+            if (typeof MS !== 'undefined' && MS.isExamPrepModalOpen && MS.isExamPrepModalOpen()) {
+                MS.openNewExamPrepModal();
+            } else {
+                UI.render();
+            }
         },
 
         _advT: {},
@@ -3604,24 +3543,38 @@
             }
             MS.openNewExamPrepModal();
         },
+        /**
+         * v23.0 원스톱 설정: 대상·관찰단계·기관·유형·반·진행자 → [검사 입력으로 이동] 시에만 검증·이동
+         */
         openNewExamPrepModal(opts) {
             const root = document.getElementById('ms-modal-root');
             if (!root) return;
+            const prevG = document.getElementById('ms-unified-group-name');
+            if (prevG) STATE.unifiedSetupGroupDraft = String(prevG.value || '');
             const clean = opts && opts.cleanInst === true;
             if (clean) {
                 STATE.searchTerm = '';
                 STATE.selectedId = null;
                 STATE.setupTypeOverride = null;
+                STATE.unifiedSetupGroupDraft = '';
                 MS._modalInstDropdownAll = false;
+                STATE.obsLocation = 'forest';
+                try {
+                    localStorage.setItem(LS_OBS_LOCATION, 'forest');
+                } catch (_) {
+                    /* ignore */
+                }
             }
             const examinerName = String(MS.getExaminerName() || '').trim();
             const sel = STATE.selected();
             const instDraft = clean
                 ? ''
                 : String(STATE.searchTerm || (sel ? sel.name : '') || '').trim();
+            const groupDraft = clean
+                ? ''
+                : String((sel && sel.groupName) || STATE.unifiedSetupGroupDraft || '').trim();
             const tg = STATE.targetGroup === 'elementary' ? 'elementary' : 'preschool';
             const nameVal = instDraft || STATE.searchTerm || (sel ? sel.name : '');
-            const showModalTypeRow = String(STATE.searchTerm || '').trim().length >= 1;
             const type = sel ? sel.type : STATE.setupTypeOverride || STATE.guessType(nameVal);
             const tgSetup = tg;
             let typeForUi = type;
@@ -3635,6 +3588,19 @@
                 'ms-btn flex-1 min-h-[44px] px-3 py-2.5 font-bold text-xs rounded-full transition-colors duration-200';
             const tabPs = tg === 'preschool' ? TAB_AGE_PS_ON : TAB_AGE_PS_OFF;
             const tabEl = tg === 'elementary' ? TAB_AGE_EL_ON : TAB_AGE_EL_OFF;
+            const obsPreOn =
+                'border-[#2D4A3E] bg-[rgba(240,253,244,0.5)] text-[#2D4A3E] shadow-md shadow-[#2D4A3E]/15';
+            const obsPreOff = 'border-ms text-ms-muted';
+            const obsPostOn =
+                'border-[#8d6e54] bg-[rgba(212,163,115,0.18)] text-[#2D4A3E] shadow-md shadow-[#D4A373]/20';
+            const obsPostOff = 'border-ms text-ms-muted';
+            const obsPreCls = STATE.observationStage === 'pre' ? obsPreOn : obsPreOff;
+            const obsPostCls = STATE.observationStage === 'post' ? obsPostOn : obsPostOff;
+            if (!clean && sel && sel.obsLocation) {
+                STATE.obsLocation = sel.obsLocation === 'indoor' ? 'indoor' : 'forest';
+            }
+            const locForestCls = STATE.obsLocation !== 'indoor' ? obsPreOn : obsPreOff;
+            const locIndoorCls = STATE.obsLocation === 'indoor' ? obsPostOn : obsPostOff;
             const typeRowHtml =
                 tgSetup === 'elementary'
                     ? `<div class="flex flex-wrap gap-2 mb-4">
@@ -3651,14 +3617,42 @@
                             <button type="button" class="ms-btn flex-1 min-w-[88px] min-h-[44px] py-2.5 font-bold border-2 text-xs ${typeForUi === '기타' ? 'border-[#03C75A] bg-[rgba(3,199,90,0.12)] text-[#2D4A3E] shadow-sm' : 'border-ms text-ms-muted'}"
                                 onclick="MS.setPrepModalType('기타')">기타</button>
                         </div>`;
-            root.className = 'print-hidden fixed inset-0 z-[200] flex items-center justify-center p-4';
+            root.className = 'print-hidden fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4';
             root.innerHTML = `
                 <div class="absolute inset-0 bg-black/45" onclick="MS.closeForestModal()" aria-hidden="true"></div>
-                <div class="relative w-full max-w-md rounded-[1.75rem] bg-[#FDFBF7] shadow-2xl border border-[#2D4A3E]/12 p-5 md:p-6" onclick="event.stopPropagation()">
-                    <h2 id="ms-modal-title" class="text-base md:text-lg font-black text-[#2D4A3E] mb-1 text-center leading-tight">기관 설정</h2>
-                    <label for="ms-modal-inst-name" class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">기관명</label>
+                <div class="relative w-full max-w-md max-h-[min(92vh,40rem)] overflow-y-auto overscroll-contain rounded-t-[1.75rem] sm:rounded-[1.75rem] bg-[#FDFBF7] shadow-2xl border border-[#2D4A3E]/12 p-5 md:p-6 custom-scrollbar pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] sm:pb-6" onclick="event.stopPropagation()">
+                    <h2 id="ms-modal-title" class="text-base md:text-lg font-black text-[#2D4A3E] mb-4 text-center leading-tight">검사 설정</h2>
+                    <span class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">대상 (문항뱅크)</span>
+                    <div class="flex gap-2 mb-4">
+                        <button type="button" class="${base} ${tabPs}"
+                            onclick="MS.setPrepModalTargetGroup('preschool')">유아·유치부</button>
+                        <button type="button" class="${base} ${tabEl}"
+                            onclick="MS.setPrepModalTargetGroup('elementary')">초등부</button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
+                        <div>
+                            <span class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">관찰 단계</span>
+                            <div class="flex flex-wrap gap-2" role="group" aria-label="사전 또는 사후">
+                                <button type="button" class="ms-btn flex-1 min-h-[44px] py-2.5 font-bold border-2 text-xs ${obsPreCls}"
+                                    onclick="MS.setObservationStage('pre')">사전</button>
+                                <button type="button" class="ms-btn flex-1 min-h-[44px] py-2.5 font-bold border-2 text-xs ${obsPostCls}"
+                                    onclick="MS.setObservationStage('post')">사후</button>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">진행 장소</span>
+                            <div class="flex flex-wrap gap-2" role="group" aria-label="숲 또는 실내">
+                                <button type="button" class="ms-btn flex-1 min-h-[44px] py-2.5 font-bold border-2 text-xs ${locForestCls}"
+                                    onclick="MS.setPrepModalObsLocation('forest')">숲</button>
+                                <button type="button" class="ms-btn flex-1 min-h-[44px] py-2.5 font-bold border-2 text-xs ${locIndoorCls}"
+                                    onclick="MS.setPrepModalObsLocation('indoor')">실내</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-ms-muted mb-4 leading-relaxed text-center">사전·사후로 나누어 저장하면 기관 허브에서 성과 비교 보고서를 열 수 있어요.</p>
+                    <label for="ms-modal-inst-name" class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">기관명 검색</label>
                     <div class="relative z-40 mb-2">
-                        <input id="ms-modal-inst-name" type="text" maxlength="120" autocomplete="organization" placeholder="기관명을 입력하세요 (예: 삼계중앙어린이집)"
+                        <input id="ms-modal-inst-name" type="text" maxlength="120" autocomplete="organization" placeholder="초성·부분 검색 가능 (예: 삼계중앙어린이집)"
                             class="w-full ms-input pl-4 pr-[7.25rem] py-3 text-center font-bold rounded-2xl text-[#2D4A3E] text-sm"
                             value="${UI.esc(instDraft)}"
                             aria-autocomplete="list" aria-expanded="false" aria-controls="ms-modal-inst-dropdown"
@@ -3686,30 +3680,26 @@
                             role="listbox" aria-label="기관 자동완성"></div>
                     </div>
                     <p class="text-[10px] text-ms-muted mb-3 leading-relaxed rounded-xl bg-[rgba(45,74,62,0.04)] px-2.5 py-2 border border-[rgba(45,74,62,0.07)]">
-                        이름에 <span class="font-bold text-[#03C75A]">어린이집·유치원</span> 또는
-                        <span class="font-bold text-[#FF9800]">지역아동·아동센터·방과후</span>가 들어가면 세부 유형이 자동으로 맞춰져요. 틀리면 아래에서 바로 고칠 수 있어요.
+                        기관을 고르면 유형이 맞춰지고, 이름에 <span class="font-bold text-[#03C75A]">어린이집·유치원</span>·<span class="font-bold text-[#FF9800]">지역아동·방과후</span> 등이 들어가면 자동 감지됩니다.
                     </p>
-                    <span class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">대상 (문항뱅크)</span>
-                    <div class="flex gap-2 mb-2">
-                        <button type="button" class="${base} ${tabPs}"
-                            onclick="MS.setPrepModalTargetGroup('preschool')">유아·유치부</button>
-                        <button type="button" class="${base} ${tabEl}"
-                            onclick="MS.setPrepModalTargetGroup('elementary')">초등부</button>
-                    </div>
-                    ${
-                        showModalTypeRow
-                            ? `<span class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">세부 유형</span>
-                    ${typeRowHtml}`
-                            : `<p class="text-[10px] text-ms-muted mb-3 text-center leading-relaxed">기관명을 <strong class="text-[#2D4A3E]">한 글자 이상</strong> 입력하면 세부 유형(어린이집·유치원·기타 등)을 고를 수 있어요.</p>`
-                    }
+                    <span class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">기관 유형</span>
+                    ${typeRowHtml}
+                    <label for="ms-unified-group-name" class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">반 이름</label>
+                    <input id="ms-unified-group-name" type="text" placeholder="예: 새싹반 · 비워 두어도 됩니다"
+                        class="w-full ms-input px-4 py-3 text-center font-bold rounded-2xl mb-4 text-[#2D4A3E] text-sm border border-ms"
+                        value="${UI.esc(groupDraft)}"
+                        maxlength="120"
+                        autocomplete="off"
+                        aria-label="반 이름" />
                     <label for="ms-examiner-name-modal" class="block text-[11px] font-bold text-ms-muted mb-1.5 ml-0.5 tracking-widest">진행자(해설사) 성함</label>
                     <input id="ms-examiner-name-modal" type="text" maxlength="40" autocomplete="name" placeholder="필수"
                         class="w-full ms-input px-4 py-3 text-center font-bold rounded-2xl mb-4 text-[#2D4A3E] text-sm"
                         value="${UI.esc(examinerName)}"
                         oninput="MS.onExaminerNameInput(this.value)" />
-                    <p class="text-[10px] text-ms-muted text-center mb-2 leading-relaxed">대상(유아·초등)을 누르면 검사 설정으로 바로 이동해요. 진행자 성함이 비어 있으면 이동하지 않습니다.</p>
+                    <button type="button" class="ms-btn w-full rounded-[2rem] bg-[#2D4A3E] text-white font-black py-5 text-base md:text-lg shadow-xl hover:brightness-95 mb-3"
+                        onclick="MS.submitUnifiedSetupFromModal()">검사 입력으로 이동</button>
                     <div class="flex justify-center">
-                        <button type="button" class="ms-btn w-full sm:w-auto min-w-[140px] rounded-full border-2 border-ms text-[#2D4A3E] font-bold py-3 text-sm" onclick="MS.closeForestModal()">취소</button>
+                        <button type="button" class="ms-btn text-sm font-bold text-ms-muted py-2" onclick="MS.closeForestModal()">취소</button>
                     </div>
                 </div>
             `;
@@ -3721,6 +3711,56 @@
                 }
                 MS.updateModalInstDropdown();
             });
+        },
+        submitUnifiedSetupFromModal() {
+            const instEl = document.getElementById('ms-modal-inst-name');
+            const name = String((instEl && instEl.value) || '').trim();
+            if (!name) {
+                alert('기관명을 입력해 주세요.');
+                return;
+            }
+            const exEl = document.getElementById('ms-examiner-name-modal');
+            const examiner = String((exEl && exEl.value) || '').trim();
+            if (!examiner) {
+                alert('진행자(해설사) 성함을 입력해 주세요.');
+                return;
+            }
+            MS.onExaminerNameInput(examiner);
+            STATE.searchTerm = name;
+            const phase = STATE.observationStage === 'post' ? 'post' : 'pre';
+            let inst = STATE.institutions.find((i) => String(i.name).trim() === name);
+            if (!inst) {
+                if (STATE.targetGroup === 'preschool' && !STATE.setupTypeOverride) {
+                    alert('유아부는 기관 유형(어린이집·유치원·기타)을 선택해 주세요.');
+                    return;
+                }
+                if (STATE.targetGroup === 'elementary' && !STATE.setupTypeOverride) {
+                    alert('초등부는 기관 유형(지역아동센터·방과후·기타)을 선택해 주세요.');
+                    return;
+                }
+                inst = STATE.addInstitution(name);
+                inst.type = STATE.setupTypeOverride || STATE.guessType(name);
+                inst.obsPhase = phase;
+            } else {
+                STATE.selectedId = inst.id;
+                STATE.ensureCounts(inst);
+                if (STATE.setupTypeOverride) inst.type = STATE.setupTypeOverride;
+                if (phase === 'pre' || phase === 'post') inst.obsPhase = phase;
+            }
+            inst.targetGroup = STATE.targetGroup === 'elementary' ? 'elementary' : 'preschool';
+            const gEl = document.getElementById('ms-unified-group-name');
+            const gn = gEl && gEl.value.trim() ? gEl.value.trim().slice(0, 120) : '';
+            inst.groupName = gn;
+            inst.obsLocation = STATE.obsLocation === 'indoor' ? 'indoor' : 'forest';
+            STATE.setupObsPhase = phase;
+            STATE.setupTypeOverride = null;
+            STATE.unifiedSetupGroupDraft = '';
+            STATE.step = 'input';
+            STATE.isPreviewSample = false;
+            STATE.touchSelected();
+            STATE.persist();
+            MS.closeForestModal();
+            UI.render();
         },
         /** v18.0: 기관명만 비우고 모달 유지 (입력은 브라우저·IME에 맡김) */
         clearModalInstNameInput(ev) {
@@ -3747,36 +3787,6 @@
                 MS.updateModalInstDropdown();
             });
         },
-        /**
-         * v16.0 원클릭: 모달 입력값으로 검사 설정(setup)까지 반영. 성공 시 true.
-         */
-        applyExamPrepModalAndGoToSetup() {
-            const instEl = document.getElementById('ms-modal-inst-name');
-            const instName = String((instEl && instEl.value) || '').trim();
-            if (!instName) {
-                alert('기관명을 입력해 주세요.');
-                return false;
-            }
-            const el = document.getElementById('ms-examiner-name-modal');
-            const v = String((el && el.value) || '').trim();
-            if (!v) {
-                alert('진행자 이름을 입력해 주세요');
-                return false;
-            }
-            STATE.searchTerm = instName;
-            const match = STATE.institutions.find((i) => String(i.name).trim() === instName);
-            if (match) {
-                STATE.selectedId = match.id;
-                STATE.targetGroup = SCHEMA.getTargetGroup(match);
-                STATE.setupTypeOverride = null;
-            } else {
-                STATE.selectedId = null;
-            }
-            MS.onExaminerNameInput(v);
-            MS.closeForestModal();
-            MS.goSetup();
-            return true;
-        },
         setPrepModalTargetGroup(tg) {
             if (tg !== 'preschool' && tg !== 'elementary') return;
             STATE.targetGroup = tg;
@@ -3798,11 +3808,7 @@
             } catch (_) {
                 /* ignore */
             }
-            if (MS.applyExamPrepModalAndGoToSetup()) return;
             MS.openNewExamPrepModal();
-        },
-        confirmNewExamPrepModal() {
-            MS.applyExamPrepModalAndGoToSetup();
         },
         openAdminUnlockModal() {
             const root = document.getElementById('ms-modal-root');
@@ -3812,7 +3818,7 @@
                 <div class="absolute inset-0 bg-black/45" onclick="MS.closeForestModal()" aria-hidden="true"></div>
                 <div class="relative w-full max-w-sm rounded-[2rem] bg-[#FDFBF7] shadow-2xl border border-[#2D4A3E]/12 p-6 md:p-8" onclick="event.stopPropagation()">
                     <h2 id="ms-modal-title" class="text-lg font-black text-[#2D4A3E] mb-4 text-center">관리자 인증</h2>
-                    <p class="text-xs text-ms-muted mb-3 text-center leading-relaxed">대시보드·기관 목록·백업을 열려면 비밀번호를 입력하세요.</p>
+                    <p class="text-xs text-ms-muted mb-3 text-center leading-relaxed">관리 대시보드·데이터 백업을 열려면 비밀번호를 입력하세요.</p>
                     <input id="ms-admin-pw" type="password" autocomplete="new-password" placeholder="비밀번호"
                         class="w-full ms-input px-4 py-3.5 text-center font-bold rounded-2xl mb-4" />
                     <div class="flex gap-2">
@@ -3885,7 +3891,7 @@
                 'fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4 print:p-4';
             root.innerHTML = `
                 <div class="ms-manual-no-print absolute inset-0 bg-black/45" onclick="MS.closeManualModal()" aria-hidden="true"></div>
-                <div class="ms-manual-sheet relative w-full max-w-full sm:max-w-xl lg:max-w-2xl sm:mx-auto rounded-t-[1.75rem] sm:rounded-[2rem] bg-[#FDFBF7] shadow-2xl border-2 border-[#5D4037]/15 flex flex-col max-h-[96vh] sm:max-h-[92vh] overflow-hidden text-[#5D4037] text-[15px] sm:text-base" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-label="4군자 숲속 기질 지표 정의서">
+                <div class="ms-manual-sheet relative w-full max-w-full sm:max-w-xl lg:max-w-2xl sm:mx-auto rounded-t-[1.75rem] sm:rounded-[2rem] bg-[#FDFBF7] shadow-2xl border-2 border-[#5D4037]/15 flex flex-col max-h-[96vh] sm:max-h-[92vh] overflow-hidden text-[#5D4037] text-[15px] sm:text-base" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-label="어린이 4계절 Temperament TEST (4STT) 가이드">
                     <div class="ms-manual-no-print shrink-0 flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 pt-3 sm:pt-4 pb-2 border-b border-[#5D4037]/10">
                         <button type="button" class="rounded-full border-2 border-[#5D4037]/30 bg-white px-4 py-2.5 text-xs font-black text-[#5D4037] shadow-sm active:scale-[0.99] min-h-[44px]"
                             onclick="MS.triggerManualPrint()">설명서 인쇄/PDF 저장</button>
@@ -4043,15 +4049,51 @@
                     : STATE.observationStage === 'post'
                       ? 'post'
                       : 'pre';
-            const group_name = String(inst.groupName || inst.childLabel || inst.studentName || '').trim();
+            const group_name = String(inst.groupName || '').trim();
             const examiner = String(MS.getExaminerName() || '').trim();
+            const location = inst.obsLocation === 'indoor' ? '실내' : '숲';
+            const scoreM = totalsO.WINT || 0;
+            const scoreN = totalsO.SPRT || 0;
+            const scoreK = totalsO.AUTT || 0;
+            const scoreD = totalsO.SUMT || 0;
+            /** 구글 시트 doPost: 열 순서와 동일한 키 순서(SPRT→scoreN … WINT→scoreM) */
+            const sheetPayload = {
+                instType: String(inst.type || ''),
+                institute: iname,
+                stage: observation_stage,
+                scoreN,
+                scoreD,
+                scoreK,
+                scoreM,
+                className: group_name,
+                targetGroup: tg,
+                location,
+                examiner
+            };
+            void fetch(FOREST_SHEETS_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(sheetPayload),
+                mode: 'cors',
+                credentials: 'omit'
+            }).catch(() => {});
             const payload = {
+                instType: String(inst.type || ''),
+                institute: iname,
+                stage: observation_stage,
+                scoreN,
+                scoreD,
+                scoreK,
+                scoreM,
+                className: group_name,
+                targetGroup: tg,
+                location,
+                examiner,
                 institution_name: iname,
                 group_name: group_name,
                 test_type: test_type,
                 observation_stage: observation_stage,
                 target_group: tg,
-                examiner: examiner,
                 scores: {
                     schema_version: SCHEMA.version,
                     target_group: tg,
@@ -4449,6 +4491,9 @@
             STATE.selectedId = inst.id;
             STATE.searchTerm = inst.name;
             STATE.targetGroup = SCHEMA.getTargetGroup(inst);
+            if (inst.obsLocation) {
+                STATE.obsLocation = inst.obsLocation === 'indoor' ? 'indoor' : 'forest';
+            }
             STATE.setupObsPhase = STATE.observationStage;
             MS._instDropdownAll = false;
             MS._modalInstDropdownAll = false;
@@ -4786,11 +4831,7 @@
 
         /** 대시보드: 기기 금고 전체 비우기 */
         clearVaultEntirely() {
-            if (
-                !confirm(
-                    '이 기기(ms_forest_v1)에 저장된 모든 검사 기록을 삭제할까요?\n\n되돌릴 수 없습니다. 먼저 「보내기」로 JSON 백업을 권장합니다.'
-                )
-            ) {
+            if (!confirm('기기에 저장된 모든 기록이 삭제됩니다. 계속하시겠습니까?')) {
                 return;
             }
             STATE.institutions = [];
@@ -4966,6 +5007,14 @@
         toggleDashboardReports() {
             STATE.dashboardReportsExpanded = !STATE.dashboardReportsExpanded;
             UI.render();
+        },
+        /** 대시보드 하단 푸터: 미인증 시 인증 모달, 인증 후 패널 토글 */
+        onFooterAdminDashboardClick() {
+            if (!MS.isAdminUnlocked()) {
+                MS.openAdminUnlockModal();
+                return;
+            }
+            MS.toggleDashboardReports();
         },
 
         setDashboardBuilderInstFromSelect(sel) {
@@ -5378,12 +5427,12 @@
             const summary = UI.buildHarmonySummary(scores);
             const svg = UI.buildRadarSvg(scores);
             root.className =
-                'print-hidden fixed inset-0 z-[200] flex items-center justify-center p-4';
+                'print-hidden fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4';
             root.innerHTML = `
                 <div class="absolute inset-0 bg-black/45" onclick="MS.closeForestMapModal()" aria-hidden="true"></div>
-                <div class="relative w-full max-w-md rounded-[2rem] bg-[#FDFBF7] shadow-2xl border border-[#2D4A3E]/12 p-6 md:p-8 max-h-[88vh] overflow-y-auto" onclick="event.stopPropagation()">
+                <div class="relative w-full max-w-md rounded-t-[1.75rem] sm:rounded-[2rem] bg-[#FDFBF7] shadow-2xl border border-[#2D4A3E]/12 p-6 md:p-8 max-h-[88vh] overflow-y-auto pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] sm:pb-8" onclick="event.stopPropagation()">
                     <h3 id="ms-modal-title" class="text-lg md:text-xl font-black text-[#2D4A3E] text-center mb-1 leading-tight">우리 아이의 마음 숲 지도</h3>
-                    <p class="text-center text-[10px] text-gray-400 mb-4">4기질 비교 · 레이더</p>
+                    <p class="text-center text-[10px] text-gray-400 mb-4">4STT 비교 · 레이더</p>
                     <div class="flex justify-center overflow-x-auto">${svg}</div>
                     <p class="text-sm text-ms-body leading-relaxed mt-4 mb-6 text-left">${UI.esc(summary)}</p>
                     <button type="button" class="w-full rounded-full border-2 border-[#2D4A3E] bg-transparent text-[#2D4A3E] font-bold py-3 text-sm mb-2 hover:bg-[rgba(45,74,62,0.06)]" onclick="MS.goHomeToDashboard()">🏠 홈으로 — 대시보드</button>

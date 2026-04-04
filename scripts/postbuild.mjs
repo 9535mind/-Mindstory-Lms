@@ -24,6 +24,9 @@ const ROUTES = {
     /** 유아숲 도구: Worker 미개입 — Clean URL /forest·/forest.html 정적만 (루프 방지) */
     '/forest',
     '/forest.html',
+    /** forest.html 이 로드하는 문항뱅크 — Worker가 잡으면 404 (정적 자산으로 반드시 서빙) */
+    '/forest-question-banks.js',
+    '/forest_v9.html',
     /** /forest_v9.html 은 Worker에서 ASSETS.fetch 로 명시 서빙(배포 누락·라우팅 꼬임 완화) */
     '/유아숲 행동관찰.html',
     '/build.txt',
