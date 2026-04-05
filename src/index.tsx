@@ -245,6 +245,21 @@ app.get('/forest_v9', async (c) => {
   return res
 })
 
+/**
+ * /forest — 302 금지(대시보드 리다이렉트 규칙과 충돌 시 /forest.html ↔ /forest 루프 가능).
+ * 정적 ASSETS 의 /forest.html 과 동일 바이트를 200으로 반환.
+ */
+app.get('/forest', async (c) => {
+  const assets = c.env.ASSETS
+  if (!assets) return c.text('Not Found', 404)
+  const u = new URL(c.req.url)
+  u.pathname = '/forest.html'
+  return assets.fetch(new Request(u.toString(), { method: c.req.method, headers: c.req.raw.headers }))
+})
+
+/** 루트 favicon 미배치 시 브라우저 기본 요청으로 콘솔 404 방지 (정적 SVG 재사용) */
+app.get('/favicon.ico', (c) => c.redirect('/static/images/course-placeholder.svg', 302))
+
 // 페이지 라우트 (약관·개인정보·환불은 다른 / 라우터보다 먼저 등록)
 app.route('/', landing)  // 신규 랜딩 페이지 (Phase 3)
 app.route('/', pagesLegal) // /terms, /privacy, /refund

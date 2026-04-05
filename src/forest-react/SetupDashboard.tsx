@@ -4,6 +4,7 @@ import { INSTITUTION_DATABASE } from './forest-presets';
 import { forestSchemaStub } from './forest-schema';
 import { guessTypeFromName } from './institution-match';
 import { InstitutionSearchInput } from './InstitutionSearchInput';
+import { ObservationContextCard } from './ObservationContextCard';
 import type { ForestInstitution, ForestSchemaApi, ObservationStage, ObsLocation, SetupTypeOverride, TargetGroup } from './types';
 
 export interface SetupDashboardProps {
@@ -33,7 +34,7 @@ export interface SetupDashboardProps {
 }
 
 const tabBase =
-    'ms-btn flex-1 min-h-[44px] px-3 py-2.5 font-bold text-xs rounded-full transition-colors duration-200';
+    'ms-btn flex-1 min-h-[40px] px-3 py-2 font-bold text-xs rounded-full transition-colors duration-200';
 const TAB_AGE_PS_ON =
     '!bg-[#03C75A] !text-white border-0 shadow-lg shadow-[#03C75A]/35 ring-0 outline-none hover:brightness-[1.02]';
 const TAB_AGE_PS_OFF = '!bg-[#81C784] !text-white border-0 shadow-sm ring-0 outline-none hover:brightness-95';
@@ -80,6 +81,7 @@ export function SetupDashboard({
     const [showAllListMode, setShowAllListMode] = useState(false);
     const [extraInstitutions, setExtraInstitutions] = useState<ForestInstitution[]>([]);
     const [instResetKey, setInstResetKey] = useState(0);
+    const [instDropdownKick, setInstDropdownKick] = useState(0);
     const instSearchInputRef = useRef<HTMLInputElement>(null);
 
     /** 검색어 1글자 이상일 때만 입력으로 포커스 복구 — 드롭다운(aria-expanded) 유지 */
@@ -251,10 +253,12 @@ export function SetupDashboard({
 
     const obsPreOn =
         'border-[#2D4A3E] bg-[rgba(240,253,244,0.5)] text-[#2D4A3E] shadow-md shadow-[#2D4A3E]/15';
-    const obsPreOff = 'border-ms text-ms-muted';
+    const obsPreOff =
+        'border-[rgba(93,64,55,0.28)] bg-white text-[#5D4037]/55 shadow-none hover:bg-[rgba(93,64,55,0.06)]';
     const obsPostOn =
-        'border-[#8d6e54] bg-[rgba(212,163,115,0.18)] text-[#2D4A3E] shadow-md shadow-[#D4A373]/20';
-    const obsPostOff = 'border-ms text-ms-muted';
+        'border-[#8d6e54] bg-[rgba(212,163,115,0.22)] text-[#2D4A3E] shadow-md shadow-[#D4A373]/25';
+    const obsPostOff =
+        'border-[rgba(93,64,55,0.28)] bg-white text-[#5D4037]/55 shadow-none hover:bg-[rgba(93,64,55,0.06)]';
     const obsPreCls = observationStage === 'pre' ? obsPreOn : obsPreOff;
     const obsPostCls = observationStage === 'post' ? obsPostOn : obsPostOff;
     const locForestCls = obsLocation !== 'indoor' ? obsPreOn : obsPreOff;
@@ -262,249 +266,252 @@ export function SetupDashboard({
 
     return (
         <div
-            className="relative w-full max-w-md max-h-[90vh] flex flex-col rounded-t-[1.75rem] sm:rounded-[1.75rem] bg-[#FDFBF7] shadow-2xl border border-[#2D4A3E]/12 overflow-x-hidden"
+            className="relative w-full max-w-md max-h-[90vh] flex flex-col rounded-t-[1.75rem] sm:rounded-[1.75rem] bg-[#FDFBF7] shadow-2xl border border-[#2D4A3E]/12 overflow-visible"
             onClick={(e) => e.stopPropagation()}
         >
-            <div className="shrink-0 px-3 sm:px-4 md:px-5 pt-3 sm:pt-4 md:pt-5">
+            {/* 1단: 타이틀 */}
+            <div className="shrink-0 px-3 sm:px-4 md:px-5 pt-3 sm:pt-4 md:pt-5 pb-1">
                 <h2
                     id="ms-modal-title"
-                    className="text-base md:text-lg font-black text-[#2D4A3E] mb-2 text-center leading-tight"
+                    className="text-base md:text-lg font-black text-[#2D4A3E] text-center leading-tight"
                 >
                     검사 설정
                 </h2>
-                <label
-                    htmlFor="ms-modal-inst-name-react"
-                    className="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest"
-                >
-                    기관명 검색
-                </label>
-                <InstitutionSearchInput
-                    inputId="ms-modal-inst-name-react"
-                    inputRef={instSearchInputRef}
-                    value={searchTerm}
-                    resetKey={instResetKey}
-                    schema={schema}
-                    institutions={allInstitutions}
-                    presetDatabase={presetDatabase}
-                    targetGroup={targetGroup}
-                    setupTypeOverride={setupTypeOverride}
-                    onValueCommit={onValueCommit}
-                    onBlurSearch={onBlurSearch}
-                    placeholder="초성·부분 검색 가능 (예: 삼계중앙어린이집)"
-                    showAllListMode={showAllListMode}
-                    onToggleShowAllList={onToggleShowAllList}
-                    onPickInstitution={onPickInstitution}
-                    onPickPresetName={onPickPresetName}
-                    onClear={onClearSearch}
-                />
-                <p className="text-[10px] text-ms-muted mb-2 leading-relaxed rounded-lg bg-[rgba(45,74,62,0.04)] px-2 py-1.5 border border-[rgba(45,74,62,0.07)]">
-                    오른쪽 <span className="font-bold text-[#2D4A3E]">검은 ▼</span>을 누르면{' '}
-                    <strong className="text-[#2D4A3E]">검색어 없이</strong> 기초 사전·저장 기관 전체가 가나다순으로
-                    펼쳐집니다. React 상태로만 갱신되어 한글 입력이 끊기지 않습니다.
-                </p>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-5 custom-scrollbar pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:pb-4">
-                <span className="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest">
-                    대상 (문항뱅크)
-                </span>
-                <div className="flex gap-2 mb-2">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-3 sm:px-4 md:px-5 custom-scrollbar pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:pb-4 space-y-4">
+                {/* 2단: 관찰 단계 · 진행 장소 */}
+                <ObservationContextCard
+                    obsPreCls={obsPreCls}
+                    obsPostCls={obsPostCls}
+                    locForestCls={locForestCls}
+                    locIndoorCls={locIndoorCls}
+                    onObservationStage={setObservationStage}
+                    onObsLocation={setObsLocation}
+                />
+
+                {/* 3단: 기관명 검색 */}
+                <section aria-labelledby="ms-setup-search-heading">
+                    <label
+                        id="ms-setup-search-heading"
+                        htmlFor="ms-modal-inst-name-react"
+                        className="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest"
+                    >
+                        기관명 검색
+                    </label>
+                    <InstitutionSearchInput
+                        inputId="ms-modal-inst-name-react"
+                        inputRef={instSearchInputRef}
+                        forceOpenKey={instDropdownKick}
+                        value={searchTerm}
+                        resetKey={instResetKey}
+                        schema={schema}
+                        institutions={allInstitutions}
+                        presetDatabase={presetDatabase}
+                        targetGroup={targetGroup}
+                        setupTypeOverride={setupTypeOverride}
+                        onValueCommit={onValueCommit}
+                        onChange={onValueCommit}
+                        onBlurSearch={onBlurSearch}
+                        placeholder="초성·부분 검색 가능 (예: 삼계중앙어린이집)"
+                        showAllListMode={showAllListMode}
+                        onToggleShowAllList={onToggleShowAllList}
+                        onPickInstitution={onPickInstitution}
+                        onPickPresetName={onPickPresetName}
+                        onClear={onClearSearch}
+                    />
+                    <p className="text-[10px] text-ms-muted mt-2 leading-relaxed rounded-lg bg-[rgba(45,74,62,0.04)] px-2 py-1.5 border border-[rgba(45,74,62,0.07)]">
+                        유아·유치부는 <strong className="text-[#2D4A3E]">타겟 사전 23곳</strong>이 입력 즉시 반영되고, 사전에
+                        없을 때만 저장 기관 검색이 200ms 디바운스로 최대 50건 붙습니다. 오른쪽{' '}
+                        <span className="font-bold text-[#2D4A3E]">검은 ▼</span>은 검색어 없이 사전·저장 목록을 펼칩니다.
+                        React 상태로만 갱신되어 한글 입력이 끊기지 않습니다.
+                    </p>
+                </section>
+
+                {/* 4단: 대상 (문항뱅크) */}
+                <section aria-labelledby="ms-setup-target-heading">
+                    <span
+                        id="ms-setup-target-heading"
+                        className="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest"
+                    >
+                        대상 (문항뱅크)
+                    </span>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            className={`${tabBase} ${tabPs}`}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                                setTargetGroup('preschool');
+                                setInstDropdownKick((k) => k + 1);
+                                focusInstSearchIfQuery();
+                            }}
+                        >
+                            유아·유치부
+                        </button>
+                        <button
+                            type="button"
+                            className={`${tabBase} ${tabEl}`}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                                setTargetGroup('elementary');
+                                setInstDropdownKick((k) => k + 1);
+                                focusInstSearchIfQuery();
+                            }}
+                        >
+                            초등부
+                        </button>
+                    </div>
+                </section>
+
+                {/* 5단: 기관 유형 */}
+                <section aria-labelledby="ms-setup-type-heading">
+                    <span
+                        id="ms-setup-type-heading"
+                        className="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest"
+                    >
+                        기관 유형
+                    </span>
+                    {targetGroup === 'elementary' ? (
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                className={`ms-btn flex-1 min-w-[100px] min-h-[36px] py-1.5 font-bold border-2 text-xs ${
+                                    typeForUiElementary === '지역아동센터'
+                                        ? 'border-[#FF9800] bg-[rgba(255,152,0,0.14)] text-[#2D4A3E] shadow-sm'
+                                        : 'border-ms text-ms-muted'
+                                }`}
+                                onClick={() => setSetupTypeOverride('지역아동센터')}
+                            >
+                                지역아동센터
+                            </button>
+                            <button
+                                type="button"
+                                className={`ms-btn flex-1 min-w-[100px] min-h-[36px] py-1.5 font-bold border-2 text-xs ${
+                                    typeForUiElementary === '방과후교실'
+                                        ? 'border-[#FF9800] bg-[rgba(255,152,0,0.14)] text-[#2D4A3E] shadow-sm'
+                                        : 'border-ms text-ms-muted'
+                                }`}
+                                onClick={() => setSetupTypeOverride('방과후교실')}
+                            >
+                                방과후교실
+                            </button>
+                            <button
+                                type="button"
+                                className={`ms-btn flex-1 min-w-[100px] min-h-[36px] py-1.5 font-bold border-2 text-xs ${
+                                    typeForUiElementary === '초등학교'
+                                        ? 'border-[#FF9800] bg-[rgba(255,152,0,0.14)] text-[#2D4A3E] shadow-sm'
+                                        : 'border-ms text-ms-muted'
+                                }`}
+                                onClick={() => setSetupTypeOverride('초등학교')}
+                            >
+                                초등학교
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                className={`ms-btn flex-1 min-w-[88px] min-h-[36px] py-1.5 font-bold border-2 text-xs ${
+                                    typeForUiPreschool === '어린이집'
+                                        ? 'border-[#03C75A] bg-[rgba(3,199,90,0.12)] text-[#2D4A3E] shadow-sm'
+                                        : 'border-ms text-ms-muted'
+                                }`}
+                                onClick={() => setSetupTypeOverride('어린이집')}
+                            >
+                                어린이집
+                            </button>
+                            <button
+                                type="button"
+                                className={`ms-btn flex-1 min-w-[88px] min-h-[36px] py-1.5 font-bold border-2 text-xs ${
+                                    typeForUiPreschool === '유치원'
+                                        ? 'border-[#03C75A] bg-[rgba(3,199,90,0.12)] text-[#2D4A3E] shadow-sm'
+                                        : 'border-ms text-ms-muted'
+                                }`}
+                                onClick={() => setSetupTypeOverride('유치원')}
+                            >
+                                유치원
+                            </button>
+                            <button
+                                type="button"
+                                className={`ms-btn flex-1 min-w-[88px] min-h-[36px] py-1.5 font-bold border-2 text-xs ${
+                                    typeForUiPreschool === '기타'
+                                        ? 'border-[#03C75A] bg-[rgba(3,199,90,0.12)] text-[#2D4A3E] shadow-sm'
+                                        : 'border-ms text-ms-muted'
+                                }`}
+                                onClick={() => setSetupTypeOverride('기타')}
+                            >
+                                기타
+                            </button>
+                        </div>
+                    )}
+                </section>
+
+                {/* 6단: 진행자(해설사) 성함 */}
+                <section aria-labelledby="ms-setup-examiner-heading">
+                    <label
+                        id="ms-setup-examiner-heading"
+                        htmlFor="ms-examiner-name-react"
+                        className="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest"
+                    >
+                        진행자(해설사) 성함
+                    </label>
+                    <input
+                        id="ms-examiner-name-react"
+                        type="text"
+                        maxLength={40}
+                        autoComplete="name"
+                        placeholder="필수"
+                        className="w-full ms-input px-3 py-2 text-center font-bold leading-tight rounded-2xl text-[#2D4A3E] text-sm"
+                        value={examinerName}
+                        onChange={(e) => setExaminerName(e.target.value)}
+                    />
+                </section>
+
+                {/* 7단: 반 이름 */}
+                <section aria-labelledby="ms-setup-group-heading">
+                    <label
+                        id="ms-setup-group-heading"
+                        htmlFor="ms-unified-group-name-react"
+                        className="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest"
+                    >
+                        반 이름
+                    </label>
+                    <input
+                        id="ms-unified-group-name-react"
+                        type="text"
+                        placeholder="예: 새싹반 · 비워 두어도 됩니다"
+                        className="w-full ms-input px-3 py-2 text-center font-bold leading-tight rounded-2xl text-[#2D4A3E] text-sm border border-ms"
+                        maxLength={120}
+                        autoComplete="off"
+                        value={groupName}
+                        onChange={(e) => setGroupName(e.target.value)}
+                    />
+                </section>
+
+                {/* 8단: 주요 액션 */}
+                <div className="pt-1">
                     <button
                         type="button"
-                        className={`${tabBase} ${tabPs}`}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                            setTargetGroup('preschool');
-                            focusInstSearchIfQuery();
-                        }}
+                        className="ms-btn w-full rounded-[2rem] bg-[#2D4A3E] text-white font-black py-3 md:py-3.5 text-base md:text-lg shadow-xl hover:brightness-95"
+                        onClick={submit}
                     >
-                        유아·유치부
-                    </button>
-                    <button
-                        type="button"
-                        className={`${tabBase} ${tabEl}`}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                            setTargetGroup('elementary');
-                            focusInstSearchIfQuery();
-                        }}
-                    >
-                        초등부
+                        검사 시작
                     </button>
                 </div>
 
-                <span className="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest">기관 유형</span>
-                {targetGroup === 'elementary' ? (
-                    <div className="flex flex-wrap gap-2 mb-2">
-                        <button
-                            type="button"
-                            className={`ms-btn flex-1 min-w-[100px] min-h-[40px] py-2 font-bold border-2 text-xs ${
-                                typeForUiElementary === '지역아동센터'
-                                    ? 'border-[#FF9800] bg-[rgba(255,152,0,0.14)] text-[#2D4A3E] shadow-sm'
-                                    : 'border-ms text-ms-muted'
-                            }`}
-                            onClick={() => setSetupTypeOverride('지역아동센터')}
-                        >
-                            지역아동센터
-                        </button>
-                        <button
-                            type="button"
-                            className={`ms-btn flex-1 min-w-[100px] min-h-[40px] py-2 font-bold border-2 text-xs ${
-                                typeForUiElementary === '방과후교실'
-                                    ? 'border-[#FF9800] bg-[rgba(255,152,0,0.14)] text-[#2D4A3E] shadow-sm'
-                                    : 'border-ms text-ms-muted'
-                            }`}
-                            onClick={() => setSetupTypeOverride('방과후교실')}
-                        >
-                            방과후교실
-                        </button>
-                        <button
-                            type="button"
-                            className={`ms-btn flex-1 min-w-[100px] min-h-[40px] py-2 font-bold border-2 text-xs ${
-                                typeForUiElementary === '초등학교'
-                                    ? 'border-[#FF9800] bg-[rgba(255,152,0,0.14)] text-[#2D4A3E] shadow-sm'
-                                    : 'border-ms text-ms-muted'
-                            }`}
-                            onClick={() => setSetupTypeOverride('초등학교')}
-                        >
-                            초등학교
-                        </button>
-                    </div>
-                ) : (
-                    <div className="flex flex-wrap gap-2 mb-2">
-                        <button
-                            type="button"
-                            className={`ms-btn flex-1 min-w-[88px] min-h-[40px] py-2 font-bold border-2 text-xs ${
-                                typeForUiPreschool === '어린이집'
-                                    ? 'border-[#03C75A] bg-[rgba(3,199,90,0.12)] text-[#2D4A3E] shadow-sm'
-                                    : 'border-ms text-ms-muted'
-                            }`}
-                            onClick={() => setSetupTypeOverride('어린이집')}
-                        >
-                            어린이집
-                        </button>
-                        <button
-                            type="button"
-                            className={`ms-btn flex-1 min-w-[88px] min-h-[40px] py-2 font-bold border-2 text-xs ${
-                                typeForUiPreschool === '유치원'
-                                    ? 'border-[#03C75A] bg-[rgba(3,199,90,0.12)] text-[#2D4A3E] shadow-sm'
-                                    : 'border-ms text-ms-muted'
-                            }`}
-                            onClick={() => setSetupTypeOverride('유치원')}
-                        >
-                            유치원
-                        </button>
-                        <button
-                            type="button"
-                            className={`ms-btn flex-1 min-w-[88px] min-h-[40px] py-2 font-bold border-2 text-xs ${
-                                typeForUiPreschool === '기타'
-                                    ? 'border-[#03C75A] bg-[rgba(3,199,90,0.12)] text-[#2D4A3E] shadow-sm'
-                                    : 'border-ms text-ms-muted'
-                            }`}
-                            onClick={() => setSetupTypeOverride('기타')}
-                        >
-                            기타
-                        </button>
-                    </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-1">
-                    <div>
-                        <span className="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest">
-                            관찰 단계
-                        </span>
-                        <div className="flex flex-wrap gap-2" role="group" aria-label="사전 또는 사후">
-                            <button
-                                type="button"
-                                className={`ms-btn flex-1 min-h-[40px] py-2 font-bold border-2 text-xs ${obsPreCls}`}
-                                onClick={() => setObservationStage('pre')}
-                            >
-                                사전
-                            </button>
-                            <button
-                                type="button"
-                                className={`ms-btn flex-1 min-h-[40px] py-2 font-bold border-2 text-xs ${obsPostCls}`}
-                                onClick={() => setObservationStage('post')}
-                            >
-                                사후
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <span className="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest">
-                            진행 장소
-                        </span>
-                        <div className="flex flex-wrap gap-2" role="group" aria-label="숲 또는 실내">
-                            <button
-                                type="button"
-                                className={`ms-btn flex-1 min-h-[40px] py-2 font-bold border-2 text-xs ${locForestCls}`}
-                                onClick={() => setObsLocation('forest')}
-                            >
-                                숲
-                            </button>
-                            <button
-                                type="button"
-                                className={`ms-btn flex-1 min-h-[40px] py-2 font-bold border-2 text-xs ${locIndoorCls}`}
-                                onClick={() => setObsLocation('indoor')}
-                            >
-                                실내
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <p className="text-[10px] text-ms-muted mb-2 leading-relaxed text-center">
-                    사전·사후로 나누어 저장하면 기관 허브에서 성과 비교 보고서를 열 수 있어요.
-                </p>
-
-                <label
-                    htmlFor="ms-unified-group-name-react"
-                    className="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest"
-                >
-                    반 이름
-                </label>
-                <input
-                    id="ms-unified-group-name-react"
-                    type="text"
-                    placeholder="예: 새싹반 · 비워 두어도 됩니다"
-                    className="w-full ms-input px-3 py-2.5 text-center font-bold rounded-2xl mb-2 text-[#2D4A3E] text-sm border border-ms"
-                    maxLength={120}
-                    autoComplete="off"
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                />
-
-                <label
-                    htmlFor="ms-examiner-name-react"
-                    className="block text-[11px] font-bold text-ms-muted mb-1 ml-0.5 tracking-widest"
-                >
-                    진행자(해설사) 성함
-                </label>
-                <input
-                    id="ms-examiner-name-react"
-                    type="text"
-                    maxLength={40}
-                    autoComplete="name"
-                    placeholder="필수"
-                    className="w-full ms-input px-3 py-2.5 text-center font-bold rounded-2xl mb-2 text-[#2D4A3E] text-sm"
-                    value={examinerName}
-                    onChange={(e) => setExaminerName(e.target.value)}
-                />
-
-                <button
-                    type="button"
-                    className="ms-btn w-full rounded-[2rem] bg-[#2D4A3E] text-white font-black py-3.5 text-base md:text-lg shadow-xl hover:brightness-95 mb-2"
-                    onClick={submit}
-                >
-                    검사 입력으로 이동
-                </button>
-                <div className="flex justify-center">
+                {/* 9단: 보조 액션 */}
+                <div className="flex justify-center pb-0.5">
                     <button
                         type="button"
-                        className="ms-btn text-sm font-bold text-ms-muted py-2"
+                        className="ms-btn inline-flex items-center justify-center gap-1.5 text-sm font-bold text-ms-muted py-2"
                         onClick={onCancel}
+                        aria-label="뒤로 가기"
                     >
-                        취소
+                        <span className="text-base leading-none opacity-80" aria-hidden>
+                            ↩
+                        </span>
+                        뒤로 가기
                     </button>
                 </div>
             </div>

@@ -8,8 +8,20 @@ export type { InstitutionSearchInputProps } from './InstitutionSearchInput';
 export { SetupDashboard } from './SetupDashboard';
 export type { SetupDashboardProps } from './SetupDashboard';
 
-export { buildInstitutionDropdownRows } from './institution-dropdown-rows';
-export type { BuildInstitutionDropdownOptions, CategoryChipFilter } from './institution-dropdown-rows';
+export { ObservationContextCard } from './ObservationContextCard';
+export type { ObservationContextCardProps } from './ObservationContextCard';
+
+export {
+    buildInstitutionDropdownRows,
+    buildPresetOnlyInstitutionDropdownRows,
+    buildPreschoolInstitutionRowsLimited,
+    getPresetInstitutionNamesMatching,
+} from './institution-dropdown-rows';
+export type {
+    BuildInstitutionDropdownOptions,
+    BuildPresetOnlyDropdownOptions,
+    CategoryChipFilter,
+} from './institution-dropdown-rows';
 
 export { forestSchemaStub } from './forest-schema';
 export { INSTITUTION_DATABASE } from './forest-presets';

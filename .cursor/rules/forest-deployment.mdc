@@ -1,0 +1,15 @@
+---
+description: 유아숲 행동관찰(forest) 배포·검증 URL — 평생교육원 랜딩과 구분
+globs:
+alwaysApply: true
+---
+
+# Forest / 유아숲 행동관찰 배포
+
+- Cloudflare Pages `mslms` 배포 후 **검증·안내용 URL**은 사이트 **루트가 아니라** 반드시 **`/forest.html`** 경로를 사용한다.  
+  예: `https://<preview-hash>.mslms.pages.dev/forest.html`  
+  (과거 예: `https://cf84263e.mslms.pages.dev/forest.html`)
+
+- **루트** (`https://<hash>.mslms.pages.dev/` — 평생교육원 랜딩)는 forest 개발 변경 사항의 QA·“배포 완료” 확인용으로 쓰지 않는다.
+
+- `npm run build` / `wrangler pages deploy dist`는 저장소 전체 번들이므로 동일 프로젝트에 올라가지만, **사용자에게 보고할 때** forest 관련 작업은 **`/forest.html` 링크**로만 안내한다.

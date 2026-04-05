@@ -1,5 +1,5 @@
 /**
- * 4JTT-Kinder (4 Jahreszeiten Temperament-Test für Kinder) — scoring (Potential model).
+ * JTT-Kinder (4 Jahreszeiten Temperament-Test für Kinder) — scoring (Potential model).
  * Ipsative X→alt routing removed; O/X split into active vs potential per q.cat.
  */
 

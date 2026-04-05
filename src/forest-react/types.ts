@@ -32,7 +32,9 @@ export interface ForestInstitution {
 /** 드롭다운 한 줄 */
 export type InstitutionDropdownRow =
     | { kind: 'inst'; inst: ForestInstitution }
-    | { kind: 'preset'; name: string };
+    | { kind: 'preset'; name: string }
+    /** 사전 명단에 없을 때 사용자 문자열 확정 */
+    | { kind: 'direct'; query: string };
 
 /** SCHEMA 에서 검사 설정에 필요한 최소 표면 */
 export interface ForestSchemaApi {

@@ -1,7 +1,5 @@
 /**
- * Vite 빌드 후 처리 (Windows/Linux 공통 — bash 불필요)
- * - uploads 복사
- * - _routes.json (정적 사업자 안내 페이지는 Worker 우회)
+ * Vite 빌드 후: dist 루트에 정적 파일 강제 복사 + Cloudflare Pages `_routes.json` (정적 우회).
  */
 import { copyFileSync, cpSync, existsSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -12,27 +10,18 @@ const root = join(__dirname, '..')
 const dist = join(root, 'dist')
 const publicDir = join(root, 'public')
 
-/** Cloudflare Pages: 단일 정적 자산 최대 25 MiB — 초과 시 업로드에서 제외되어 프로덕션 404 가능 */
 const CF_PAGES_MAX_ASSET_BYTES = 25 * 1024 * 1024
 
-/** exclude: Worker가 아닌 정적 자산만 나열(리다이렉트 아님). .html 파일명은 실제 public 정적 파일. */
+/** Worker가 아닌 ASSETS 직접 서빙 — forest.html 등 정적 HTML·JS가 404 나지 않게 */
 const ROUTES = {
   version: 1,
   include: ['/*'],
   exclude: [
     '/uploads/*',
     '/static/*',
-    '/pg-business-info.html',
-    '/mindstory-4gunja-temperament.html',
-    /** 유아숲 도구: Worker 미개입 — Clean URL /forest·/forest.html 정적만 (루프 방지) */
-    '/forest',
-    '/forest.html',
-    /** forest.html 이 로드하는 문항뱅크 — Worker가 잡으면 404 (정적 자산으로 반드시 서빙) */
-    '/forest-question-banks.js',
     '/assets/*',
-    '/forest_v9.html',
-    /** /forest_v9.html 은 Worker에서 ASSETS.fetch 로 명시 서빙(배포 누락·라우팅 꼬임 완화) */
-    '/유아숲 행동관찰.html',
+    '/forest.html',
+    '/forest-question-banks.js',
     '/build.txt',
     '/google7186e759c88da5d4.html',
   ],
@@ -43,53 +32,55 @@ if (!existsSync(dist)) {
   process.exit(1)
 }
 
+/** Netlify/Cloudflare 레거시 리다이렉트만 제거 — _routes.json 은 아래에서 생성 */
+const redirectsPublic = join(publicDir, '_redirects')
+const redirectsDist = join(dist, '_redirects')
+if (existsSync(redirectsPublic)) {
+  rmSync(redirectsPublic, { force: true })
+  console.log('✅ public/_redirects 제거')
+}
+if (existsSync(redirectsDist)) {
+  rmSync(redirectsDist, { force: true })
+  console.log('✅ dist/_redirects 제거')
+}
+
 const uploadsSrc = join(publicDir, 'uploads')
 if (existsSync(uploadsSrc)) {
   cpSync(uploadsSrc, join(dist, 'uploads'), { recursive: true })
   console.log('✅ uploads → dist 복사')
-} else {
-  console.log('⚠️  public/uploads 없음 — 건너뜀')
 }
 
-/** Vite copyPublicDir 외에도 단일 HTML 도구가 dist 루트에 반드시 있도록 보강 (기존 파일 삭제 후 강제 덮어쓰기) */
-function forceCopyFile(src, dest) {
-  if (existsSync(dest)) {
-    rmSync(dest, { force: true })
-  }
-  copyFileSync(src, dest)
+/** 레거시 폴더명이 파일과 충돌하면 Windows에서 forest.html 생성이 실패할 수 있음 */
+const forestDirLegacy = join(dist, 'forest')
+if (existsSync(forestDirLegacy)) {
+  rmSync(forestDirLegacy, { recursive: true, force: true })
+  console.log('✅ dist/forest/ 제거 (forest.html 과 충돌 방지)')
 }
 
-const forestHtml = join(publicDir, 'forest.html')
+const forestHtmlSrc = join(publicDir, 'forest.html')
 const forestHtmlDest = join(dist, 'forest.html')
-if (existsSync(forestHtml)) {
-  forceCopyFile(forestHtml, forestHtmlDest)
-  console.log('✅ forest.html → dist 루트 명시 복사(덮어쓰기)')
+const forestQSrc = join(publicDir, 'forest-question-banks.js')
+const forestQDest = join(dist, 'forest-question-banks.js')
+
+if (!existsSync(forestHtmlSrc)) {
+  console.error('❌ public/forest.html 이 없습니다. 파일을 추가한 뒤 다시 빌드하세요.')
+  process.exit(1)
+}
+
+copyFileSync(forestHtmlSrc, forestHtmlDest)
+console.log('✅ copyFileSync: public/forest.html → dist/forest.html')
+
+if (!existsSync(forestQSrc)) {
+  console.warn('⚠️  public/forest-question-banks.js 없음 — 건너뜀')
 } else {
-  console.log('⚠️  public/forest.html 없음 — /forest.html 404 가능')
+  copyFileSync(forestQSrc, forestQDest)
+  console.log('✅ copyFileSync: public/forest-question-banks.js → dist/forest-question-banks.js')
 }
 
-const forestV9Html = join(publicDir, 'forest_v9.html')
-const forestV9HtmlDest = join(dist, 'forest_v9.html')
-if (existsSync(forestV9Html)) {
-  forceCopyFile(forestV9Html, forestV9HtmlDest)
-  console.log('✅ forest_v9.html → dist 루트 명시 복사(덮어쓰기)')
-} else {
-  console.log('⚠️  public/forest_v9.html 없음')
-}
-
-const forestQbanks = join(publicDir, 'forest-question-banks.js')
-const forestQbanksDest = join(dist, 'forest-question-banks.js')
-if (existsSync(forestQbanks)) {
-  forceCopyFile(forestQbanks, forestQbanksDest)
-  console.log('✅ forest-question-banks.js → dist 루트 명시 복사(덮어쓰기)')
-}
-
-/** Clean URL: /forest → /forest.html (200 rewrite, 주소창 유지) — Cloudflare Pages _redirects */
-const redirectsSrc = join(publicDir, '_redirects')
-const redirectsDest = join(dist, '_redirects')
-if (existsSync(redirectsSrc)) {
-  forceCopyFile(redirectsSrc, redirectsDest)
-  console.log('✅ _redirects → dist 루트 복사 (/forest rewrite)')
+const forestV9 = join(publicDir, 'forest_v9.html')
+if (existsSync(forestV9)) {
+  copyFileSync(forestV9, join(dist, 'forest_v9.html'))
+  console.log('✅ copyFileSync: public/forest_v9.html → dist/forest_v9.html')
 }
 
 const assetsDir = join(publicDir, 'assets')
@@ -99,14 +90,14 @@ if (existsSync(assetsDir)) {
   const introMp4 = join(dist, 'assets', 'forest_test.mp4')
   if (!existsSync(introMp4)) {
     console.warn(
-      '⚠️  dist/assets/forest_test.mp4 없음 — 프로덕션에서 /assets/forest_test.mp4 가 404일 수 있음 (public/assets에 추가 후 빌드)'
+      '⚠️  dist/assets/forest_test.mp4 없음 — public/assets에 추가 후 빌드'
     )
   } else {
     try {
       const st = statSync(introMp4)
       if (st.size > CF_PAGES_MAX_ASSET_BYTES) {
         console.warn(
-          `⚠️  forest_test.mp4 가 ${(st.size / (1024 * 1024)).toFixed(2)} MiB — Cloudflare Pages 단일 파일 한도 25 MiB 초과. 배포 시 이 파일이 빠져 /assets/forest_test.mp4 가 404가 됩니다. public/assets/README.md 의 ffmpeg 예시로 25 MiB 이하로 줄이거나, R2 등 외부 HTTPS URL을 관리자 비주얼 설정에 넣으세요.`
+          `⚠️  forest_test.mp4 가 ${(st.size / (1024 * 1024)).toFixed(2)} MiB — Pages 단일 파일 25 MiB 한도 초과 시 업로드 제외될 수 있음`
         )
       }
     } catch {
@@ -116,9 +107,8 @@ if (existsSync(assetsDir)) {
 }
 
 writeFileSync(join(dist, '_routes.json'), JSON.stringify(ROUTES, null, 2) + '\n', 'utf8')
-console.log('✅ dist/_routes.json 작성 (정적 exclude: /pg-business-info.html 등)')
+console.log('✅ dist/_routes.json 작성 (forest.html·forest-question-banks.js 정적 exclude)')
 
-// 배포 후 브라우저에서 https://(도메인)/build.txt 로 최신 빌드 시각 확인 (npm run build 시 postbuild에서 매번 갱신)
 const now = new Date()
 const builtAtISO = now.toISOString()
 const builtAtLocal = now.toLocaleString('ko-KR', {
@@ -127,14 +117,30 @@ const builtAtLocal = now.toLocaleString('ko-KR', {
   timeStyle: 'medium',
 })
 const buildMeta = {
-  stamp: '[REAL V10.0 - NAVER GREEN]',
+  stamp: 'postbuild',
   builtAt: builtAtISO,
   builtAtKorea: builtAtLocal,
-  note: 'npm run build → postbuild.mjs 가 이 파일을 덮어씁니다. 시각이 안 바뀌면 dist 미배포 또는 캐시 의심.',
+  note: 'npm run build → postbuild.mjs',
 }
-const buildTxtBody =
-  `# ${buildMeta.stamp}\n# builtAt (ISO): ${builtAtISO}\n# builtAt (Asia/Seoul): ${builtAtLocal}\n\n` +
-  JSON.stringify(buildMeta, null, 2) +
-  '\n'
-writeFileSync(join(dist, 'build.txt'), buildTxtBody, 'utf8')
-console.log('✅ dist/build.txt 작성 (배포 반영 확인용)', builtAtISO)
+writeFileSync(
+  join(dist, 'build.txt'),
+  `# builtAt (ISO): ${builtAtISO}\n# builtAt (Asia/Seoul): ${builtAtLocal}\n\n${JSON.stringify(buildMeta, null, 2)}\n`,
+  'utf8'
+)
+console.log('✅ dist/build.txt', builtAtISO)
+
+if (!existsSync(forestHtmlDest)) {
+  console.error('❌ dist/forest.html 이 없습니다.')
+  process.exit(1)
+}
+try {
+  const st = statSync(forestHtmlDest)
+  if (st.size < 1) {
+    console.error('❌ dist/forest.html 크기가 0입니다.')
+    process.exit(1)
+  }
+  console.log(`✅ 검증: dist/forest.html 존재 (${st.size} bytes)`)
+} catch (e) {
+  console.error('❌ dist/forest.html 검증 실패:', e)
+  process.exit(1)
+}
