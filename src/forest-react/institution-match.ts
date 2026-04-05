@@ -39,8 +39,10 @@ export function matchesPresetPrepKind(
     want: '어린이집' | '유치원' | '기타'
 ): boolean {
     const n = String(name || '');
-    if (want === '기타') return false;
-    if (want === '어린이집') return n.includes('어린이집') && !n.includes('유치원');
-    if (want === '유치원') return n.includes('유치원');
+    const looksDaycare = n.includes('어린이집') && !n.includes('유치원');
+    const looksKinder = n.includes('유치원');
+    if (want === '기타') return !looksDaycare && !looksKinder;
+    if (want === '어린이집') return looksDaycare;
+    if (want === '유치원') return looksKinder;
     return true;
 }

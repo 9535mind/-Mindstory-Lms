@@ -26,4 +26,7 @@ export const INSTITUTION_DATABASE: readonly string[] = [
     '공립사임당예랑어린이집',
     '공립로제비앙어린이집',
     '한마음자연생태유치원',
+    /** 연습용 — 이름에 어린이집·유치원 미포함 → 기타 필터에만 노출 */
+    '마인드스토리',
+    '숲마을',
 ] as const;
