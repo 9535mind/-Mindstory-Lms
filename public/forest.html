@@ -4062,6 +4062,7 @@
             /** IME 조합 중에도 입력값으로 드롭다운은 즉시 갱신(한 글자라도 보이게) — STATE 동기화는 조합 종료 시 */
             const composing = Boolean(ev && ev.isComposing) || Boolean(MS._modalInstImeComposing);
             if (composing) {
+                MS._modalInstDropdownSuppressNextRefresh = false;
                 MS.updateModalInstDropdown();
                 return;
             }
@@ -4077,6 +4078,7 @@
         },
         /** 조합 완료 후에만 STATE·자동완성 갱신. 매 글자마다 모달 전체를 다시 그리지 않음(드롭다운·초성 검색이 깨지지 않게). 대상/유형이 키워드로 바뀔 때만 전체 재렌더. */
         applyModalInstNameSync(el) {
+            MS._modalInstDropdownSuppressNextRefresh = false;
             const v = String((el && el.value) || '');
             let start = 0;
             let end = 0;
@@ -5253,6 +5255,13 @@
             const panel = document.getElementById('ms-inst-dropdown');
             const inp = document.getElementById('inst-name');
             if (!panel) return;
+            if (MS._instDropdownSuppressNextRefresh) {
+                MS._instDropdownSuppressNextRefresh = false;
+                panel.innerHTML = '';
+                panel.classList.add('hidden');
+                MS.setInstToggleAria(false);
+                return;
+            }
             MS.bindInstSuggestCloseOutside();
             const raw = inp ? inp.value : STATE.searchTerm || '';
             const q = raw.trim();
@@ -5299,6 +5308,15 @@
             const panel = document.getElementById('ms-modal-inst-dropdown');
             const inp = document.getElementById('ms-modal-inst-name');
             if (!panel || !inp) return;
+            if (MS._modalInstDropdownSuppressNextRefresh) {
+                MS._modalInstDropdownSuppressNextRefresh = false;
+                panel.innerHTML = '';
+                panel.classList.add('hidden');
+                const btn0 = document.getElementById('ms-modal-inst-toggle-all');
+                if (btn0) btn0.setAttribute('aria-expanded', 'false');
+                inp.setAttribute('aria-expanded', 'false');
+                return;
+            }
             try {
                 window.__MS_FOREST_INSTITUTIONS__ = STATE.institutions;
             } catch (_) {}
@@ -5423,6 +5441,9 @@
             STATE.setupObsPhase = STATE.observationStage;
             MS._instDropdownAll = false;
             MS._modalInstDropdownAll = false;
+            /** 선택 직후 focus/rAF에서 자동완성이 다시 열리지 않게 (한 번만 억제) */
+            MS._instDropdownSuppressNextRefresh = true;
+            MS._modalInstDropdownSuppressNextRefresh = true;
             STATE.setupTypeOverride = null;
             STATE.persist();
             const panel = document.getElementById('ms-inst-dropdown');
@@ -5474,6 +5495,9 @@
             STATE.setupObsPhase = STATE.observationStage;
             MS._instDropdownAll = false;
             MS._modalInstDropdownAll = false;
+            /** 선택 직후 focus/rAF에서 자동완성이 다시 열리지 않게 (한 번만 억제) */
+            MS._instDropdownSuppressNextRefresh = true;
+            MS._modalInstDropdownSuppressNextRefresh = true;
             STATE.setupTypeOverride = null;
             STATE.persist();
             const panel = document.getElementById('ms-inst-dropdown');
@@ -6225,6 +6249,7 @@
         },
         /** 설정 화면 기관명: 조합 완료 후에만 STATE·드롭다운 반영 */
         applySetupInstNameFromInput(val) {
+            MS._instDropdownSuppressNextRefresh = false;
             STATE.searchTerm = val;
             MS._instDropdownAll = false;
             const match = STATE.institutions.find((i) => i.name === val.trim());
