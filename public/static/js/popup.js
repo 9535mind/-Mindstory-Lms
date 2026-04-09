@@ -48,12 +48,30 @@
     return d.innerHTML
   }
 
+  function allowedPopupHost(host) {
+    var h = String(host || '').toLowerCase()
+    if (h === 'mindstory.kr' || h === 'www.mindstory.kr') return true
+    if (h.length > 14 && h.slice(-14) === '.mindstory.kr') return true
+    if (h === 'mslms.pages.dev' || (h.length > 16 && h.slice(-16) === '.mslms.pages.dev')) return true
+    if (h === 'localhost' || h === '127.0.0.1') return true
+    return false
+  }
+
+  /** 서버 sanitizePopupUrl 과 동일 — 외부 광고·피싱 도메인 차단 */
   function safeUrl(url) {
     if (!url || typeof url !== 'string') return ''
-    var u = url.trim()
-    if (u.indexOf('/') === 0) return u
-    if (u.indexOf('https://') === 0 || u.indexOf('http://') === 0) return u
-    return ''
+    var s = url.trim()
+    if (!s) return ''
+    if (s.indexOf('/') === 0 && s.indexOf('//') !== 0) return s
+    var parsed
+    try {
+      parsed = new URL(s)
+    } catch (e) {
+      return ''
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return ''
+    if (!allowedPopupHost(parsed.hostname)) return ''
+    return parsed.toString()
   }
 
   function postJson(path, body) {

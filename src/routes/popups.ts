@@ -8,6 +8,7 @@ import { getCookie, setCookie } from 'hono/cookie'
 import { Bindings } from '../types/database'
 import { successResponse, errorResponse } from '../utils/helpers'
 import { requireAdmin, optionalAuth } from '../middleware/auth'
+import { sanitizePopupUrl } from '../utils/popup-url-allowlist'
 
 type UpsertResult =
   | { ok: true; id: number }
@@ -86,8 +87,13 @@ popups.get('/active', optionalAuth, async (c) => {
     const result = await DB.prepare(sql).bind(...binds).all()
     const rows = (result.results ?? []) as Record<string, unknown>[]
     const filtered = rows.filter((r) => !hiddenPopups.includes(Number(r.id)))
+    const sanitized = filtered.map((r) => ({
+      ...r,
+      image_url: sanitizePopupUrl(r.image_url as string | null) ?? '',
+      link_url: sanitizePopupUrl(r.link_url as string | null) ?? '',
+    }))
 
-    return c.json(successResponse(filtered))
+    return c.json(successResponse(sanitized))
   } catch (error) {
     console.error('Get active popups error:', error)
     return c.json(errorResponse('팝업을 불러오는데 실패했습니다.'), 500)
@@ -270,8 +276,18 @@ async function upsertPopupBody(c: Context<{ Bindings: Bindings }>, popupId: numb
   const start_date = normalizeStartDate(startRaw)
   const end_date = normalizeEndDate(endRaw)
   const content = body.content != null ? String(body.content) : null
-  const image_url = body.image_url != null && String(body.image_url).trim() !== '' ? String(body.image_url).trim() : null
-  const link_url = body.link_url != null && String(body.link_url).trim() !== '' ? String(body.link_url).trim() : null
+  const image_url_raw =
+    body.image_url != null && String(body.image_url).trim() !== '' ? String(body.image_url).trim() : null
+  const link_url_raw =
+    body.link_url != null && String(body.link_url).trim() !== '' ? String(body.link_url).trim() : null
+  const image_url = image_url_raw != null ? sanitizePopupUrl(image_url_raw) : null
+  const link_url = link_url_raw != null ? sanitizePopupUrl(link_url_raw) : null
+  if (image_url_raw != null && image_url == null) {
+    return { ok: false, body: errorResponse('이미지 URL은 mindstory.kr(또는 하위 도메인), Pages 배포 도메인, 또는 사이트 내부 경로(https)만 허용됩니다.'), status: 400 }
+  }
+  if (link_url_raw != null && link_url == null) {
+    return { ok: false, body: errorResponse('링크 URL은 mindstory.kr(또는 하위 도메인), Pages 배포 도메인, 또는 사이트 내부 경로(https)만 허용됩니다.'), status: 400 }
+  }
   const link_text = body.link_text != null && String(body.link_text).trim() !== '' ? String(body.link_text).trim() : null
   const priority = Math.max(0, parseInt(String(body.priority ?? 0), 10) || 0)
   const display_type = String(body.display_type || 'modal').trim() || 'modal'

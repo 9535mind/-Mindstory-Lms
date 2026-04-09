@@ -28,15 +28,15 @@ const HUB_VALID_PANELS = new Set([
 
 const PANEL_TO_GROUP = {
   dashboard: 'ops',
-  'edu-dashboard': 'edu',
+  'edu-dashboard': 'edu-courses',
   members: 'ops',
   b2b: 'ops',
   enrollments: 'ops',
   payments: 'ops',
-  courses: 'edu',
-  videos: 'edu',
-  certificates: 'edu',
-  instructors: 'edu',
+  courses: 'edu-courses',
+  videos: 'edu-courses',
+  instructors: 'edu-courses',
+  certificates: 'edu-academic',
   publishing: 'pub',
   'pub-dashboard': 'pub',
   isbn: 'pub',
@@ -45,7 +45,7 @@ const PANEL_TO_GROUP = {
   'sys-dashboard': 'sys',
   popups: 'sys',
   settings: 'sys',
-  'offline-meetups': 'edu',
+  'offline-meetups': 'edu-academic',
 }
 
 let hubUserPage = 1
@@ -1024,7 +1024,18 @@ function applyHashRoute() {
   if (panel) panel.classList.remove('hidden')
 
   if (tab === 'members') loadUsers()
-  if (tab === 'edu-dashboard') loadEduDashboard()
+  if (tab === 'edu-dashboard') {
+    loadEduDashboard()
+    try {
+      const sid = sessionStorage.getItem('hubEduScroll')
+      if (sid) {
+        sessionStorage.removeItem('hubEduScroll')
+        setTimeout(() => document.getElementById(sid)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120)
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  }
   if (tab === 'pub-dashboard') loadPubDashboard()
   if (tab === 'sys-dashboard') loadSysDashboard()
   if (tab === 'courses') loadCourses()

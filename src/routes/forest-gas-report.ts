@@ -1,11 +1,12 @@
 /**
  * GET /api/forest-gas-report?id=REQUEST_ID
- * 브라우저 → 동일 출처 → Worker → Google Apps Script doGet (?view=report&id=)
- * (script.google.com 직접 fetch 는 CORS 로 실패할 수 있어 프록시 필요)
+ * 브라우저 → Worker → Google Apps Script doGet (?view=report&id=)
+ * 본인 소유(request_id → user_id) 또는 관리자만 GAS 프록시 허용.
  */
 
 import { Hono } from 'hono'
 import type { Bindings } from '../types/database'
+import { getCurrentUser } from '../utils/helpers'
 
 const forestGasReport = new Hono<{ Bindings: Bindings }>()
 
@@ -14,6 +15,49 @@ forestGasReport.get('/', async (c) => {
   if (!id) {
     return c.json({ success: false, error: 'id is required' }, 400)
   }
+
+  const user = await getCurrentUser(c)
+  if (!user) {
+    return c.json(
+      {
+        success: false,
+        error: 'login_required',
+        message: '로그인이 필요합니다.',
+      },
+      401,
+    )
+  }
+
+  const uid = Number(user.id)
+  const isAdmin = user.role === 'admin'
+  const { DB } = c.env
+
+  if (!isAdmin) {
+    if (!DB) {
+      return c.json({ success: false, error: 'DB unavailable', message: 'DB unavailable' }, 503)
+    }
+    let row: { user_id: number | null } | null = null
+    try {
+      row = (await DB.prepare(
+        `SELECT user_id FROM forest_group_results WHERE request_id = ? LIMIT 1`,
+      )
+        .bind(id)
+        .first()) as { user_id: number | null } | null
+    } catch (e) {
+      console.warn('[forest-gas-report] ownership lookup', e)
+    }
+    if (!row || row.user_id == null || Number(row.user_id) !== uid) {
+      return c.json(
+        {
+          success: false,
+          error: 'forbidden',
+          message: '본인이 진행한 검사 보고서만 열람할 수 있습니다.',
+        },
+        403,
+      )
+    }
+  }
+
   const base = (c.env.FOREST_GAS_WEBHOOK_URL || '').trim()
   if (!base) {
     return c.json({ success: false, error: 'FOREST_GAS_WEBHOOK_URL not configured' }, 503)
@@ -30,13 +74,13 @@ forestGasReport.get('/', async (c) => {
     const res = await fetch(url.toString(), {
       method: 'GET',
       redirect: 'follow',
-      headers: { Accept: 'application/json,text/plain,*/*' }
+      headers: { Accept: 'application/json,text/plain,*/*' },
     })
     const text = await res.text()
     if (!res.ok) {
       return c.json(
         { success: false, error: 'upstream', status: res.status, body: text.slice(0, 500) },
-        502
+        502,
       )
     }
     let parsed: unknown

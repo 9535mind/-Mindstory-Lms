@@ -2280,15 +2280,14 @@
             const densityBars = this.buildJttDensityBarsSvg(density);
             const meanRadarBlock =
                 met && met.mean
-                    ? `<div class="flex flex-col items-center justify-start w-full">
+                    ? `<div class="flex flex-col items-center justify-start w-full min-h-[min(260px,80vw)]">
                         <p class="text-[10px] font-black text-[#2D4A3E] tracking-[0.14em] mb-3 text-center">축별 정규화 평균 · 편차</p>
-                        <div class="w-full flex justify-center overflow-x-auto">${this.buildJttNormMeanRadarSvg(met.mean)}</div>
+                        <div class="w-full flex justify-center overflow-x-auto py-1">${this.buildJttNormMeanRadarSvg(met.mean)}</div>
                     </div>`
-                    : `<div class="flex flex-col items-center justify-center min-h-[min(240px,55vw)] w-full">
+                    : `<div class="flex flex-col items-center justify-center min-h-[min(280px,85vw)] w-full">
                         <p class="text-[10px] font-black text-[#2D4A3E] tracking-[0.14em] mb-3 text-center">우리 반 전체의 기질 에너지 분포 (%)</p>
-                        <div class="flex justify-center w-full">${this.buildRadarSvg(percentByAxis)}</div>
+                        <div class="flex justify-center w-full [&_svg]:max-w-[min(100%,320px)] [&_svg]:h-auto">${this.buildRadarSvg(percentByAxis)}</div>
                     </div>`;
-            const kpiHtml = met && Number.isFinite(met.balance) ? this.buildJttMetricsKpiHtml(met) : '';
             const maxO = Math.max(1, ...rankedTemperaments.map((r) => r.score));
             const rankRows = rankedTemperaments
                 .map(
@@ -2304,10 +2303,8 @@
                 </li>`
                 )
                 .join('');
-            const propRadar = this.buildRadarSvg(percentByAxis);
             const atmosphere = MS.dominantInterpretationLineForCat(domCat);
             const ageLine = tg === 'elementary' ? '초등부 · 집단 응답 합산' : '유아·유치부 · 집단 응답 합산';
-            const hasNormRadar = !!(met && met.mean);
             return `
                 <section id="ms-report-inline-radar" class="mb-8 md:mb-10 text-left rounded-[1.85rem] border border-[#2D4A3E]/12 bg-gradient-to-b from-[#FDFBF7] via-white to-[rgba(45,74,62,0.03)] p-6 md:px-8 md:py-9 shadow-[0_14px_44px_rgba(45,74,62,0.09)] scroll-mt-4" aria-label="학급·집단 기질 프로필">
                     <header class="mb-6 md:mb-8 pb-5 border-b border-[rgba(45,74,62,0.1)]">
@@ -2317,31 +2314,21 @@
                             검사 인원 <strong class="text-[#2D4A3E]">${nQ1}</strong>명 (Q1 △+□) · ${this.esc(ageLine)} · 네 축의 <strong class="text-[#2D4A3E]">에너지 밀도</strong>와 <strong class="text-[#2D4A3E]">대표 성향</strong>을 한 번에 봅니다.
                         </p>
                     </header>
-                    <div class="grid md:grid-cols-2 gap-8 md:gap-10 items-start">
-                        <div class="rounded-2xl border border-[rgba(45,74,62,0.1)] bg-white/85 p-4 md:p-5 shadow-sm">
-                            <p class="text-[10px] font-black text-[#2D4A3E] tracking-[0.16em] mb-4 text-center md:text-left">에너지 밀도 (%)</p>
-                            <div class="flex justify-center md:justify-start overflow-x-auto">${densityBars}</div>
+                    <div class="grid grid-cols-1 gap-6 md:gap-8 items-stretch">
+                        <div class="rounded-2xl border border-[rgba(45,74,62,0.1)] bg-white/85 p-4 md:p-5 shadow-sm w-full">
+                            <p class="text-[10px] font-black text-[#2D4A3E] tracking-[0.16em] mb-4 text-center">에너지 밀도 (%)</p>
+                            <div class="flex justify-center overflow-x-auto w-full">${densityBars}</div>
                         </div>
-                        <div class="rounded-2xl border border-[rgba(45,74,62,0.1)] bg-white/85 p-4 md:p-5 shadow-sm min-h-[200px]">
+                        <div class="rounded-2xl border border-[rgba(45,74,62,0.1)] bg-white/85 p-4 md:p-5 shadow-sm w-full min-h-[220px]">
                             ${meanRadarBlock}
                         </div>
                     </div>
-                    ${kpiHtml || ''}
-                    <div class="grid ${hasNormRadar ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6 md:gap-8 mt-8 md:mt-10 pt-8 border-t border-[rgba(45,74,62,0.1)]">
-                        <div class="rounded-2xl border border-[rgba(45,74,62,0.12)] bg-white/90 p-5 md:p-6 shadow-sm ${hasNormRadar ? '' : 'md:max-w-xl md:mx-auto w-full'}">
+                    <div class="grid grid-cols-1 gap-6 md:gap-8 mt-8 md:mt-10 pt-8 border-t border-[rgba(45,74,62,0.1)]">
+                        <div class="rounded-2xl border border-[rgba(45,74,62,0.12)] bg-white/90 p-5 md:p-6 shadow-sm w-full">
                             <h4 class="text-xs font-black text-[#2D4A3E] text-center mb-1 tracking-wide">기질 분포도 (축별 비중)</h4>
                             <p class="text-[10px] text-ms-muted text-center mb-4 leading-relaxed">우세 순위 · 응답이 모인 계절 축</p>
                             <ol class="list-none m-0 p-0 space-y-2.5">${rankRows}</ol>
                         </div>
-                        ${
-                            hasNormRadar
-                                ? `<div class="rounded-2xl border border-[rgba(45,74,62,0.12)] bg-white/90 p-5 md:p-6 shadow-sm">
-                            <h4 class="text-xs font-black text-[#2D4A3E] text-center mb-1 tracking-wide">대표 성향 레이더</h4>
-                            <p class="text-[10px] text-ms-muted text-center mb-4 leading-relaxed">우리 반 전체의 기질 에너지 분포 (%)</p>
-                            <div class="flex justify-center overflow-x-auto overflow-y-visible py-1 -mx-1 min-h-[min(260px,58vw)] items-center">${propRadar}</div>
-                        </div>`
-                                : ''
-                        }
                     </div>
                     <div class="mt-8 rounded-2xl border border-[#2D4A3E]/14 bg-gradient-to-br from-[rgba(253,251,247,0.98)] via-white to-[rgba(45,74,62,0.025)] p-6 md:p-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
                         <h4 class="text-[11px] font-black text-[#2D4A3E] tracking-[0.14em] mb-3 text-center">집단 에너지 색채 (Center Atmosphere)</h4>
@@ -4254,9 +4241,13 @@
             el.innerHTML = `
                 <div class="max-w-lg mx-auto pt-1 flex flex-col min-h-0">
                     <div class="mb-3 flex items-center justify-between gap-2 print-hidden">
-                        <button type="button" class="text-sm font-bold text-[#2D4A3E] hover:underline py-1.5 px-2 -ml-2 rounded-xl bg-transparent border-0 cursor-pointer"
-                            onclick="MS.goSetup()">← 뒤로</button>
-                        <button type="button" class="text-[11px] text-ms-muted underline ms-btn px-2 py-1.5" onclick="MS.goDashboard()">대시보드</button>
+                        <div class="flex items-center gap-1 sm:gap-2 min-w-0 shrink">
+                            <button type="button" class="text-sm font-bold text-[#2D4A3E] hover:underline py-1.5 px-2 -ml-2 rounded-xl bg-transparent border-0 cursor-pointer"
+                                onclick="MS.goSetup()">← 뒤로</button>
+                            <button type="button" class="text-xs sm:text-sm font-bold text-[#B45309] hover:text-[#92400E] hover:underline py-1.5 px-2 rounded-xl bg-transparent border border-[#D4A373]/45 cursor-pointer whitespace-nowrap"
+                                onclick="MS.resetForestTallyInputs()" aria-label="모든 문항 인원 입력 초기화">리셋</button>
+                        </div>
+                        <button type="button" class="text-[11px] text-ms-muted underline ms-btn px-2 py-1.5 shrink-0" onclick="MS.goDashboard()">대시보드</button>
                     </div>
                     <div class="mb-3 text-center px-1 print-hidden shrink-0">
                         <p class="text-sm font-black text-[#2D4A3E] leading-snug">📍 ${name}${groupPart}</p>
@@ -6344,10 +6335,34 @@
             }
         },
 
-        /** 동일 출처 Worker 프록시(/api/forest-gas-report) → GAS doGet. 실패 시 GAS 직접(디버그). */
+        /** 보고서 딥링크 열람 전 로그인 필수 — 미로그인 시 로그인 후 복귀 */
+        async ensureForestLoggedInForReport() {
+            try {
+                const r = await fetch('/api/auth/me', { credentials: 'same-origin', cache: 'no-store' });
+                const j = await r.json().catch(function () {
+                    return {};
+                });
+                if (r.ok && j && j.success && j.data) return true;
+            } catch (_) {
+                /* ignore */
+            }
+            try {
+                const back = encodeURIComponent(location.pathname + location.search + (location.hash || ''));
+                window.location.href = '/login?redirect=' + back;
+            } catch (_) {
+                window.location.href = '/login';
+            }
+            return false;
+        },
+
+        /**
+         * 동일 출처 Worker 프록시(/api/forest-gas-report) → GAS doGet.
+         * 본인 소유·관리자만 서버가 프록시(브라우저에서 GAS 직접 호출은 하지 않음).
+         * @returns {{ snapshot: object|null, error: null|'login_required'|'forbidden' }}
+         */
         fetchForestReportSnapshotById(rid) {
             const id = String(rid || '').trim();
-            if (!id) return Promise.resolve(null);
+            if (!id) return Promise.resolve({ snapshot: null, error: null });
 
             function parseSnapshotJson(j) {
                 if (!j || typeof j !== 'object') return null;
@@ -6362,47 +6377,31 @@
             return fetch(proxyUrl, { method: 'GET', mode: 'same-origin', cache: 'no-cache', credentials: 'same-origin' })
                 .then(function (r) {
                     return r.text().then(function (raw) {
-                        if (!raw || !String(raw).trim()) return null;
+                        if (r.status === 401) {
+                            try {
+                                const back = encodeURIComponent(location.pathname + location.search + (location.hash || ''));
+                                window.location.href = '/login?redirect=' + back;
+                            } catch (_) {
+                                window.location.href = '/login';
+                            }
+                            return { snapshot: null, error: 'login_required' };
+                        }
+                        if (r.status === 403) {
+                            return { snapshot: null, error: 'forbidden' };
+                        }
+                        if (!raw || !String(raw).trim()) return { snapshot: null, error: null };
                         let j = null;
                         try {
                             j = JSON.parse(raw);
                         } catch (_) {
-                            return null;
+                            return { snapshot: null, error: null };
                         }
-                        if (!r.ok) return null;
-                        return parseSnapshotJson(j);
+                        if (!r.ok) return { snapshot: null, error: null };
+                        return { snapshot: parseSnapshotJson(j), error: null };
                     });
                 })
-                .then(function (snap) {
-                    if (snap) return snap;
-                    const base = String(FOREST_SHEETS_WEBHOOK_URL || '').trim();
-                    if (!base) return Promise.resolve(null);
-                    let url;
-                    try {
-                        url = new URL(base);
-                        url.searchParams.set('id', id);
-                        url.searchParams.set('view', 'report');
-                    } catch (_) {
-                        return Promise.resolve(null);
-                    }
-                    return fetch(url.toString(), { method: 'GET', mode: 'cors', cache: 'no-cache', credentials: 'omit' })
-                        .then(function (r) {
-                            if (!r.ok) return null;
-                            return r.text();
-                        })
-                        .then(function (raw) {
-                            if (!raw || !String(raw).trim()) return null;
-                            let j = null;
-                            try {
-                                j = JSON.parse(raw);
-                            } catch (_) {
-                                return null;
-                            }
-                            return parseSnapshotJson(j);
-                        });
-                })
                 .catch(function () {
-                    return null;
+                    return { snapshot: null, error: null };
                 });
         },
 
@@ -6415,6 +6414,8 @@
                     MS.stripForestReportQueryParams();
                     return false;
                 }
+                const loggedIn = await MS.ensureForestLoggedInForReport();
+                if (!loggedIn) return false;
                 let snap = null;
                 try {
                     const raw = localStorage.getItem(LS_FOREST_REPORT_PREFIX + rid);
@@ -6422,13 +6423,26 @@
                 } catch (_) {
                     snap = null;
                 }
-                if (!snap) snap = await MS.fetchForestReportSnapshotById(rid);
+                if (!snap) {
+                    const out = await MS.fetchForestReportSnapshotById(rid);
+                    if (out && out.error === 'login_required') return false;
+                    if (out && out.error === 'forbidden') {
+                        try {
+                            alert('본인이 진행한 검사 보고서만 열람할 수 있습니다.');
+                        } catch (_) {
+                            /* ignore */
+                        }
+                        MS.stripForestReportQueryParams();
+                        return false;
+                    }
+                    snap = out && out.snapshot ? out.snapshot : null;
+                }
                 if (!snap) {
                     try {
                         alert(
                             '이 링크에 해당하는 보고서 데이터를 찾을 수 없습니다.\n\n' +
-                                '· 전송 직후 동일 브라우저: 로컬에 스냅샷이 있으면 열립니다.\n' +
-                                '· 그 외: 서버(/api/forest-gas-report) → GAS doGet 이 ForestReports 시트에서 requestId 를 찾아야 합니다. Apps Script 에 scripts/gas-forest-report-webapp.gs 를 배포했는지 확인하세요.\n\n' +
+                                '· 서버에 본인 계정으로 저장된 검사와 requestId가 일치하는지 확인하세요.\n' +
+                                '· 구글 시트(GAS) 연동이 설정된 경우 관리자에게 문의하세요.\n\n' +
                                 'requestId: ' +
                                 rid
                         );
@@ -7096,6 +7110,7 @@
                 inst.lastReportRequestId = requestId;
                 STATE.persist();
                 payload = {
+                    request_id: requestId,
                     instType: typeForSheet,
                     institute: nameForSheet,
                     stage: observation_stage,
@@ -7224,6 +7239,15 @@
                     }
                 }
                 if (!r.ok) {
+                    if (r.status === 401) {
+                        try {
+                            const back = encodeURIComponent(location.pathname + location.search + (location.hash || ''));
+                            window.location.href = '/login?redirect=' + back;
+                        } catch (_) {
+                            window.location.href = '/login';
+                        }
+                        return;
+                    }
                     let detail = 'HTTP ' + r.status;
                     if (data && (data.message || data.error)) detail = String(data.message || data.error);
                     else if (rawText && rawText.length < 240) detail = rawText.slice(0, 240);
@@ -8695,6 +8719,31 @@
                 STATE.setupTypeOverride = null;
             }
             STATE.setupObsPhase = STATE.observationStage;
+            STATE.persist();
+            UI.render();
+        },
+        /** 검사 입력 화면: 현재 기록의 모든 문항 △·□ 인원 초기화(이전 세션 잔여값 제거) */
+        resetForestTallyInputs() {
+            const inst = STATE.selected();
+            if (!inst) return;
+            if (!confirm('모든 문항의 △·□ 인원을 지울까요?')) return;
+            STATE.ensureCounts(inst);
+            const tg =
+                typeof MS.resolveForestTargetGroup === 'function'
+                    ? MS.resolveForestTargetGroup(inst)
+                    : SCHEMA.getTargetGroup(inst);
+            SCHEMA.questionsForGroup(tg).forEach((q) => {
+                inst.counts[q.id] = { yes: '', no: '' };
+            });
+            for (let i = 1; i <= 8; i++) {
+                const k = 'q' + i;
+                if (inst.counts[k]) inst.counts[k] = { yes: '', no: '' };
+            }
+            try {
+                inst.updatedAt = new Date().toISOString();
+            } catch (_) {
+                /* ignore */
+            }
             STATE.persist();
             UI.render();
         },

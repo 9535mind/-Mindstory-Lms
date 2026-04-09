@@ -1,17 +1,22 @@
 /**
- * POST /api/forest-results — JTT-Kinder(어린이 4계절 Temperament TEST) 집단 결과(기관·반, 점수 JSON) D1 저장
- * 인증 없음(공개 도구); 레이트 리밋은 index에서 적용.
+ * POST /api/forest-results — JTT-Kinder 집단 결과 D1 저장 (로그인 필수, request_id·user_id 기록)
+ * GET  /api/forest-results/:id — 단건 조회 (본인 또는 관리자)
  */
 
 import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
 import type { Bindings } from '../types/database'
+import { getCurrentUser } from '../utils/helpers'
+import { requireAuth } from '../middleware/auth'
 
 const MAX_SCORES_BYTES = 512 * 1024
+const MAX_REQUEST_ID_LEN = 200
 
 const forestResults = new Hono<{ Bindings: Bindings }>()
 
-forestResults.post('/', async (c) => {
+forestResults.post('/', requireAuth, async (c) => {
   const { DB } = c.env
+  const user = c.get('user') as { id: number; role?: string }
   if (!DB) {
     return c.json({ success: false, error: 'DB unavailable', message: 'DB unavailable' }, 503)
   }
@@ -28,11 +33,22 @@ forestResults.post('/', async (c) => {
   }
 
   const b = body as Record<string, unknown>
+  const request_id = String(b.request_id ?? '').trim()
+  if (!request_id) {
+    return c.json(
+      { success: false, error: 'request_id is required', message: 'request_id is required' },
+      400,
+    )
+  }
+  if (request_id.length > MAX_REQUEST_ID_LEN) {
+    return c.json({ success: false, error: 'request_id too long', message: 'request_id too long' }, 400)
+  }
+
   const institution_name = String(b.institution_name ?? '').trim()
   if (!institution_name) {
     return c.json(
       { success: false, error: 'institution_name is required', message: 'institution_name is required' },
-      400
+      400,
     )
   }
   if (institution_name.length > 300) {
@@ -68,7 +84,7 @@ forestResults.post('/', async (c) => {
   } catch {
     return c.json(
       { success: false, error: 'scores must be JSON-serializable', message: 'scores must be JSON-serializable' },
-      400
+      400,
     )
   }
   if (scoresJson.length > MAX_SCORES_BYTES) {
@@ -77,23 +93,66 @@ forestResults.post('/', async (c) => {
 
   const id = crypto.randomUUID()
   const created_at = new Date().toISOString()
+  const ownerId = Number(user.id)
 
   try {
     await DB.prepare(
-      `INSERT INTO forest_group_results (id, institution_name, group_name, test_type, scores, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO forest_group_results (id, institution_name, group_name, test_type, scores, created_at, user_id, request_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-      .bind(id, institution_name, group_name, test_type, scoresJson, created_at)
+      .bind(id, institution_name, group_name, test_type, scoresJson, created_at, ownerId, request_id)
       .run()
-  } catch (e) {
+  } catch (e: unknown) {
+    const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : ''
+    if (/UNIQUE constraint failed|constraint failed/i.test(msg)) {
+      return c.json(
+        { success: false, error: 'duplicate_request_id', message: '이미 등록된 보고서 요청 ID입니다.' },
+        409,
+      )
+    }
     console.error('[forest-results] insert', e)
-    return c.json(
-      { success: false, error: 'Failed to save', message: 'Failed to save' },
-      500
-    )
+    return c.json({ success: false, error: 'Failed to save', message: 'Failed to save' }, 500)
   }
 
   return c.json({ success: true, id, created_at })
+})
+
+forestResults.get('/:id', requireAuth, async (c) => {
+  const { DB } = c.env
+  const user = c.get('user') as { id: number; role?: string }
+  const rowId = (c.req.param('id') || '').trim()
+  if (!rowId) {
+    return c.json({ success: false, error: 'id is required', message: 'id is required' }, 400)
+  }
+  if (!DB) {
+    return c.json({ success: false, error: 'DB unavailable', message: 'DB unavailable' }, 503)
+  }
+
+  let row: Record<string, unknown> | null = null
+  try {
+    row = (await DB.prepare(
+      `SELECT id, institution_name, group_name, test_type, scores, created_at, user_id, request_id
+       FROM forest_group_results WHERE id = ?`,
+    )
+      .bind(rowId)
+      .first()) as Record<string, unknown> | null
+  } catch (e) {
+    console.error('[forest-results] get', e)
+    return c.json({ success: false, error: 'lookup failed', message: 'lookup failed' }, 500)
+  }
+
+  if (!row) {
+    return c.json({ success: false, error: 'not_found', message: '결과를 찾을 수 없습니다.' }, 404)
+  }
+
+  const uid = Number(user.id)
+  const ownerId = row.user_id != null ? Number(row.user_id) : NaN
+  const isAdmin = user.role === 'admin'
+  if (!isAdmin && (Number.isNaN(ownerId) || ownerId !== uid)) {
+    return c.json({ success: false, error: 'forbidden', message: '본인 검사 결과만 열람할 수 있습니다.' }, 403)
+  }
+
+  return c.json({ success: true, data: row })
 })
 
 export default forestResults
