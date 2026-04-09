@@ -120,6 +120,7 @@ export interface Course {
   /** 1이면 DALL·E 등 AI로 생성된 대표 이미지 */
   thumbnail_image_ai?: number;
   course_type: 'general' | 'certificate' | 'test';
+  /** 수강 유효 일수 — DB 컬럼명은 `duration_days` (migrations/0003_add_course_details.sql). 미적용 DB는 API에서 컬럼 생략 처리 */
   duration_days: number;
   total_lessons: number;
   total_duration_minutes: number;

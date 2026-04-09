@@ -68,6 +68,76 @@ async function assertInstructorExistsOrSkip(
   }
 }
 
+/** SQLite: `no such column: duration_days` 또는 INSERT 시 `table … has no column named duration_days` */
+function isNoSuchColumnDurationDays(err: unknown): boolean {
+  const m = String(err instanceof Error ? err.message : err)
+  return (
+    /no such column[^:]*:\s*duration_days/i.test(m) ||
+    /has no column named\s+['"]?duration_days['"]?/i.test(m)
+  )
+}
+
+/** duration_days 컬럼 없는 레거시 DB용 (스키마상 정식 컬럼명은 duration_days) */
+async function insertCourseRowWithoutDurationColumn(
+  DB: D1Database,
+  params: {
+    title: string
+    descriptionText: string
+    thumbForInsert: string | null
+    instructorId: number | null
+    status: string
+    regular_price: number
+    sale_price: number | null
+    discount_price: number | null
+    certificateId: number | null
+    validityUnlimited: number
+    categoryGroup: string
+    scheduleInfo: string | null
+    difficulty: string
+    priceRemarks: string | null
+  },
+): Promise<{ meta: { last_row_id?: number | bigint | null } }> {
+  const cols = [
+    'title',
+    'description',
+    'thumbnail_url',
+    'instructor_id',
+    'status',
+    'price',
+    'sale_price',
+    'discount_price',
+    'certificate_id',
+    'validity_unlimited',
+    'category_group',
+    'schedule_info',
+    'offline_info',
+    'difficulty',
+    'regular_price',
+    'price_remarks',
+  ] as const
+  const binds = [
+    params.title,
+    params.descriptionText,
+    params.thumbForInsert,
+    params.instructorId,
+    params.status,
+    params.regular_price,
+    params.sale_price,
+    params.discount_price,
+    params.certificateId,
+    params.validityUnlimited,
+    params.categoryGroup,
+    params.scheduleInfo,
+    params.scheduleInfo,
+    params.difficulty,
+    params.regular_price,
+    params.priceRemarks,
+  ]
+  const placeholders = cols.map(() => '?').join(', ')
+  const sql = `INSERT INTO courses (${cols.join(', ')}, created_at, updated_at) VALUES (${placeholders}, datetime('now'), datetime('now'))`
+  return await DB.prepare(sql).bind(...binds).run()
+}
+
 async function insertCourseRow(
   DB: D1Database,
   params: {
@@ -1297,23 +1367,51 @@ admin.post('/courses', requireAdmin, async (c) => {
       return c.json(errorResponse('허용되지 않는 상태입니다'), 400)
     }
 
-    const result = await insertCourseRow(DB, {
-      title: String(title),
-      descriptionText,
-      thumbForInsert,
-      instructorId,
-      status: statusNorm.value,
-      regular_price,
-      sale_price,
-      discount_price,
-      certificateId,
-      durationDays,
-      validityUnlimited,
-      categoryGroup,
-      scheduleInfo,
-      difficulty,
-      priceRemarks,
-    })
+    let coursesHasDurationDaysColumn = true
+    try {
+      await DB.prepare(`SELECT duration_days FROM courses LIMIT 1`).first()
+    } catch (e) {
+      if (isNoSuchColumnDurationDays(e)) coursesHasDurationDaysColumn = false
+      else throw e
+    }
+
+    let result: { meta: { last_row_id?: number | bigint | null } }
+    if (coursesHasDurationDaysColumn) {
+      result = await insertCourseRow(DB, {
+        title: String(title),
+        descriptionText,
+        thumbForInsert,
+        instructorId,
+        status: statusNorm.value,
+        regular_price,
+        sale_price,
+        discount_price,
+        certificateId,
+        durationDays,
+        validityUnlimited,
+        categoryGroup,
+        scheduleInfo,
+        difficulty,
+        priceRemarks,
+      })
+    } else {
+      result = await insertCourseRowWithoutDurationColumn(DB, {
+        title: String(title),
+        descriptionText,
+        thumbForInsert,
+        instructorId,
+        status: statusNorm.value,
+        regular_price,
+        sale_price,
+        discount_price,
+        certificateId,
+        validityUnlimited,
+        categoryGroup,
+        scheduleInfo,
+        difficulty,
+        priceRemarks,
+      })
+    }
 
     const newId = Number(result.meta.last_row_id ?? 0)
 
@@ -1565,10 +1663,21 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
       thumbnail_image_ai: number | null
     }
 
+    let coursesHasDurationDaysColumn = true
+    try {
+      await DB.prepare(`SELECT duration_days FROM courses LIMIT 1`).first()
+    } catch (e) {
+      if (isNoSuchColumnDurationDays(e)) coursesHasDurationDaysColumn = false
+      else throw e
+    }
+
+    const durationSelectExpr = coursesHasDurationDaysColumn ? 'duration_days' : '90 AS duration_days'
     const sqlPutBase = `SELECT title, description, thumbnail_url, status, price, sale_price,
-              instructor_id, certificate_id, duration_days, validity_unlimited,
+              instructor_id, certificate_id, ${durationSelectExpr}, validity_unlimited,
               category_group, schedule_info, difficulty,
               COALESCE(regular_price, price) AS regular_price, price_remarks`
+
+    const durSetLine = coursesHasDurationDaysColumn ? 'duration_days = ?,\n        ' : ''
 
     let existing: CoursePutRow | null
     try {
@@ -1736,7 +1845,7 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
       discount_price,
       instructorId,
       certificateId,
-      durationDays,
+      ...(coursesHasDurationDaysColumn ? [durationDays] : []),
       validityUnlimited,
       categoryGroup,
       scheduleInfo,
@@ -1761,8 +1870,7 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
         discount_price = ?,
         instructor_id = ?,
         certificate_id = ?,
-        duration_days = ?,
-        validity_unlimited = ?,
+        ${durSetLine}validity_unlimited = ?,
         category_group = ?,
         schedule_info = ?,
         offline_info = ?,
@@ -1790,8 +1898,7 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
         discount_price = ?,
         instructor_id = ?,
         certificate_id = ?,
-        duration_days = ?,
-        validity_unlimited = ?,
+        ${durSetLine}validity_unlimited = ?,
         category_group = ?,
         schedule_info = ?,
         difficulty = ?,
@@ -1811,7 +1918,7 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
               discount_price,
               instructorId,
               certificateId,
-              durationDays,
+              ...(coursesHasDurationDaysColumn ? [durationDays] : []),
               validityUnlimited,
               categoryGroup,
               scheduleInfo,
@@ -1836,8 +1943,7 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
         discount_price = ?,
         instructor_id = ?,
         certificate_id = ?,
-        duration_days = ?,
-        validity_unlimited = ?,
+        ${durSetLine}validity_unlimited = ?,
         category_group = ?,
         schedule_info = ?,
         difficulty = ?,
@@ -1856,7 +1962,7 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
               discount_price,
               instructorId,
               certificateId,
-              durationDays,
+              ...(coursesHasDurationDaysColumn ? [durationDays] : []),
               validityUnlimited,
               categoryGroup,
               scheduleInfo,
@@ -1882,8 +1988,7 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
         discount_price = ?,
         instructor_id = ?,
         certificate_id = ?,
-        duration_days = ?,
-        validity_unlimited = ?,
+        ${durSetLine}validity_unlimited = ?,
         category_group = ?,
         schedule_info = ?,
         offline_info = ?,
@@ -1903,7 +2008,7 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
               discount_price,
               instructorId,
               certificateId,
-              durationDays,
+              ...(coursesHasDurationDaysColumn ? [durationDays] : []),
               validityUnlimited,
               categoryGroup,
               scheduleInfo,
@@ -1928,8 +2033,7 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
         discount_price = ?,
         instructor_id = ?,
         certificate_id = ?,
-        duration_days = ?,
-        validity_unlimited = ?,
+        ${durSetLine}validity_unlimited = ?,
         category_group = ?,
         schedule_info = ?,
         difficulty = ?,
@@ -1948,7 +2052,7 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
               discount_price,
               instructorId,
               certificateId,
-              durationDays,
+              ...(coursesHasDurationDaysColumn ? [durationDays] : []),
               validityUnlimited,
               categoryGroup,
               scheduleInfo,
