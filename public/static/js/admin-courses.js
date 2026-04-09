@@ -562,9 +562,24 @@ async function handleSubmit(e) {
     DEBUG(' API 응답:', response);
 
     if (response.success) {
-      alert(courseId ? '강좌가 수정되었습니다.' : '강좌가 등록되었습니다.');
       closeCourseModal();
-      await loadCourses();
+      if (courseId) {
+        if (typeof showToast === 'function') {
+          showToast('✅ 강좌 정보가 수정되었습니다.', 'success');
+        } else {
+          alert('✅ 강좌 정보가 수정되었습니다.');
+        }
+        await loadCourses();
+      } else {
+        const msg =
+          '🎉 강좌가 성공적으로 개설되었습니다!\n지금 바로 해당 강좌의 차시(영상)를 등록하시겠습니까?';
+        const goVideos = typeof window !== 'undefined' && window.confirm(msg);
+        if (goVideos) {
+          window.location.href = '/admin/dashboard#videos';
+        } else {
+          await loadCourses();
+        }
+      }
     } else {
       DEBUG.error(' 저장 실패:', response.error);
       showError(response.error || '저장에 실패했습니다.');

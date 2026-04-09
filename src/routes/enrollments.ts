@@ -119,19 +119,52 @@ enrollments.post('/', requireAuth, async (c) => {
     const { DB } = c.env
 
     // ② 강좌 존재 여부 및 상태 확인
-    const course = await DB.prepare(`
-      SELECT id, title, status, price
-      FROM courses 
-      WHERE id = ?
-    `).bind(courseId).first<{
+    let course: {
       id: number
       title: string
       status: string
       price: number
-    }>()
+      deleted_at?: string | null
+    } | null = null
+    try {
+      course = await DB.prepare(`
+      SELECT id, title, status, price, deleted_at
+      FROM courses 
+      WHERE id = ?
+    `)
+        .bind(courseId)
+        .first<{
+          id: number
+          title: string
+          status: string
+          price: number
+          deleted_at?: string | null
+        }>()
+    } catch (e) {
+      const m = String(e instanceof Error ? e.message : e)
+      if (!/no such column.*deleted_at/i.test(m)) throw e
+      course = await DB.prepare(`
+      SELECT id, title, status, price
+      FROM courses 
+      WHERE id = ?
+    `)
+        .bind(courseId)
+        .first<{
+          id: number
+          title: string
+          status: string
+          price: number
+        }>()
+    }
 
     if (!course) {
       return c.json(errorResponse('강좌를 찾을 수 없습니다.'), 404)
+    }
+
+    const trashed =
+      course.deleted_at != null && String(course.deleted_at).trim() !== ''
+    if (trashed) {
+      return c.json(errorResponse('현재 수강 신청이 불가능한 강좌입니다.'), 400)
     }
 
     // ③ 강좌 상태 확인 (published만 가능)

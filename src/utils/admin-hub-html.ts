@@ -1395,9 +1395,15 @@ export function adminHubPageHtml(): string {
   <!-- 강좌 편집 모달 -->
   <div id="courseModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-5xl w-full max-h-[92vh] overflow-y-auto shadow-2xl">
-      <div class="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-        <h3 class="text-lg font-bold text-slate-800" id="courseModalTitle">강좌 편집</h3>
-        <button type="button" class="text-slate-500 hover:text-slate-800 text-2xl" onclick="closeCourseModal()">&times;</button>
+      <div class="p-4 border-b flex flex-wrap justify-between items-center gap-2 sticky top-0 bg-white z-10">
+        <h3 class="text-lg font-bold text-slate-800 shrink min-w-0" id="courseModalTitle">강좌 편집</h3>
+        <div class="flex items-center gap-3 ml-auto">
+          <label id="hubCourseModalPublishWrap" class="hidden items-center gap-2 cursor-pointer select-none shrink-0">
+            <span class="text-sm text-slate-600 whitespace-nowrap">카탈로그 공개</span>
+            <input type="checkbox" id="hubCoursePublishToggle" class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-indigo-500" aria-label="강좌 공개 여부">
+          </label>
+          <button type="button" class="text-slate-500 hover:text-slate-800 text-2xl leading-none" onclick="closeCourseModal()" aria-label="닫기">&times;</button>
+        </div>
       </div>
       <div class="border-b flex flex-wrap gap-1 px-4 pt-2">
         <button type="button" id="courseTabInfo" class="tab-btn px-4 py-2 rounded-t-lg font-medium text-indigo-600 border-b-2 border-indigo-600">기본 정보</button>
@@ -1414,6 +1420,26 @@ export function adminHubPageHtml(): string {
         <p class="text-sm text-slate-600 mb-3">이 강좌에 접수된 <strong>오프라인 모임 신청</strong> 목록입니다. 저장된 강좌에서만 조회됩니다.</p>
         <div id="courseMeetupListMount" class="text-sm text-slate-500">강좌를 불러오는 중…</div>
       </div>
+    </div>
+  </div>
+
+  <!-- 강좌 삭제 방식 선택 -->
+  <div id="hubCourseDeleteModal" class="fixed inset-0 z-[56] hidden items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="hubCourseDeleteModalTitle" onclick="if (event.target === this) hubCloseCourseDeleteModal()">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200" onclick="event.stopPropagation()">
+      <h4 id="hubCourseDeleteModalTitle" class="text-lg font-bold text-slate-900">강좌 삭제</h4>
+      <p class="text-sm text-slate-600 mt-2">삭제 방식을 선택하세요. 휴지통은 DB에 기록을 남깁니다.</p>
+      <div class="mt-4 space-y-2">
+        <button type="button" class="w-full text-left rounded-lg border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50" onclick="hubConfirmCourseDelete(false)">
+          안전 삭제 (휴지통)
+        </button>
+        <button type="button" class="w-full text-left rounded-lg border border-red-200 bg-red-50/80 px-4 py-3 text-sm font-medium text-red-900 hover:bg-red-100" onclick="hubConfirmCourseDelete(true)">
+          영구 삭제 (DB에서 행 삭제)
+        </button>
+      </div>
+      <p class="text-xs text-red-800 mt-3 leading-relaxed bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+        수강생 기록이 있는 강좌는 영구 삭제 시 시스템 오류가 발생할 수 있습니다. 테스트용 빈 강좌에만 사용하세요.
+      </p>
+      <button type="button" class="mt-4 w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50" onclick="hubCloseCourseDeleteModal()">취소</button>
     </div>
   </div>
 
@@ -1479,7 +1505,7 @@ ${adminHubEntityDetailPanelHtml()}
   <script src="/static/js/admin-status-labels.js?v=20260402-course-status-3way"></script>
   <script src="/static/js/admin-hub-member-panel.js?v=20260330-members-page"></script>
   <script src="/static/js/admin-hub-entity-panel.js?v=20260330-hub-pillars"></script>
-  <script src="/static/js/admin-hub.js?v=20260402-course-status-3way"></script>
+  <script src="/static/js/admin-hub.js?v=20260409-cert-catalog-36-issuers"></script>
   <script src="/static/js/admin-isbn.js"></script>
   <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
 </body>

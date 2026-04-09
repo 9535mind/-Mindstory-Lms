@@ -48,6 +48,7 @@ app.get('/courses/:id', async (c) => {
         <script src="https://cdn.iamport.kr/js/iamport.payment-1.2.0.js"></script>
         <script src="/static/js/auth.js?v=20260329-admin-name"></script>
         <script src="/static/js/utils.js${STATIC_JS_CACHE_QUERY}"></script>
+        <script src="/static/js/certificate-enrollment-popup.js${STATIC_JS_CACHE_QUERY}"></script>
         <script src="/static/js/content-protection.js${STATIC_JS_CACHE_QUERY}"></script>
         ${siteHeaderNavCoursesGlassStyles()}
         ${siteFloatingQuickMenuStyles()}
@@ -193,6 +194,36 @@ app.get('/courses/:id', async (c) => {
                     </div>
                 </div>
             </div>
+
+            <!-- 민간자격 표시의무 (강좌에 자격증 연결 시에만 표시) -->
+            <section id="courseCertificateLegalSection" class="hidden mb-8" aria-labelledby="courseCertificateLegalHeading">
+                <div class="bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden">
+                    <h2 id="courseCertificateLegalHeading" class="px-6 py-4 text-lg font-bold text-gray-900 border-b border-slate-200 bg-slate-50">
+                        자격증 정보 및 표시의무 고지
+                    </h2>
+                    <div class="overflow-x-auto p-4">
+                        <table class="min-w-full text-sm text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-800">
+                                    <th class="border border-slate-200 px-3 py-2 font-semibold whitespace-nowrap">자격명</th>
+                                    <th class="border border-slate-200 px-3 py-2 font-semibold whitespace-nowrap">자격의 종류</th>
+                                    <th class="border border-slate-200 px-3 py-2 font-semibold whitespace-nowrap">등록번호</th>
+                                    <th class="border border-slate-200 px-3 py-2 font-semibold whitespace-nowrap">발급기관</th>
+                                    <th class="border border-slate-200 px-3 py-2 font-semibold whitespace-nowrap">총비용</th>
+                                    <th class="border border-slate-200 px-3 py-2 font-semibold whitespace-nowrap">세부비용</th>
+                                    <th class="border border-slate-200 px-3 py-2 font-semibold whitespace-nowrap">환불규정</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr id="courseCertificateLegalRow"></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="px-6 pb-6 text-sm font-semibold text-indigo-900 leading-relaxed border-t border-slate-100 pt-4 bg-indigo-50/40">
+                        상기 자격은 자격기본법 규정에 따라 등록한 민간자격으로, 국가로부터 인정받은 공인자격이 아닙니다.
+                    </p>
+                </div>
+            </section>
         </main>
 
         <footer class="bg-gray-900 text-white border-t border-gray-800">
@@ -237,6 +268,32 @@ app.get('/courses/:id', async (c) => {
             let enrollment = null;
             let detailUser = null;
             let hasPaidAccessFlag = false;
+            let certificateEnrollmentGuide = null;
+
+            function courseDetailEscHtml(s) {
+                return String(s == null ? '' : s)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+
+            function renderCourseCertificateLegal(cc) {
+                var sec = document.getElementById('courseCertificateLegalSection');
+                var row = document.getElementById('courseCertificateLegalRow');
+                if (!sec || !row) return;
+                if (!cc || typeof cc !== 'object') {
+                    sec.classList.add('hidden');
+                    row.innerHTML = '';
+                    return;
+                }
+                var keys = ['name', 'type', 'registration_number', 'issuer_name', 'cost_total', 'cost_details', 'refund_policy'];
+                row.innerHTML = keys.map(function (k) {
+                    return '<td class="border border-slate-200 px-3 py-2 align-top text-gray-800">' +
+                        courseDetailEscHtml(cc[k]) + '</td>';
+                }).join('');
+                sec.classList.remove('hidden');
+            }
 
             // 페이지 로드 시 초기화
             document.addEventListener('DOMContentLoaded', async () => {
@@ -268,6 +325,7 @@ app.get('/courses/:id', async (c) => {
                     courseData = response.data.course;
                     enrollment = response.data.enrollment;
                     hasPaidAccessFlag = response.data.has_paid_access === true;
+                    certificateEnrollmentGuide = response.data.certificate_enrollment_guide || null;
                     const hasPaidAccess = hasPaidAccessFlag;
                     const isAdmin = detailUser && detailUser.role === 'admin';
 
@@ -364,6 +422,8 @@ app.get('/courses/:id', async (c) => {
                     } else if (meetupSec) {
                         meetupSec.classList.add('hidden');
                     }
+
+                    renderCourseCertificateLegal(courseData.certificate_catalog);
 
                 } catch (error) {
                     console.error('강좌 로드 에러:', error);
@@ -522,36 +582,52 @@ app.get('/courses/:id', async (c) => {
                     return;
                 }
 
-                if (!confirm('이 강좌를 수강 신청하시겠습니까?')) {
+                const finalPrice = (courseData.discount_price != null && courseData.discount_price > 0)
+                    ? courseData.discount_price
+                    : (courseData.price || 0);
+
+                function goCheckout() {
+                    window.location.href = '/payment/checkout/' + courseId;
+                }
+
+                if (finalPrice > 0) {
+                    if (certificateEnrollmentGuide && typeof openCertificateEnrollmentModal === 'function') {
+                        openCertificateEnrollmentModal(certificateEnrollmentGuide, goCheckout);
+                    } else {
+                        goCheckout();
+                    }
                     return;
                 }
 
-                try {
-                    const response = await apiRequest('POST', \`/api/enrollments\`, {
-                        courseId: courseId
-                    });
-
-                    if (response.success) {
-                        alert('수강 신청이 완료되었습니다!');
-                        location.reload();
-                    } else {
-                        showError(response.error || '수강 신청에 실패했습니다.');
+                async function doFreeEnroll() {
+                    try {
+                        const response = await apiRequest('POST', \`/api/enrollments\`, {
+                            courseId: courseId
+                        });
+                        if (response.success) {
+                            alert('수강 신청이 완료되었습니다!');
+                            location.reload();
+                        } else {
+                            showError(response.error || '수강 신청에 실패했습니다.');
+                        }
+                    } catch (error) {
+                        console.error('수강 신청 에러:', error);
+                        showError('수강 신청 중 오류가 발생했습니다.');
                     }
-                } catch (error) {
-                    console.error('수강 신청 에러:', error);
-                    showError('수강 신청 중 오류가 발생했습니다.');
+                }
+
+                if (certificateEnrollmentGuide && typeof openCertificateEnrollmentModal === 'function') {
+                    openCertificateEnrollmentModal(certificateEnrollmentGuide, doFreeEnroll);
+                } else {
+                    if (!confirm('이 강좌를 수강 신청하시겠습니까?')) {
+                        return;
+                    }
+                    await doFreeEnroll();
                 }
             }
 
             // PortOne(아임포트) — 강의 구매
-            async function handleBuyCourse() {
-                const user = await getCurrentUser();
-                if (!user) {
-                    if (confirm('로그인이 필요합니다. 로그인 페이지로 이동할까요?')) {
-                        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
-                    }
-                    return;
-                }
+            async function runPortoneCoursePay() {
                 if (typeof IMP === 'undefined') {
                     alert('결제 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');
                     return;
@@ -602,6 +678,21 @@ app.get('/courses/:id', async (c) => {
                 } catch (e) {
                     console.error(e);
                     alert('결제를 시작할 수 없습니다.');
+                }
+            }
+
+            async function handleBuyCourse() {
+                const user = await getCurrentUser();
+                if (!user) {
+                    if (confirm('로그인이 필요합니다. 로그인 페이지로 이동할까요?')) {
+                        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+                    }
+                    return;
+                }
+                if (certificateEnrollmentGuide && typeof openCertificateEnrollmentModal === 'function') {
+                    openCertificateEnrollmentModal(certificateEnrollmentGuide, runPortoneCoursePay);
+                } else {
+                    await runPortoneCoursePay();
                 }
             }
 

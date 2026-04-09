@@ -22,8 +22,11 @@ let hasPaidAccess = false;
 // 진도 저장용 상태
 let lastProgressSentAtMs = 0;
 let lastPositionSeconds = 0;
+/** pagehide/beforeunload 등 1회만 연결 */
+let progressUnloadGuardsWired = false;
 
-const PROGRESS_UPDATE_INTERVAL = 5000; // 5초마다 진도 업데이트
+/** 서버 부하 최소화: 하트비트 최소 60초 (이벤트 기반 즉시 저장은 별도) */
+const PROGRESS_HEARTBEAT_MS = 60000;
 
 if (typeof axios !== 'undefined') {
     axios.defaults.withCredentials = true;
@@ -31,6 +34,94 @@ if (typeof axios !== 'undefined') {
         cfg.withCredentials = true;
         return cfg;
     });
+}
+
+function canSyncProgress() {
+    if (learnPlayerIsAdmin) return false;
+    if (!currentLesson || !enrollmentData) return false;
+    return true;
+}
+
+/**
+ * 현재 플레이어 기준 재생 위치·길이(초). iframe(api.video 등)은 차시 메타 길이만 사용.
+ */
+function getPlaybackSnapshot() {
+    if (!currentLesson) return { currentTime: 0, duration: 0 };
+    if (player && typeof player.getCurrentTime === 'function' && typeof player.getDuration === 'function') {
+        var d = player.getDuration() || 0;
+        return {
+            currentTime: Math.floor(player.getCurrentTime() || 0),
+            duration: Math.floor(d > 0 ? d : 0),
+        };
+    }
+    if (player && player.tagName === 'VIDEO') {
+        var d2 = player.duration && !isNaN(player.duration) && player.duration > 0 ? player.duration : 0;
+        return {
+            currentTime: Math.floor(player.currentTime || 0),
+            duration: Math.floor(d2),
+        };
+    }
+    var fallback = Math.max(0, Math.floor((currentLesson.video_duration_minutes || 0) * 60));
+    return { currentTime: 0, duration: fallback };
+}
+
+function setupProgressUnloadGuards() {
+    if (progressUnloadGuardsWired) return;
+    progressUnloadGuardsWired = true;
+    window.addEventListener('pagehide', function () {
+        flushLessonProgressBeacon('pagehide');
+    });
+    window.addEventListener('beforeunload', function () {
+        flushLessonProgressBeacon('beforeunload');
+    });
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') {
+            flushLessonProgressBeacon('visibility');
+        }
+    });
+}
+
+/** 탭 종료·백그라운드 — sendBeacon 또는 fetch keepalive */
+function flushLessonProgressBeacon(reason) {
+    if (!canSyncProgress() || !currentLesson) return;
+    try {
+        var snap = getPlaybackSnapshot();
+        var now = Date.now();
+        var secondsDelta = Math.max(0, Math.floor((now - (lastProgressSentAtMs || now)) / 1000));
+        var positionSeconds = Math.max(0, Math.floor(snap.currentTime));
+        var positionDelta = Math.max(0, positionSeconds - (lastPositionSeconds || 0));
+        var watchDelta = Math.max(0, Math.min(positionDelta, secondsDelta + 2));
+        var pct =
+            snap.duration > 0
+                ? Math.min(
+                      100,
+                      Math.round((Math.min(positionSeconds, snap.duration) / snap.duration) * 100),
+                  )
+                : 0;
+        var payload = JSON.stringify({
+            watched_seconds: positionSeconds,
+            total_seconds: snap.duration,
+            watch_time_seconds: watchDelta,
+            watch_percentage: pct,
+        });
+        var url =
+            (typeof location !== 'undefined' ? location.origin : '') +
+            '/api/progress/lessons/' +
+            currentLesson.id;
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(url, new Blob([payload], { type: 'application/json' }));
+        } else {
+            fetch('/api/progress/lessons/' + currentLesson.id, {
+                method: 'POST',
+                body: payload,
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                keepalive: true,
+            });
+        }
+    } catch (e) {
+        /* ignore */
+    }
 }
 
 // courseId는 HTML에서 window.COURSE_ID로 전달됨
@@ -177,7 +268,17 @@ async function loadLessons() {
             lessons = [];
         }
         
-        lessonsData = lessons;
+        lessonsData = lessons.map(function (l) {
+            var p = l.progress;
+            var pct = p ? p.watch_percentage || 0 : 0;
+            var done =
+                (p && (p.is_completed === 1 || p.is_completed === true)) ||
+                l.completed === true;
+            return Object.assign({}, l, {
+                progress_percent: pct,
+                completed: !!done,
+            });
+        });
         console.log(`✅ Loaded ${lessonsData.length} lessons`);
         
         // 차시가 없으면 안내 메시지 표시
@@ -239,19 +340,35 @@ function renderLessonList() {
     container.innerHTML = lessonsData.map(lesson => {
         const isActive = currentLesson && currentLesson.id === lesson.id;
         const isCompleted = lesson.completed;
+        const pctRaw = lesson.progress_percent != null ? lesson.progress_percent : 0;
+        const pct = Math.max(0, Math.min(100, Math.round(Number(pctRaw) || 0)));
         const prevBadge = lessonIsPreview(lesson)
             ? '<span class="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200/80">✨맛보기</span>'
+            : '';
+        const doneBadge = isCompleted
+            ? '<span class="ml-2 inline-flex items-center text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full shrink-0">✅ 완료</span>'
+            : '';
+        const bar = !isCompleted
+            ? `<div class="mt-2 pr-1">
+                <div class="flex justify-between text-[10px] text-gray-500 mb-0.5">
+                  <span>진도</span><span>${pct}%</span>
+                </div>
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div class="h-full bg-purple-500 rounded-full transition-[width] duration-300" style="width:${pct}%"></div>
+                </div>
+              </div>`
             : '';
         
         return `
             <div class="lesson-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} p-4 border-b cursor-pointer hover:bg-gray-50"
                  onclick="loadLesson(${lesson.id})">
-                <div class="flex justify-between items-start">
-                    <div class="flex-1">
-                        <h3 class="lesson-title text-sm font-medium text-gray-900">
-                            ${lesson.lesson_number}. ${lesson.title}${prevBadge}
+                <div class="flex justify-between items-start gap-2">
+                    <div class="flex-1 min-w-0">
+                        <h3 class="lesson-title text-sm font-medium text-gray-900 flex flex-wrap items-center">
+                            ${lesson.lesson_number}. ${lesson.title}${prevBadge}${doneBadge}
                         </h3>
                         ${lesson.video_duration_minutes ? `<p class="text-xs text-gray-500 mt-1">${lesson.video_duration_minutes}분</p>` : ''}
+                        ${bar}
                     </div>
                     ${isCompleted ? '<i class="fas fa-check-circle text-green-500"></i>' : ''}
                 </div>
@@ -416,11 +533,16 @@ async function loadVideoPlayer(lesson) {
     }
     
     try {
-        // 영상 제공자 확인 (video_provider 또는 video_type 사용)
-        const provider = lesson.video_provider || lesson.video_type || 'youtube';
-        console.log('🎬 Video provider:', provider, '(from video_provider:', lesson.video_provider, ', video_type:', lesson.video_type, ')');
-        
-        if (provider === 'youtube') {
+        const vtRaw = String(lesson.video_type || '').toUpperCase();
+        if (vtRaw === 'R2' || vtRaw === 'UPLOAD') {
+            console.log('▶️ Loading HTML5 / R2 video');
+            await loadHtml5VideoPlayer(lesson);
+            return;
+        }
+        const provider = String(lesson.video_provider || lesson.video_type || 'youtube').toLowerCase();
+        console.log('🎬 Video provider:', provider, '(video_provider:', lesson.video_provider, ', video_type:', lesson.video_type, ')');
+
+        if (provider === 'youtube' || vtRaw === 'YOUTUBE') {
             console.log('▶️ Loading YouTube player');
             await loadYouTubePlayer(lesson);
         } else if (provider === 'apivideo' || provider === 'api.video') {
@@ -451,6 +573,39 @@ async function loadVideoPlayer(lesson) {
             </div>
         `;
     }
+}
+
+/**
+ * R2 등 직접 URL — HTML5 video
+ */
+async function loadHtml5VideoPlayer(lesson) {
+    const container = document.getElementById('videoPlayer');
+    if (!container) return;
+    const src = String(lesson.video_url || '').trim();
+    if (!src || src.startsWith('#')) {
+        container.innerHTML =
+            '<div class="text-center p-12 bg-gray-900 rounded-lg"><p class="text-white">등록된 영상 URL이 없습니다. 관리자에게 문의하세요.</p></div>';
+        player = null;
+        return;
+    }
+    container.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'relative w-full bg-black rounded-lg overflow-hidden';
+    const video = document.createElement('video');
+    video.className = 'w-full h-auto max-h-[min(70vh,640px)] bg-black';
+    video.controls = true;
+    video.playsInline = true;
+    video.preload = 'metadata';
+    video.src = src;
+    player = video;
+    video.addEventListener('ended', () => {
+        markLessonCompleted();
+    });
+    video.addEventListener('pause', () => {
+        void flushLessonProgressSync('html5-pause');
+    });
+    wrap.appendChild(video);
+    container.appendChild(wrap);
 }
 
 /**
@@ -577,6 +732,11 @@ function onYouTubePlayerStateChange(event) {
     if (event.data === YT.PlayerState.ENDED) {
         console.log('🏁 YouTube video ended');
         markLessonCompleted();
+        return;
+    }
+    // YT.PlayerState.PAUSED === 2 (API 로드 전에도 동작)
+    if (event.data === 2) {
+        void flushLessonProgressSync('youtube-pause');
     }
 }
 
@@ -724,72 +884,73 @@ async function loadApiVideoPlayer(lesson) {
 }
 
 /**
- * 진도율 추적 시작 (임시 비활성화 - API 미구현)
+ * 진도율 추적 시작 — 60초 하트비트 + 이탈 시 보초(Beacon)
  */
 function startProgressTracking() {
     stopProgressTracking();
     // 관리자는 서버에서 진도 기록을 스킵하므로 호출해도 무방하지만,
     // 불필요한 트래픽을 줄이기 위해 클라이언트도 스킵한다.
     if (learnPlayerIsAdmin) return;
+    setupProgressUnloadGuards();
     lastProgressSentAtMs = Date.now();
     lastPositionSeconds = 0;
     progressUpdateInterval = setInterval(() => {
-        updateProgress().catch(err => {
-            console.error('❌ Progress tracking error:', err);
-        });
-    }, PROGRESS_UPDATE_INTERVAL);
+        if (document.visibilityState === 'visible') {
+            updateProgress().catch(function (err) {
+                console.error('❌ Progress tracking error:', err);
+            });
+        }
+    }, PROGRESS_HEARTBEAT_MS);
 }
 
 /**
- * 진도율 추적 중지
+ * 진도율 추적 중지 (차시 전환 전 마지막 위치 동기화)
  */
 function stopProgressTracking() {
+    void flushLessonProgressSync('lesson-switch');
     if (progressUpdateInterval) {
         clearInterval(progressUpdateInterval);
         progressUpdateInterval = null;
     }
 }
 
+/** 일시정지·차시 전환 등 — axios 즉시 저장 */
+async function flushLessonProgressSync(reason) {
+    if (!canSyncProgress()) return;
+    try {
+        await updateProgress();
+    } catch (e) {
+        /* ignore */
+    }
+}
+
 /**
- * 진도율 업데이트
+ * 진도율 업데이트 (서버가 80% 이상 시 자동 완료 처리)
  */
 async function updateProgress() {
     if (!currentLesson || !player) return;
+    if (!canSyncProgress()) return;
 
     try {
-        let currentTime = 0;
-        let duration = 1;
-        let watchPercentage = 0;
+        const snap = getPlaybackSnapshot();
+        var duration = snap.duration > 0 ? snap.duration : 1;
+        var positionSeconds = Math.max(0, Math.floor(snap.currentTime));
+        var watchPercentage =
+            snap.duration > 0
+                ? Math.min(100, Math.round((Math.min(positionSeconds, snap.duration) / snap.duration) * 100))
+                : 0;
 
-        // YouTube player
-        if (player.getCurrentTime && player.getDuration) {
-            currentTime = player.getCurrentTime();
-            duration = player.getDuration();
-            watchPercentage = Math.round((currentTime / duration) * 100);
-        } else {
-            // api.video - estimate from duration
-            duration = currentLesson.video_duration_minutes * 60;
-            currentTime = duration * 0.5;
-            watchPercentage = 50;
+        // iframe embed 등 — 메타 길이만 있을 때 과도한 진도율 방지
+        if (snap.duration <= 0 && currentLesson.video_duration_minutes) {
+            duration = Math.max(1, Math.floor((currentLesson.video_duration_minutes || 0) * 60));
+            watchPercentage = Math.min(watchPercentage, 99);
         }
 
-        // 서버에 진도율 전송 (임시 비활성화 - API 미구현)
-        // await axios.post('/api/progress/update', {
-        //     lesson_id: currentLesson.id,
-        //     watch_percentage: Math.min(watchPercentage, 100),
-        //     current_time: Math.floor(currentTime),
-        //     duration: Math.floor(duration)
-        // });
-
-        // UI 업데이트
         updateProgressUI(watchPercentage);
 
-        // 서버에 진도율 전송
         const now = Date.now();
         const secondsDelta = Math.max(0, Math.floor((now - (lastProgressSentAtMs || now)) / 1000));
-        const positionSeconds = Math.max(0, Math.floor(currentTime));
         const positionDelta = Math.max(0, positionSeconds - (lastPositionSeconds || 0));
-        // 플레이어 이벤트가 불안정한 환경에서는 시간을 더 보수적으로 잡는다.
         const watchTimeSeconds = Math.max(0, Math.min(positionDelta, secondsDelta + 2));
 
         lastProgressSentAtMs = now;
@@ -798,14 +959,22 @@ async function updateProgress() {
         await axios.post(
             `/api/progress/lessons/${currentLesson.id}`,
             {
+                watched_seconds: positionSeconds,
+                total_seconds: snap.duration > 0 ? snap.duration : Math.floor(duration),
+                watch_time_seconds: watchTimeSeconds,
                 watch_percentage: Math.min(watchPercentage, 100),
                 last_position_seconds: positionSeconds,
-                watch_time_seconds: watchTimeSeconds,
-                is_completed: 0
+                is_completed: 0,
             },
             { withCredentials: true }
         );
 
+        const lesson = lessonsData.find(l => l.id === currentLesson.id);
+        if (lesson && watchPercentage >= 80) {
+            lesson.progress_percent = Math.max(lesson.progress_percent || 0, watchPercentage);
+            lesson.completed = true;
+            renderLessonList();
+        }
     } catch (error) {
         // 진도 업데이트 에러는 UX를 깨지 않게 조용히 처리
     }
@@ -827,8 +996,7 @@ function updateProgressUI(percentage) {
 }
 
 /**
- * 차시 완료 마킹
- * TODO: lesson_progress 테이블 구현 후 활성화
+ * 차시 완료 마킹 (종료 시 100%·완료 플래그 저장)
  */
 async function markLessonCompleted() {
     if (!currentLesson) return;
@@ -836,12 +1004,16 @@ async function markLessonCompleted() {
     console.log('🎓 Lesson completed:', currentLesson.title);
     // 서버에 완료 기록 (관리자는 서버에서 스킵)
     try {
+        const snap = getPlaybackSnapshot();
+        const dur = Math.max(snap.duration, snap.currentTime, lastPositionSeconds || 0, 1);
         await axios.post(
             `/api/progress/lessons/${currentLesson.id}`,
             {
-                watch_percentage: 100,
-                last_position_seconds: Math.max(0, Math.floor(lastPositionSeconds || 0)),
+                watched_seconds: Math.floor(dur),
+                total_seconds: Math.floor(Math.max(snap.duration, dur)),
                 watch_time_seconds: 0,
+                watch_percentage: 100,
+                last_position_seconds: Math.floor(dur),
                 is_completed: 1
             },
             { withCredentials: true }
@@ -855,6 +1027,7 @@ async function markLessonCompleted() {
     const lesson = lessonsData.find(l => l.id === currentLesson.id);
     if (lesson) {
         lesson.completed = true;
+        lesson.progress_percent = 100;
         renderLessonList();
     }
 
@@ -903,34 +1076,6 @@ async function markLessonCompleted() {
         // 마지막 차시 완료
         alert('🎉 축하합니다! 모든 차시를 완료했습니다!');
     }
-    
-    /* API 호출 비활성화 (lesson_progress 테이블 구현 후 활성화)
-    try {
-        await axios.post('/api/progress/complete', {
-            lesson_id: currentLesson.id
-        });
-        
-        console.log('✅ Lesson marked as completed');
-        
-        // 차시 목록 업데이트
-        const lesson = lessonsData.find(l => l.id === currentLesson.id);
-        if (lesson) {
-            lesson.completed = true;
-            renderLessonList();
-        }
-        
-        // 다음 차시로 자동 이동 (선택사항)
-        const currentIndex = lessonsData.findIndex(l => l.id === currentLesson.id);
-        if (currentIndex >= 0 && currentIndex < lessonsData.length - 1) {
-            const nextLesson = lessonsData[currentIndex + 1];
-            if (confirm(`다음 차시 "${nextLesson.title}"로 이동하시겠습니까?`)) {
-                await loadLesson(nextLesson.id);
-            }
-        }
-    } catch (error) {
-        console.error('❌ Failed to mark lesson as completed:', error);
-    }
-    */
 }
 
 /**

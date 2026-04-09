@@ -564,6 +564,21 @@ function hubSelectOptionsHtml(items, selectedValue, placeholder) {
   return `<option value="">${escapeHtml(placeholder || '선택')}</option>${opts}`
 }
 
+/** 민간자격 카탈로그 — 첫 옵션 문구 고정, 라벨 [발급기관명] 자격증명 (등록번호) */
+function hubCertificateCatalogSelectOptionsHtml(items, selectedValue) {
+  const sel = String(selectedValue ?? '')
+  const opts = (items || [])
+    .map((it) => {
+      const id = String(it.id)
+      const issuer = String(it.issuer_name || '').trim() || '발급기관'
+      const num = String(it.registration_number || '').trim()
+      const label = '[' + issuer + '] ' + String(it.name || id) + ' (' + (num || '—') + ')'
+      return `<option value="${escapeAttr(id)}"${sel === id ? ' selected' : ''}>${escapeHtml(label)}</option>`
+    })
+    .join('')
+  return `<option value="">선택 안 함 (자격증 연관 없음)</option>${opts}`
+}
+
 function hubDifficultySelectOptions(selected) {
   const sel = String(selected || 'beginner')
   const rows = [
@@ -720,6 +735,14 @@ function wireCoursePricingInputs() {
 
 function hubCourseDescriptionSectionHtml(textareaBodyEscaped) {
   return (
+    '<div class="rounded-lg border-2 border-amber-400 bg-amber-50 p-3 mb-2 text-sm text-amber-950 shadow-sm">' +
+    '<p class="font-semibold mb-1.5">⚠️ [필독] 민간자격 홍보 시 과장광고 금지</p>' +
+    '<p class="text-xs font-medium text-amber-900 mb-1.5">국가자격 사칭·취업/수익 보장·근거 없는 최상급 수식어 표현을 사용하지 마세요.</p>' +
+    '<ul class="list-disc pl-5 space-y-0.5 text-xs leading-relaxed">' +
+    '<li>국가자격 사칭 금지 (\'국가공인\' 등 표현 불가)</li>' +
+    '<li>취업·수익 보장 등 단정적 표현 금지 (\'취업 100% 보장\' 등)</li>' +
+    '<li>근거 없는 최상급 수식어 금지 (\'국내 유일\' 등)</li>' +
+    '</ul></div>' +
     '<label class="block text-sm font-medium">설명</label>' +
     '<div id="hubCourseDescWrap" class="relative">' +
     '<textarea id="hubCourseDesc" rows="4" class="w-full border rounded px-3 py-2 relative z-10 bg-white">' +
@@ -831,10 +854,12 @@ async function hubSaveAllLessonDrafts(courseId) {
     const urlEl = document.getElementById('lesson-url-' + lessonId)
     const durEl = document.getElementById('lesson-dur-' + lessonId)
     const titleEl = document.getElementById('lesson-title-' + lessonId)
-    const video_url = urlEl?.value?.trim() ?? ''
+    const srcEl = document.querySelector('input[name="lesson-src-' + lessonId + '"]:checked')
+    const video_type = srcEl && srcEl.value === 'R2' ? 'R2' : 'YOUTUBE'
+    const video_url = video_type === 'YOUTUBE' ? String(urlEl?.value ?? '').trim() : String(urlEl?.value ?? '').trim()
     const duration_minutes = Math.max(0, parseInt(String(durEl?.value ?? '0'), 10) || 0)
     const title = titleEl?.value?.trim()
-    const payload = { video_url, duration_minutes }
+    const payload = { video_url, duration_minutes, video_type }
     if (title !== undefined && title !== '') payload.title = title
     const res = await apiRequest('PUT', `/api/courses/${courseId}/lessons/${lessonId}`, payload)
     if (!res.success) {
@@ -3244,9 +3269,11 @@ async function loadCourses() {
   tbody.innerHTML = res.data
     .map((c) => {
       const pub = courseIsPublic(c.status)
+      const trashed = c.deleted_at != null && String(c.deleted_at).trim() !== ''
       return `
-    <tr class="border-t border-slate-100">
+    <tr class="border-t border-slate-100${trashed ? ' bg-amber-50/40' : ''}">
       <td class="p-3">${escapeHtml(c.title)} <span class="text-xs text-slate-400">#${c.id}</span>
+        ${trashed ? '<span class="text-[10px] ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 align-middle">휴지통</span>' : ''}
         <span class="inline-flex flex-wrap items-center gap-0.5 align-middle">${hubCourseLineBadgesHtml(c.category_group)}</span></td>
       <td class="p-3 text-xs">${escapeHtml(hubAdminStatusKo(c.status))}</td>
       <td class="p-3 text-center">
@@ -3273,6 +3300,79 @@ window.toggleCoursePublic = async function (courseId, checked) {
   } else {
     showToast(res.error || '상태 변경 실패', 'error')
     loadCourses()
+  }
+}
+
+function hubHideCourseModalPublishToggle() {
+  const wrap = document.getElementById('hubCourseModalPublishWrap')
+  if (wrap) {
+    wrap.classList.add('hidden')
+    wrap.classList.remove('inline-flex')
+  }
+}
+
+function hubWireCourseModalPublishToggle(courseId, isPublished, deletedAt) {
+  const wrap = document.getElementById('hubCourseModalPublishWrap')
+  const toggle = document.getElementById('hubCoursePublishToggle')
+  if (!wrap || !toggle) return
+  const trashed = deletedAt != null && String(deletedAt).trim() !== ''
+  wrap.classList.remove('hidden')
+  wrap.classList.add('inline-flex')
+  toggle.checked = !!isPublished && !trashed
+  toggle.onchange = async function () {
+    const next = toggle.checked ? 'published' : 'inactive'
+    const res = await apiRequest('PATCH', '/api/admin/courses/' + courseId, { status: next })
+    if (res.success) {
+      showToast(next === 'published' ? '카탈로그에 공개했습니다.' : '카탈로그에서 내렸습니다.', 'success')
+      const sel = document.getElementById('hubCourseStatus')
+      if (sel) sel.value = next
+      if (window.hubCourseDraft) window.hubCourseDraft.status = next
+      loadCourses()
+    } else {
+      showToast(res.error || '상태 변경 실패', 'error')
+      toggle.checked = !toggle.checked
+    }
+  }
+}
+
+window.hubOpenCourseDeleteModal = function () {
+  if (currentCourseId == null) return
+  const m = document.getElementById('hubCourseDeleteModal')
+  if (m) {
+    m.classList.remove('hidden')
+    m.classList.add('flex')
+  }
+}
+
+window.hubCloseCourseDeleteModal = function () {
+  const m = document.getElementById('hubCourseDeleteModal')
+  if (m) {
+    m.classList.add('hidden')
+    m.classList.remove('flex')
+  }
+}
+
+window.hubConfirmCourseDelete = async function (hard) {
+  if (currentCourseId == null) return
+  if (hard) {
+    const ok = confirm(
+      '수강생 기록이 있는 강좌는 영구 삭제 시 시스템 오류가 발생할 수 있습니다.\n\n정말 DB에서 완전히 삭제할까요? (수강·주문 기록이 있으면 서버에서 거부됩니다.)',
+    )
+    if (!ok) return
+  } else {
+    if (!confirm('강좌를 휴지통으로 옮길까요? 기존 수강생은 내 강의실에서 계속 수강할 수 있습니다.')) return
+  }
+  const q = hard ? '?hard=true' : ''
+  const res = await apiRequest('DELETE', '/api/admin/courses/' + currentCourseId + q)
+  hubCloseCourseDeleteModal()
+  if (res.success) {
+    showToast(hard ? '영구 삭제되었습니다.' : '휴지통으로 옮겼습니다.', 'success')
+    closeCourseModal()
+    currentCourseId = null
+    courseModalLessons = []
+    await loadCourses()
+  } else {
+    showToast(res.error || '삭제 실패', 'error')
   }
 }
 
@@ -3373,6 +3473,7 @@ window.openHubNewCourseModal = async function () {
   if (frame) frame.src = 'about:blank'
   modal.classList.remove('hidden')
   modal.classList.add('flex')
+  hubHideCourseModalPublishToggle()
   info.innerHTML = `
     <div class="space-y-2">
       <label class="block text-sm font-medium">제목</label>
@@ -3388,7 +3489,7 @@ window.openHubNewCourseModal = async function () {
       </select>
       <label class="block text-sm font-medium">연관 자격증</label>
       <select id="hubCourseCertificateId" class="w-full border rounded px-3 py-2">
-        ${hubSelectOptionsHtml(options.certificate_types, '', '자격증 선택')}
+        ${hubCertificateCatalogSelectOptionsHtml(options.certificate_types, '')}
       </select>
       <label class="block text-sm font-medium">난이도</label>
       <select id="hubCourseDifficulty" class="w-full border rounded px-3 py-2">
@@ -3508,7 +3609,7 @@ window.openCourseModal = async function (courseId) {
       </select>
       <label class="block text-sm font-medium">연관 자격증</label>
       <select id="hubCourseCertificateId" class="w-full border rounded px-3 py-2">
-        ${hubSelectOptionsHtml(options.certificate_types, cr.certificate_id ?? '', '자격증 선택')}
+        ${hubCertificateCatalogSelectOptionsHtml(options.certificate_types, cr.certificate_id ?? '')}
       </select>
       <label class="block text-sm font-medium">난이도</label>
       <select id="hubCourseDifficulty" class="w-full border rounded px-3 py-2">
@@ -3549,6 +3650,15 @@ window.openCourseModal = async function (courseId) {
       <p class="text-xs text-slate-500 -mt-1 mb-1">입력 시 강좌 상세에 「오프라인 모임 신청하기」가 열립니다.</p>
       <textarea id="hubCourseScheduleInfo" rows="3" class="w-full border rounded px-3 py-2" placeholder="모임 일시·장소·안내 문구를 입력하세요.">${escapeHtml((cr.offline_info != null && String(cr.offline_info).trim() !== '' ? cr.offline_info : cr.schedule_info) || '')}</textarea>
       <button type="button" onclick="saveCourseBasics()" class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">저장</button>
+      ${
+        cr.deleted_at
+          ? '<p class="text-xs text-amber-900 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">휴지통(안전 삭제) 상태입니다. 상단 「카탈로그 공개」로 복구할 수 있습니다.</p>'
+          : ''
+      }
+      <div class="border-t border-slate-200 pt-4 mt-4 space-y-2">
+        <p class="text-xs text-slate-500">삭제 시 휴지통(안전 삭제) 또는 DB 영구 삭제를 선택합니다. 기존 수강생의 학습은 휴지통에서는 유지됩니다.</p>
+        <button type="button" onclick="hubOpenCourseDeleteModal()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium">삭제</button>
+      </div>
     </div>`
   wireHubCourseTitleAiBlur()
   wireCoursePricingInputs()
@@ -3556,6 +3666,10 @@ window.openCourseModal = async function (courseId) {
   hubEnsureCourseThumbPasteListener()
   if (window.hubCourseDraft && window.hubCourseDraft.thumbnail_image_ai == null) window.hubCourseDraft.thumbnail_image_ai = 0
   hubSyncCourseThumbAiHint()
+  {
+    const pub = String(cr.status || '').toLowerCase() === 'published'
+    hubWireCourseModalPublishToggle(courseId, pub, cr.deleted_at)
+  }
   const durationUnlimited = document.getElementById('hubCourseDurationUnlimited')
   const durationDays = document.getElementById('hubCourseDurationDays')
   if (durationUnlimited && durationDays) {
@@ -3676,12 +3790,35 @@ function setupCourseTabs() {
   void activate(0)
 }
 
+function hubLessonVideoSourceFromRow(l) {
+  const s = String(l.video_type || 'youtube').toLowerCase()
+  if (s === 'r2' || s === 'upload') return 'R2'
+  return 'YOUTUBE'
+}
+
+function hubWireLessonSourceRadios() {
+  courseModalLessons.forEach((l) => {
+    const id = l.id
+    const radios = document.querySelectorAll('input[name="lesson-src-' + id + '"]')
+    const sync = () => {
+      const checked = document.querySelector('input[name="lesson-src-' + id + '"]:checked')
+      const v = checked ? checked.value : 'YOUTUBE'
+      const pYt = document.getElementById('lesson-panel-yt-' + id)
+      const pR2 = document.getElementById('lesson-panel-r2-' + id)
+      if (pYt) pYt.classList.toggle('hidden', v !== 'YOUTUBE')
+      if (pR2) pR2.classList.toggle('hidden', v !== 'R2')
+    }
+    radios.forEach((r) => r.addEventListener('change', sync))
+    sync()
+  })
+}
+
 function renderLessonEditors(courseId) {
   const lessons = document.getElementById('courseTabPanelLessons')
   if (!lessons) return
   const toolbar =
     '<div class="flex flex-wrap items-center justify-between gap-2 mb-3">' +
-    '<p class="text-sm text-slate-600 max-w-xl">차시별 제목·영상 URL·학습 시간(분)을 입력하고, 필요 시 영상 파일을 올릴 수 있습니다. 강좌 <strong>저장</strong> 시 기본 정보와 차시가 함께 반영됩니다.</p>' +
+    '<p class="text-sm text-slate-600 max-w-xl">차시별 <strong>영상 소스</strong>(유튜브 또는 R2 직접 업로드)·제목·학습 시간을 입력합니다. 강좌 <strong>저장</strong> 시 기본 정보와 차시가 함께 반영됩니다.</p>' +
     '<button type="button" onclick="hubAddLesson()" class="shrink-0 text-sm bg-slate-700 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800">+ 차시 추가</button></div>' +
     '<p class="text-xs text-slate-500 mb-2"><button type="button" class="text-indigo-600 hover:underline" onclick="hubSaveLessonsOnly()">차시 변경만 저장</button></p>'
 
@@ -3695,6 +3832,9 @@ function renderLessonEditors(courseId) {
     courseModalLessons
       .map((l) => {
         const dur = hubLessonDurationDisplay(l)
+        const src = hubLessonVideoSourceFromRow(l)
+        const checkedYt = src === 'YOUTUBE' ? ' checked' : ''
+        const checkedR2 = src === 'R2' ? ' checked' : ''
         return (
           '<div class="border border-slate-200 rounded-lg p-3 mb-2" data-lesson-id="' +
           l.id +
@@ -3714,12 +3854,45 @@ function renderLessonEditors(courseId) {
           '" class="w-full border rounded px-2 py-1 text-sm mb-2" value="' +
           escapeAttr(l.title || '') +
           '">' +
-          '<label class="block text-xs text-slate-500 mb-0.5">영상 URL</label>' +
+          '<div class="mb-2"><span class="block text-xs font-medium text-slate-600 mb-1">영상 소스 선택</span>' +
+          '<div class="flex flex-wrap gap-4 text-sm">' +
+          '<label class="inline-flex items-center gap-2 cursor-pointer">' +
+          '<input type="radio" name="lesson-src-' +
+          l.id +
+          '" value="YOUTUBE"' +
+          checkedYt +
+          '> <span>🔗 유튜브 링크</span></label>' +
+          '<label class="inline-flex items-center gap-2 cursor-pointer">' +
+          '<input type="radio" name="lesson-src-' +
+          l.id +
+          '" value="R2"' +
+          checkedR2 +
+          '> <span>☁️ 직접 업로드 (R2)</span></label>' +
+          '</div></div>' +
+          '<label class="block text-xs text-slate-500 mb-0.5">재생 URL (유튜브 주소·ID 또는 R2 HTTPS URL)</label>' +
           '<input type="text" id="lesson-url-' +
           l.id +
           '" class="w-full border rounded px-2 py-1 text-sm mb-2" value="' +
           escapeAttr(l.video_url || '') +
-          '" placeholder="YouTube 또는 외부 영상 URL">' +
+          '" placeholder="유튜브: https://… 또는 11자 ID · R2: 업로드 후 자동 입력">' +
+          '<div id="lesson-panel-yt-' +
+          l.id +
+          '" class="' +
+          (src === 'R2' ? 'hidden ' : '') +
+          'text-xs text-slate-500 mb-2">유튜브 공개 영상 링크 또는 video ID를 입력하세요.</div>' +
+          '<div id="lesson-panel-r2-' +
+          l.id +
+          '" class="' +
+          (src === 'YOUTUBE' ? 'hidden ' : '') +
+          'space-y-2 mb-2">' +
+          '<p class="text-xs text-slate-500">아래에서 파일을 선택하면 R2에 업로드되며, 위 재생 URL 필드에 HTTPS 주소가 반영됩니다. (최대 500MB)</p>' +
+          '<label class="block text-xs text-slate-600">영상 파일' +
+          '<input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,.mp4,.webm,.mov,.avi,.m4v" class="block text-xs mt-1 w-full border rounded px-2 py-1 bg-white" onchange="hubUploadLessonVideo(' +
+          courseId +
+          ', ' +
+          l.id +
+          ', this)"></label>' +
+          '</div>' +
           '<label class="block text-xs text-slate-500 mb-0.5">학습 시간 (분)</label>' +
           '<input type="number" min="0" step="1" id="lesson-dur-' +
           l.id +
@@ -3727,12 +3900,6 @@ function renderLessonEditors(courseId) {
           dur +
           '">' +
           '<div class="flex flex-wrap items-center gap-2 mt-1">' +
-          '<label class="text-xs text-slate-600 flex-1 min-w-[12rem]">영상 파일 업로드' +
-          '<input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,.mp4,.webm,.mov,.avi" class="block text-xs mt-1 w-full" onchange="hubUploadLessonVideo(' +
-          courseId +
-          ', ' +
-          l.id +
-          ', this)"></label>' +
           '<button type="button" class="text-xs text-indigo-600 hover:underline shrink-0" onclick="saveLessonVideo(' +
           courseId +
           ', ' +
@@ -3741,6 +3908,7 @@ function renderLessonEditors(courseId) {
         )
       })
       .join('')
+  hubWireLessonSourceRadios()
 }
 
 window.hubAddLesson = async function () {
@@ -3752,6 +3920,7 @@ window.hubAddLesson = async function () {
     title: '차시 ' + next,
     description: '',
     video_url: null,
+    video_type: 'YOUTUBE',
     video_duration_minutes: 0,
     is_preview: 0,
   })
@@ -3799,7 +3968,17 @@ window.hubUploadLessonVideo = async function (courseId, lessonId, input) {
       }
     }
     if (response.ok && parsed && parsed.success) {
-      showToast(parsed.message || '영상 메타데이터가 반영되었습니다.', 'success')
+      showToast(parsed.message || '영상이 업로드되었습니다.', 'success')
+      const url = parsed.data && parsed.data.url ? String(parsed.data.url) : ''
+      if (url) {
+        const urlIn = document.getElementById('lesson-url-' + lessonId)
+        if (urlIn) urlIn.value = url
+        const r2 = document.querySelector('input[name="lesson-src-' + lessonId + '"][value="R2"]')
+        if (r2) {
+          r2.checked = true
+          r2.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+      }
       const durEl = document.getElementById('lesson-dur-' + lessonId)
       if (durEl && parsed.data && parsed.data.duration != null) durEl.value = String(parsed.data.duration)
       await reloadCourseModalLessons(courseId)
@@ -3825,14 +4004,62 @@ window.saveLessonVideo = async function (courseId, lessonId) {
   const urlEl = document.getElementById('lesson-url-' + lessonId)
   const durEl = document.getElementById('lesson-dur-' + lessonId)
   const titleEl = document.getElementById('lesson-title-' + lessonId)
+  const srcEl = document.querySelector('input[name="lesson-src-' + lessonId + '"]:checked')
+  const video_type = srcEl && srcEl.value === 'R2' ? 'R2' : 'YOUTUBE'
   const video_url = urlEl?.value?.trim() || ''
   const duration_minutes = Math.max(0, parseInt(String(durEl?.value ?? '0'), 10) || 0)
   const title = titleEl?.value?.trim()
-  const payload = { video_url, duration_minutes }
+  const payload = { video_url, duration_minutes, video_type }
   if (title) payload.title = title
   const res = await apiRequest('PUT', `/api/courses/${courseId}/lessons/${lessonId}`, payload)
   if (res.success) showToast('차시가 저장되었습니다.', 'success')
   else showToast(res.error || '저장 실패', 'error')
+}
+
+/** 신규 강좌 POST 성공 후 — 차시(영상) 등록 탭으로 갈지 확인 (모달 UI) */
+function hubShowCourseCreatedPostSuccessDialog() {
+  return new Promise((resolve) => {
+    const existing = document.getElementById('hubCoursePostSuccessDialog')
+    if (existing) existing.remove()
+    const wrap = document.createElement('div')
+    wrap.id = 'hubCoursePostSuccessDialog'
+    wrap.setAttribute('role', 'dialog')
+    wrap.setAttribute('aria-modal', 'true')
+    wrap.setAttribute('aria-labelledby', 'hubCoursePostSuccessTitle')
+    wrap.className = 'fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/60 p-4'
+    wrap.innerHTML =
+      '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-slate-200">' +
+      '<div id="hubCoursePostSuccessTitle" class="text-lg font-semibold text-slate-900">강좌 개설 완료</div>' +
+      '<p class="text-sm text-slate-600 whitespace-pre-line leading-relaxed">' +
+      '🎉 강좌가 성공적으로 개설되었습니다!\n지금 바로 해당 강좌의 차시(영상)를 등록하시겠습니까?' +
+      '</p>' +
+      '<div class="flex flex-wrap gap-2 justify-end pt-2">' +
+      '<button type="button" data-hub-post-cancel class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium">아니오</button>' +
+      '<button type="button" data-hub-post-ok class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 text-sm font-medium">네</button>' +
+      '</div></div>'
+    const onKey = (e) => {
+      if (e.key === 'Escape') finish(false)
+    }
+    const finish = (goVideos) => {
+      document.removeEventListener('keydown', onKey)
+      wrap.remove()
+      resolve(goVideos)
+    }
+    wrap.addEventListener('click', (e) => {
+      if (e.target === wrap) finish(false)
+    })
+    document.addEventListener('keydown', onKey)
+    const btnOk = wrap.querySelector('[data-hub-post-ok]')
+    const btnCancel = wrap.querySelector('[data-hub-post-cancel]')
+    if (btnOk) btnOk.addEventListener('click', () => finish(true))
+    if (btnCancel) btnCancel.addEventListener('click', () => finish(false))
+    document.body.appendChild(wrap)
+    try {
+      btnOk?.focus()
+    } catch (_) {
+      /* ignore */
+    }
+  })
 }
 
 window.saveCourseBasics = async function () {
@@ -3877,9 +4104,14 @@ window.saveCourseBasics = async function () {
     stripCoursePayloadDeadKeys(postBody)
     const res = await apiRequest('POST', '/api/admin/courses', postBody)
     if (res.success && res.data && res.data.id) {
-      showToast('강좌가 등록되었습니다. 차시·영상을 이어서 편집할 수 있습니다.', 'success')
-      loadCourses()
-      await openCourseModal(res.data.id)
+      closeCourseModal()
+      courseModalLessons = []
+      const goVideos = await hubShowCourseCreatedPostSuccessDialog()
+      if (goVideos) {
+        window.location.hash = 'videos'
+      } else {
+        await loadCourses()
+      }
     } else showToast(res.error || '등록 실패', 'error')
     return
   }
@@ -3908,18 +4140,21 @@ window.saveCourseBasics = async function () {
   const res = await apiRequest('PUT', '/api/admin/courses/' + currentCourseId, putBody)
   if (res.success) {
     const okLessons = await hubSaveAllLessonDrafts(currentCourseId)
-    loadCourses()
-    if (okLessons) {
-      showToast('기본 정보와 차시가 저장되었습니다.', 'success')
-      await reloadCourseModalLessons(currentCourseId)
-      refreshAdvancedLessonsFrame(currentCourseId)
-    } else {
-      showToast('강좌 기본 정보는 저장되었습니다. 차시 저장을 확인해 주세요.', 'warning')
+    if (!okLessons) {
+      showToast('강좌 기본 정보는 저장되었으나 차시 저장을 확인해 주세요.', 'warning')
+      loadCourses()
+      return
     }
+    showToast('✅ 강좌 정보가 수정되었습니다.', 'success')
+    closeCourseModal()
+    currentCourseId = null
+    courseModalLessons = []
+    await loadCourses()
   } else showToast(res.error || '실패', 'error')
 }
 
 window.closeCourseModal = function () {
+  if (typeof hubCloseCourseDeleteModal === 'function') hubCloseCourseDeleteModal()
   const modal = document.getElementById('courseModal')
   if (modal) {
     modal.classList.add('hidden')

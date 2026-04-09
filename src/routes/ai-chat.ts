@@ -12,6 +12,8 @@ import type { Bindings } from '../types/database'
 import { buildCourseScheduleContextBlock } from '../config/course-schedule'
 import { MINDSTORY_LMS_AI_GUIDE_SYSTEM, MINDSTORY_LMS_RAG_INTERNAL_SYSTEM } from '../utils/ai-chat-system-prompt'
 import { buildLmsFallbackSiteContext, retrieveLmsHybridContext } from '../utils/chat-rag-context'
+import { SQL_COURSE_CATALOG_VISIBLE } from '../utils/course-visibility'
+import { buildCertificateBenefitChatReply } from '../utils/certificate-enrollment-guide'
 
 const aiChat = new Hono<{ Bindings: Bindings }>()
 
@@ -50,7 +52,7 @@ function normalizeDisplayName(raw: string): string {
 
 function isCertificateQuestion(message: string): boolean {
   const q = (message || '').toLowerCase()
-  return /자격증|수료증|민간자격|공인\s*민간|국가\s*공인|자격기본법/.test(q)
+  return /자격증|어떤\s*자격|자격\s*받|수료증|민간자격|공인\s*민간|국가\s*공인|자격기본법/.test(q)
 }
 
 async function logAiChatOutcome(
@@ -104,8 +106,17 @@ aiChat.post('/chat', async (c) => {
   const displayName = normalizeDisplayName(userNameRaw)
   const historyIn = Array.isArray(body.history) ? body.history : []
 
-  // 자격증 관련 질문은 모호한 답변을 방지하기 위해 고정 가이드 우선 반환
+  // 자격증 관련 질문: 강좌·카탈로그 매칭 답변 → 없으면 고정 가이드
   if (isCertificateQuestion(userMessage)) {
+    try {
+      const matched = await buildCertificateBenefitChatReply(DB, userMessage)
+      if (matched) {
+        await logAiChatOutcome(DB, true, 'cert_course_match')
+        return c.json({ success: true, reply: matched })
+      }
+    } catch (e) {
+      console.warn('[ai-chat] certificate benefit match', e)
+    }
     const fixedReply =
       `${displayName}, 자격증 취득에 대해 명확히 안내해 드립니다.\n\n` +
       `마인드스토리의 공식 입장은 다음과 같습니다.\n` +
@@ -138,7 +149,7 @@ aiChat.post('/chat', async (c) => {
     const listed = await DB.prepare(
       `SELECT id, title, category_group, schedule_info, description,
               COALESCE(regular_price, price) AS price, sale_price
-       FROM courses WHERE LOWER(TRIM(COALESCE(status,''))) = 'published' ORDER BY id ASC LIMIT 250`
+       FROM courses WHERE ${SQL_COURSE_CATALOG_VISIBLE} ORDER BY id ASC LIMIT 250`
     ).all<{
       id: number
       title: string

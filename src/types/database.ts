@@ -120,7 +120,7 @@ export interface Course {
   /** 1이면 DALL·E 등 AI로 생성된 대표 이미지 */
   thumbnail_image_ai?: number;
   course_type: 'general' | 'certificate' | 'test';
-  /** 수강 유효 일수 — DB 컬럼명은 `duration_days` (migrations/0003_add_course_details.sql). 미적용 DB는 API에서 컬럼 생략 처리 */
+  /** 수강 유효 일수 — DB 컬럼명 `duration_days` (0003, 0060). 미적용 DB는 INSERT/UPDATE에서 생략·응답은 기본값 처리 */
   duration_days: number;
   total_lessons: number;
   total_duration_minutes: number;
@@ -164,6 +164,8 @@ export interface Course {
   /** 강사 프로필 이미지가 AI 생성인지 (1=AI) */
   instructor_profile_image_ai?: number | null;
   difficulty?: string | null;
+  /** 휴지통(soft delete) 시각 — 있으면 카탈로그에서 제외 */
+  deleted_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -197,6 +199,7 @@ export interface Lesson {
   video_provider?: string;
   video_id?: string;
   video_url?: string;
+  video_type?: 'YOUTUBE' | 'R2';
   video_duration_minutes?: number;
   document_url?: string;
   document_filename?: string;
@@ -219,6 +222,7 @@ export interface CreateLessonInput {
   video_provider?: string;
   video_id?: string;
   video_url?: string;
+  video_type?: 'YOUTUBE' | 'R2';
   video_duration_minutes?: number;
   /** 1이면 맛보기 공개 */
   is_preview?: number;

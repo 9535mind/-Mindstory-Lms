@@ -145,12 +145,13 @@ portone.post('/prepare', requireAuth, async (c) => {
       status: string
       price: number | null
       discount_price?: number | null
+      deleted_at?: string | null
     }
 
     let course: CourseRow | null = null
     try {
       course = await DB.prepare(
-        `SELECT id, title, status, price, discount_price FROM courses WHERE id = ?`,
+        `SELECT id, title, status, price, discount_price, deleted_at FROM courses WHERE id = ?`,
       )
         .bind(course_id)
         .first<CourseRow>()
@@ -160,7 +161,8 @@ portone.post('/prepare', requireAuth, async (c) => {
         .first<CourseRow>()
     }
 
-    if (!course || course.status !== 'published') {
+    const trashed = course && course.deleted_at != null && String(course.deleted_at).trim() !== ''
+    if (!course || course.status !== 'published' || trashed) {
       return c.json(errorResponse('강좌를 찾을 수 없거나 공개되지 않았습니다.'), 404)
     }
 

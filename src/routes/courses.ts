@@ -15,8 +15,42 @@ import {
   type CatalogLineKey,
 } from '../utils/catalog-lines'
 import { lessonPreviewFlagFromRow, normalizeLessonRowForApi } from '../utils/lesson-preview'
+import { normalizeLessonVideoType } from '../utils/lesson-video-type'
+import { SQL_COURSE_CATALOG_VISIBLE } from '../utils/course-visibility'
+import { buildCertificateEnrollmentGuide } from '../utils/certificate-enrollment-guide'
 
 const courses = new Hono<{ Bindings: Bindings }>()
+
+function isCourseTrashed(row: { deleted_at?: string | null }): boolean {
+  const d = row.deleted_at
+  if (d == null) return false
+  return String(d).trim() !== ''
+}
+
+/** 학습·상세: 비공개·휴지통이어도 수강 중이면 접근 허용 */
+async function assertLearnerCanAccessCourse(
+  DB: Bindings['DB'],
+  course: { status?: string | null; deleted_at?: string | null },
+  courseId: string,
+  user: { id: number; role: string } | undefined,
+): Promise<{ enrollment: unknown | null; denied: '404' | '403' | null }> {
+  let enrollment: unknown | null = null
+  if (user) {
+    enrollment = await DB.prepare(`SELECT * FROM enrollments WHERE user_id = ? AND course_id = ?`)
+      .bind(user.id, courseId)
+      .first()
+  }
+  const isAdmin = user?.role === 'admin'
+  if (isCourseTrashed(course)) {
+    if (!isAdmin && !enrollment) return { enrollment: null, denied: '404' }
+    return { enrollment, denied: null }
+  }
+  const st = String(course.status ?? '').trim().toLowerCase()
+  if (st !== 'published' && !isAdmin && !enrollment) {
+    return { enrollment: null, denied: '403' }
+  }
+  return { enrollment, denied: null }
+}
 
 /**
  * courses 테이블에만 존재하는 컬럼명 — PUT 시 body 전개로 레슨 필드·레거시 is_free 등이 들어가면 D1 오류 방지
@@ -147,10 +181,13 @@ courses.get('/', optionalAuth, async (c) => {
       ? 'highlight_classic DESC, IFNULL(display_order, 0) ASC, created_at DESC'
       : 'IFNULL(display_order, 0) ASC, created_at DESC'
 
+  const includeDeleted = user?.role === 'admin' && c.req.query('include_deleted') === '1'
+  const trashClause = includeDeleted ? '' : ` AND (deleted_at IS NULL OR TRIM(COALESCE(deleted_at,'')) = '')`
+
   const query =
     user?.role === 'admin'
-      ? `SELECT * FROM courses WHERE 1=1 ${cgSql} ORDER BY ${orderBy}`
-      : `SELECT * FROM courses WHERE status = 'published' ${cgSql} ORDER BY ${orderBy}`
+      ? `SELECT * FROM courses WHERE 1=1 ${cgSql}${trashClause} ORDER BY ${orderBy}`
+      : `SELECT * FROM courses WHERE ${SQL_COURSE_CATALOG_VISIBLE} ${cgSql} ORDER BY ${orderBy}`
 
   try {
     const result = cg
@@ -158,12 +195,13 @@ courses.get('/', optionalAuth, async (c) => {
       : await DB.prepare(query).all<Course>()
     return c.json(successResponse(result.results))
   } catch (error) {
-    // Legacy/local DB may miss newer columns (e.g., display_order/category_group).
+    // Legacy/local DB may miss newer columns (e.g., display_order/category_group/deleted_at).
     console.warn('Get courses primary query failed, fallback to legacy query:', error)
     try {
+      const legacyTrash = includeDeleted ? '' : ` AND (deleted_at IS NULL OR TRIM(COALESCE(deleted_at,'')) = '')`
       const legacyQuery = user?.role === 'admin'
-        ? `SELECT * FROM courses ORDER BY created_at DESC`
-        : `SELECT * FROM courses WHERE status = 'published' ORDER BY created_at DESC`
+        ? `SELECT * FROM courses WHERE 1=1${legacyTrash} ORDER BY created_at DESC`
+        : `SELECT * FROM courses WHERE ${SQL_COURSE_CATALOG_VISIBLE} ORDER BY created_at DESC`
       const legacy = await DB.prepare(legacyQuery).all<Course>()
       return c.json(successResponse(legacy.results))
     } catch (legacyError) {
@@ -183,7 +221,7 @@ courses.get('/featured', async (c) => {
 
     const result = await DB.prepare(`
       SELECT * FROM courses 
-      WHERE status = 'published'
+      WHERE ${SQL_COURSE_CATALOG_VISIBLE}
       ORDER BY created_at DESC
       LIMIT 10
     `).all<Course>()
@@ -212,16 +250,24 @@ function offlineMeetupIntroText(row: CourseOfflineRow): string {
 async function fetchCourseForOfflineApply(DB: Bindings['DB'], courseId: string): Promise<CourseOfflineRow | null> {
   try {
     return await DB.prepare(
-      `SELECT id, status, offline_info, schedule_info FROM courses WHERE id = ?`,
+      `SELECT id, status, offline_info, schedule_info, deleted_at FROM courses WHERE id = ?`,
     )
       .bind(courseId)
       .first<CourseOfflineRow>()
   } catch (e) {
     const m = String(e instanceof Error ? e.message : e)
     if (!/no such column.*offline_info/i.test(m)) throw e
-    return await DB.prepare(`SELECT id, status, schedule_info FROM courses WHERE id = ?`)
-      .bind(courseId)
-      .first<CourseOfflineRow>()
+    try {
+      return await DB.prepare(`SELECT id, status, schedule_info, deleted_at FROM courses WHERE id = ?`)
+        .bind(courseId)
+        .first<CourseOfflineRow>()
+    } catch (e2) {
+      const m2 = String(e2 instanceof Error ? e2.message : e2)
+      if (!/no such column.*deleted_at/i.test(m2)) throw e2
+      return await DB.prepare(`SELECT id, status, schedule_info FROM courses WHERE id = ?`)
+        .bind(courseId)
+        .first<CourseOfflineRow>()
+    }
   }
 }
 
@@ -254,6 +300,9 @@ async function postOfflineApplication(c: Context<{ Bindings: Bindings }>) {
     const course = await fetchCourseForOfflineApply(DB, courseId)
     if (!course) {
       return c.json(errorResponse('강좌를 찾을 수 없습니다.'), 404)
+    }
+    if (isCourseTrashed(course)) {
+      return c.json(errorResponse('신청할 수 없는 강좌입니다.'), 403)
     }
     if (course.status !== 'published') {
       return c.json(errorResponse('신청할 수 없는 강좌입니다.'), 403)
@@ -328,10 +377,14 @@ courses.get('/:id', optionalAuth, async (c) => {
       return c.json(errorResponse('과정을 찾을 수 없습니다.'), 404)
     }
 
-    // 학생·일반: published만 공개. 관리자는 모든 상태 조회 가능
-    if (course.status !== 'published' && user?.role !== 'admin') {
+    const access = await assertLearnerCanAccessCourse(DB, course, courseId, user)
+    if (access.denied === '404') {
+      return c.json(errorResponse('과정을 찾을 수 없습니다.'), 404)
+    }
+    if (access.denied === '403') {
       return c.json(errorResponse('접근 권한이 없습니다.'), 403)
     }
+    const enrollment = access.enrollment
 
     // 차시 목록 조회
     const lessons = await DB.prepare(`
@@ -339,15 +392,6 @@ courses.get('/:id', optionalAuth, async (c) => {
       WHERE course_id = ? 
       ORDER BY lesson_number ASC
     `).bind(courseId).all<Lesson>()
-
-    // 수강 정보 조회 (로그인한 경우)
-    let enrollment = null
-    if (user) {
-      enrollment = await DB.prepare(`
-        SELECT * FROM enrollments 
-        WHERE user_id = ? AND course_id = ?
-      `).bind(user.id, courseId).first()
-    }
 
     // 수강생 수 조회
     const studentCountResult = await DB.prepare(`
@@ -397,12 +441,50 @@ courses.get('/:id', optionalAuth, async (c) => {
 
     const lineKeys = parseCatalogLines(course.category_group)
 
+    let certificate_catalog: Record<string, unknown> | null = null
+    let certificate_enrollment_guide = null as ReturnType<typeof buildCertificateEnrollmentGuide>
+    const certId = (course as { certificate_id?: number | null }).certificate_id
+    if (certId) {
+      let certRow: Record<string, unknown> | null = null
+      try {
+        certRow = await DB.prepare(
+          `SELECT id, name, type, registration_number, issuer_name, cost_total, cost_details, refund_policy,
+                  issue_fee_list_won, issue_fee_student_won
+           FROM private_certificate_catalog WHERE id = ?`,
+        )
+          .bind(certId)
+          .first<Record<string, unknown>>()
+      } catch (e) {
+        const m = String(e instanceof Error ? e.message : e)
+        if (/no such column.*issue_fee/i.test(m)) {
+          try {
+            certRow = await DB.prepare(
+              `SELECT id, name, type, registration_number, issuer_name, cost_total, cost_details, refund_policy
+               FROM private_certificate_catalog WHERE id = ?`,
+            )
+              .bind(certId)
+              .first<Record<string, unknown>>()
+          } catch {
+            certRow = null
+          }
+        } else {
+          certRow = null
+        }
+      }
+      if (certRow) {
+        certificate_catalog = certRow
+        certificate_enrollment_guide = buildCertificateEnrollmentGuide(String(course.title || ''), certRow)
+      }
+    }
+
     return c.json(successResponse({
       course: {
         ...course,
         student_count: studentCount,
         category_groups: lineKeys,
+        certificate_catalog,
       },
+      certificate_enrollment_guide,
       lessons: lessons.results,
       enrollment,
       has_paid_access
@@ -515,31 +597,56 @@ courses.put('/:id', requireAdmin, async (c) => {
 
 /**
  * DELETE /api/courses/:id
- * 과정 삭제 (관리자 전용)
+ * 기본: 휴지통(soft delete). ?hard=true: 영구 삭제 — 수강·주문 기록이 있으면 거부
  */
 courses.delete('/:id', requireAdmin, async (c) => {
   try {
     const courseId = c.req.param('id')
     const { DB } = c.env
+    const hard = c.req.query('hard') === 'true'
 
-    // 수강 중인 학생이 있는지 확인
-    const activeEnrollments = await DB.prepare(`
-      SELECT COUNT(*) as count 
-      FROM enrollments 
-      WHERE course_id = ? AND status = 'active'
-    `).bind(courseId).first<{ count: number }>()
-
-    if (activeEnrollments && activeEnrollments.count > 0) {
-      return c.json(errorResponse('수강 중인 학생이 있어 삭제할 수 없습니다.'), 400)
+    if (!hard) {
+      const r = await DB.prepare(
+        `UPDATE courses SET deleted_at = datetime('now'), status = 'inactive', updated_at = datetime('now') WHERE id = ?`,
+      )
+        .bind(courseId)
+        .run()
+      if (r.meta.changes === 0) {
+        return c.json(errorResponse('과정을 찾을 수 없습니다.'), 404)
+      }
+      return c.json(successResponse(null, '강좌를 휴지통으로 옮겼습니다.'))
     }
 
-    // 과정 삭제 (CASCADE로 차시도 함께 삭제)
-    await DB.prepare(`
-      DELETE FROM courses WHERE id = ?
-    `).bind(courseId).run()
+    const enrollments = await DB.prepare(`SELECT COUNT(*) as count FROM enrollments WHERE course_id = ?`)
+      .bind(courseId)
+      .first<{ count: number }>()
+    if (enrollments && enrollments.count > 0) {
+      return c.json(
+        errorResponse('수강 기록이 있는 강좌는 영구 삭제할 수 없습니다. 휴지통(안전 삭제)을 이용해 주세요.'),
+        400,
+      )
+    }
 
-    return c.json(successResponse(null, '과정이 삭제되었습니다.'))
+    let orderCount = 0
+    try {
+      const o = await DB.prepare(`SELECT COUNT(*) as count FROM orders WHERE course_id = ?`)
+        .bind(courseId)
+        .first<{ count: number }>()
+      orderCount = o?.count ?? 0
+    } catch {
+      orderCount = 0
+    }
+    if (orderCount > 0) {
+      return c.json(errorResponse('주문 기록이 있어 영구 삭제할 수 없습니다.'), 400)
+    }
 
+    await DB.prepare(`DELETE FROM lessons WHERE course_id = ?`).bind(courseId).run()
+    const del = await DB.prepare(`DELETE FROM courses WHERE id = ?`).bind(courseId).run()
+    if (del.meta.changes === 0) {
+      return c.json(errorResponse('과정을 찾을 수 없습니다.'), 404)
+    }
+
+    return c.json(successResponse(null, '과정이 영구 삭제되었습니다.'))
   } catch (error) {
     console.error('Delete course error:', error)
     return c.json(errorResponse('서버 오류가 발생했습니다.'), 500)
@@ -565,6 +672,14 @@ courses.get('/:id/lessons', optionalAuth, async (c) => {
       return c.json(errorResponse('과정을 찾을 수 없습니다.'), 404)
     }
 
+    const access = await assertLearnerCanAccessCourse(DB, course, courseId, user)
+    if (access.denied === '404') {
+      return c.json(errorResponse('과정을 찾을 수 없습니다.'), 404)
+    }
+    if (access.denied === '403') {
+      return c.json(errorResponse('접근 권한이 없습니다.'), 403)
+    }
+
     // 차시 목록 조회
     const lessons = await DB.prepare(`
       SELECT * FROM lessons 
@@ -578,10 +693,7 @@ courses.get('/:id/lessons', optionalAuth, async (c) => {
 
     // 수강 중인 경우 진도 정보 포함 (lesson_progress 테이블 있을 때만)
     if (user) {
-      const enrollment = await DB.prepare(`
-        SELECT * FROM enrollments 
-        WHERE user_id = ? AND course_id = ?
-      `).bind(user.id, courseId).first()
+      const enrollment = access.enrollment
 
       if (enrollment) {
         // lesson_progress 테이블 존재 확인
@@ -632,26 +744,20 @@ courses.get('/:courseId/materials', requireAuth, async (c) => {
     const user = c.get('user') as { id: number; role: string }
     const { DB } = c.env
 
-    const course = await DB.prepare(`SELECT id, price, status FROM courses WHERE id = ?`).bind(courseId).first<{
+    const course = await DB.prepare(`SELECT id, price, status, deleted_at FROM courses WHERE id = ?`).bind(courseId).first<{
       id: number
       price: number
       status: string
+      deleted_at?: string | null
     }>()
     if (!course) return c.json(errorResponse('강좌를 찾을 수 없습니다.'), 404)
 
-    // 비공개 과정은 관리자만
-    if (course.status !== 'published' && user.role !== 'admin') {
-      return c.json(errorResponse('접근 권한이 없습니다.'), 403)
-    }
+    const access = await assertLearnerCanAccessCourse(DB, course, courseId, user)
+    if (access.denied === '404') return c.json(errorResponse('강좌를 찾을 수 없습니다.'), 404)
+    if (access.denied === '403') return c.json(errorResponse('접근 권한이 없습니다.'), 403)
 
     if (user.role !== 'admin' && Number(course.price || 0) > 0) {
-      // 유료 강좌는 수강(또는 결제) 사용자만 자료 접근
-      const enrollment = await DB.prepare(
-        `SELECT id FROM enrollments WHERE user_id = ? AND course_id = ? LIMIT 1`
-      )
-        .bind(user.id, courseId)
-        .first<{ id: number }>()
-      if (!enrollment) {
+      if (!access.enrollment) {
         return c.json(errorResponse('수강 신청이 필요합니다.'), 403)
       }
     }
@@ -721,7 +827,9 @@ courses.post('/:id/lessons', requireAdmin, async (c) => {
       video_id,
       video_url,
       video_duration_minutes,
+      video_type: rawVideoType,
     } = body
+    const videoTypeNorm = normalizeLessonVideoType(rawVideoType ?? video_provider)
     const previewVal = resolveLessonPreviewFromBody(body)
 
     // ✅ 필수 필드 검증 강화
@@ -748,12 +856,23 @@ courses.post('/:id/lessons', requireAdmin, async (c) => {
       console.warn('⚠️ 콘텐츠 경고:', contentValidation.warnings)
     }
     
-    // 🔍 영상 URL 추가 검증
+    // 🔍 영상 URL 검증 (유튜브·승인 플랫폼 / R2 HTTPS)
     if (video_url) {
-      const urlValidation = validateVideoUrl(video_url)
-      if (!urlValidation.isAllowed) {
-        console.warn('🚫 부적절한 영상 URL 차단:', video_url)
-        return c.json(errorResponse(urlValidation.reason || '유효하지 않은 영상 URL입니다.'), 400)
+      if (videoTypeNorm === 'YOUTUBE') {
+        const urlValidation = validateVideoUrl(video_url)
+        if (!urlValidation.isAllowed) {
+          console.warn('🚫 부적절한 영상 URL 차단:', video_url)
+          return c.json(errorResponse(urlValidation.reason || '유효하지 않은 영상 URL입니다.'), 400)
+        }
+      } else {
+        try {
+          const u = new URL(String(video_url))
+          if (u.protocol !== 'https:') {
+            return c.json(errorResponse('직접 업로드(R2) 영상은 HTTPS URL만 사용할 수 있습니다.'), 400)
+          }
+        } catch {
+          return c.json(errorResponse('유효한 영상 URL이 아닙니다.'), 400)
+        }
       }
     }
     
@@ -769,6 +888,7 @@ courses.post('/:id/lessons', requireAdmin, async (c) => {
       title,
       lesson_number,
       video_provider: normalizedProvider,
+      video_type: videoTypeNorm,
       video_url,
       video_id,
       video_duration_minutes,
@@ -822,7 +942,7 @@ courses.post('/:id/lessons', requireAdmin, async (c) => {
           title,
           description || null,
           video_url || null,
-          'youtube',
+          videoTypeNorm,
           video_duration_minutes || 0,
           previewVal,
           previewVal,
@@ -845,7 +965,7 @@ courses.post('/:id/lessons', requireAdmin, async (c) => {
           title,
           description || null,
           video_url || null,
-          'youtube',
+          videoTypeNorm,
           video_duration_minutes || 0,
           previewVal,
         )
@@ -941,6 +1061,35 @@ courses.put('/:courseId/lessons/:lessonId', requireAdmin, async (c) => {
       normalized.is_preview = previewVal
       normalized.is_free = previewVal
       normalized.is_free_preview = previewVal
+    }
+
+    if (normalized.video_type !== undefined) {
+      normalized.video_type = normalizeLessonVideoType(normalized.video_type)
+    }
+
+    const lessonRow = lesson as Record<string, unknown>
+    const effectiveType = normalizeLessonVideoType(
+      normalized.video_type !== undefined ? normalized.video_type : lessonRow.video_type,
+    )
+    const effectiveUrl = String(
+      normalized.video_url !== undefined ? normalized.video_url : lessonRow.video_url || '',
+    ).trim()
+    if (effectiveUrl) {
+      if (effectiveType === 'YOUTUBE') {
+        const urlValidation = validateVideoUrl(effectiveUrl)
+        if (!urlValidation.isAllowed) {
+          return c.json(errorResponse(urlValidation.reason || '유효하지 않은 영상 URL입니다.'), 400)
+        }
+      } else {
+        try {
+          const u = new URL(effectiveUrl)
+          if (u.protocol !== 'https:') {
+            return c.json(errorResponse('직접 업로드(R2) 영상은 HTTPS URL만 사용할 수 있습니다.'), 400)
+          }
+        } catch {
+          return c.json(errorResponse('유효한 영상 URL이 아닙니다.'), 400)
+        }
+      }
     }
 
     // 업데이트할 필드 구성 (스키마에 없는 컬럼명은 무시)

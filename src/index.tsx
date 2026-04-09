@@ -19,6 +19,8 @@ import courses from './routes/courses'
 import enrollments from './routes/enrollments'
 import payments from './routes/payments'  // 결제 API
 import portoneOrders from './routes/portone-orders'
+import certificateIssuance from './routes/certificate-issuance'
+import paymentVerify from './routes/payment-verify'
 import certificates from './routes/certificates'  // Phase 4: 수료증 시스템
 import admin from './routes/admin'
 import landing from './routes/landing'  // 신규 랜딩 페이지
@@ -44,6 +46,7 @@ import pagesLearn from './routes/pages-learn'
 import analytics from './routes/analytics'
 import pagesAnalytics from './routes/pages-analytics'
 import pagesCourseDetail from './routes/pages-course-detail'
+import pagesCertificateIssue from './routes/pages-certificate-issue'
 import pagesCompany from './routes/pages-company'
 import pagesCommunity from './routes/pages-community'
 import pagesLegal from './routes/pages-legal'
@@ -169,6 +172,8 @@ app.use('/api/courses', generalRateLimiter)
 app.use('/api/enrollments', generalRateLimiter)
 app.use('/api/payments-v2', generalRateLimiter)
 app.use('/api/portone', generalRateLimiter)
+app.use('/api/certificate-issuance', generalRateLimiter)
+app.use('/api/payment', generalRateLimiter)
 app.use('/api/admin', generalRateLimiter)
 app.use('/api/popups', generalRateLimiter)
 app.use('/api/notices', generalRateLimiter)
@@ -206,6 +211,8 @@ app.route('/api/courses', reviews)  // 수강평/별점 API (courses/:id/reviews
 app.route('/api/enrollments', enrollments)
 app.route('/api/payments-v2', payments)  // 결제 API
 app.route('/api/portone', portoneOrders)
+app.route('/api/certificate-issuance', certificateIssuance)
+app.route('/api/payment', paymentVerify)
 app.route('/api', certificates)  // 수료증 API (courses/:id/certificate, my/certificates, certificates/:number)
 app.route('/api/admin', admin)
 app.route('/api/popups', popups)
@@ -266,6 +273,7 @@ app.route('/', pagesEnrollment)  // 수강신청 페이지 (/enrollment)
 app.route('/', pagesStudent)  // 수강생 페이지
 app.route('/', pagesMy)
 app.route('/', pagesCourseDetail)  // 강좌 상세 페이지
+app.route('/', pagesCertificateIssue) // 자격증 발급비 본인인증+결제
 app.route('/', pagesLearn)    // 학습 페이지
 app.route('/', pagesAnalytics)  // 분석 페이지
 app.route('/admin', pagesAdmin)  // 관리자 페이지

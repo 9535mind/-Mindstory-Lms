@@ -8,6 +8,7 @@ import { Bindings } from '../types/database'
 import { successResponse, errorResponse } from '../utils/helpers'
 import { requireAdmin } from '../middleware/auth'
 import { uploadImageFileToR2 } from '../utils/r2-image-upload'
+import { uploadVideoFileToR2 } from '../utils/r2-video-upload'
 
 const upload = new Hono<{ Bindings: Bindings }>()
 
@@ -16,33 +17,6 @@ const upload = new Hono<{ Bindings: Bindings }>()
  */
 function isLocalEnvironment(c: any): boolean {
   return !c.env.STORAGE && !c.env.VIDEO_STORAGE
-}
-
-/**
- * 파일 저장 헬퍼 함수
- * R2 Storage 없이 lesson_id와 연결하여 DB에 메타데이터만 저장
- * 실제 파일은 외부 URL 또는 YouTube 사용
- */
-async function generateVideoMetadata(file: File): Promise<{
-  filename: string
-  size: number
-  mimeType: string
-  estimatedDuration: number
-}> {
-  const timestamp = Date.now()
-  const randomString = Math.random().toString(36).substring(2, 15)
-  const extension = file.name.split('.').pop()
-  const filename = `${timestamp}-${randomString}.${extension}`
-  
-  // 영상 duration 추정 (임시: 파일 크기 기반)
-  const estimatedDuration = Math.max(1, Math.ceil(file.size / (1024 * 1024 * 5))) // 5MB당 1분으로 추정
-  
-  return {
-    filename,
-    size: file.size,
-    mimeType: file.type,
-    estimatedDuration
-  }
 }
 
 /**
@@ -111,12 +85,10 @@ upload.post('/image', requireAdmin, async (c) => {
 
 /**
  * POST /api/upload/video
- * 영상 업로드 (관리자 전용)
- * R2 없이 메타데이터만 저장 + lesson_id와 연결
+ * 영상 업로드 (관리자 전용) — R2에 저장 후 lessons.video_url·video_type=R2 반영
  */
 upload.post('/video', requireAdmin, async (c) => {
   try {
-    // FormData에서 파일 가져오기
     const formData = await c.req.formData()
     const file = formData.get('file') as File | null
     const lessonIdStr = formData.get('lesson_id') as string | null
@@ -125,75 +97,87 @@ upload.post('/video', requireAdmin, async (c) => {
       return c.json(errorResponse('파일이 없습니다.'), 400)
     }
 
-    // lesson_id 확인 (선택적)
-    const lessonId = lessonIdStr ? parseInt(lessonIdStr) : null
+    const lessonId = lessonIdStr ? parseInt(lessonIdStr, 10) : null
 
-    // 파일 유효성 검사
-    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo']
-    const allowedExtensions = ['.mp4', '.webm', '.mov', '.avi']
+    if (!c.env.R2) {
+      return c.json(
+        errorResponse('동영상 업로드(R2)가 설정되지 않았습니다. 유튜브 링크로 등록해 주세요.'),
+        503,
+      )
+    }
+
+    const allowedExtensions = ['.mp4', '.webm', '.mov', '.avi', '.m4v']
     const fileExtension = '.' + (file.name.split('.').pop()?.toLowerCase() || '')
-    
-    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-      return c.json(errorResponse('지원하지 않는 파일 형식입니다. (MP4, WebM, MOV, AVI만 가능)'), 400)
+    if (!allowedExtensions.includes(fileExtension)) {
+      return c.json(errorResponse('지원하지 않는 파일 형식입니다. (MP4, WebM, MOV, AVI 등)'), 400)
     }
 
-    // 파일 크기 제한 (50MB) - R2 없으므로 제한
-    const maxSize = 50 * 1024 * 1024
-    if (file.size > maxSize) {
-      return c.json(errorResponse('파일 크기는 50MB 이하여야 합니다. 대용량 영상은 YouTube URL을 사용하세요.'), 400)
-    }
-
-    console.log('[VIDEO UPLOAD] Starting upload:', {
+    console.log('[VIDEO UPLOAD] R2 upload:', {
       originalName: file.name,
       size: file.size,
       type: file.type,
-      lessonId
+      lessonId,
     })
 
-    // 메타데이터 생성
-    const metadata = await generateVideoMetadata(file)
+    let publicUrl: string
+    try {
+      const { url } = await uploadVideoFileToR2(c.env, file, 'courses')
+      publicUrl = url
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      if (msg === 'UNSUPPORTED_VIDEO_TYPE') {
+        return c.json(errorResponse('지원하지 않는 동영상 형식입니다.'), 400)
+      }
+      if (msg === 'VIDEO_TOO_LARGE') {
+        return c.json(errorResponse('파일이 너무 큽니다. (최대 500MB)'), 400)
+      }
+      throw e
+    }
 
-    // lessonId가 있으면 DB 업데이트
-    if (lessonId) {
+    const estimatedDuration = Math.max(1, Math.ceil(file.size / (1024 * 1024 * 5)))
+
+    if (lessonId && Number.isFinite(lessonId)) {
       const { DB } = c.env
-      
-      // lesson에 영상 메타데이터 저장
-      await DB.prepare(`
+      await DB.prepare(
+        `
         UPDATE lessons
         SET 
+          video_url = ?,
+          video_type = 'R2',
           video_file_name = ?,
           video_file_size = ?,
           video_mime_type = ?,
           video_uploaded_at = datetime('now'),
-          video_type = 'upload',
           duration_minutes = ?,
           updated_at = datetime('now')
         WHERE id = ?
-      `).bind(
-        metadata.filename,
-        metadata.size,
-        metadata.mimeType,
-        metadata.estimatedDuration,
-        lessonId
-      ).run()
-
-      console.log('[VIDEO UPLOAD] Metadata saved to lesson:', lessonId)
+      `,
+      )
+        .bind(
+          publicUrl,
+          file.name,
+          file.size,
+          file.type || 'video/mp4',
+          estimatedDuration,
+          lessonId,
+        )
+        .run()
     }
 
-    // 임시 URL (실제로는 외부 스토리지 또는 YouTube 사용 권장)
-    const placeholderUrl = `#uploaded-${metadata.filename}`
-
-    return c.json(successResponse({
-      url: placeholderUrl,
-      filename: metadata.filename,
-      size: metadata.size,
-      type: metadata.mimeType,
-      duration: metadata.estimatedDuration,
-      originalName: file.name,
-      lessonId: lessonId,
-      message: 'R2 Storage 활성화 시 실제 업로드 가능. 현재는 메타데이터만 저장됨.'
-    }, '영상 메타데이터가 저장되었습니다. YouTube URL 또는 외부 URL을 사용해주세요.'))
-
+    return c.json(
+      successResponse(
+        {
+          url: publicUrl,
+          filename: file.name,
+          size: file.size,
+          type: file.type || 'video/mp4',
+          duration: estimatedDuration,
+          originalName: file.name,
+          lessonId,
+        },
+        '영상이 업로드되었습니다.',
+      ),
+    )
   } catch (error) {
     console.error('Upload video error:', error)
     return c.json(errorResponse('영상 업로드에 실패했습니다.'), 500)

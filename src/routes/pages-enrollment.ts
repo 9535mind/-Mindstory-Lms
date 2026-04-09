@@ -18,6 +18,7 @@ import {
 } from '../utils/site-floating-quick-menu'
 import { siteFooterLegalBlockHtml } from '../utils/site-footer-legal'
 import { SITE_POPUP_SCRIPT_TAG } from '../utils/site-popup-script'
+import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 
 const pagesEnrollment = new Hono<{ Bindings: Bindings }>()
 
@@ -55,6 +56,7 @@ pagesEnrollment.get('/enrollment', optionalAuth, async (c) => {
         <!-- Custom Scripts -->
         <script src="/static/js/auth.js?v=20260329-admin-name"></script>
         <script src="/static/js/utils.js"></script>
+        <script src="/static/js/certificate-enrollment-popup.js${STATIC_JS_CACHE_QUERY}"></script>
         ${siteFloatingQuickMenuStyles()}
         ${siteAiChatWidgetStyles()}
         
@@ -448,18 +450,33 @@ pagesEnrollment.get('/enrollment', optionalAuth, async (c) => {
             async function enrollCourse(courseId, price) {
                 try {
                     if (price === 0) {
-                        const response = await axios.post('/api/enrollments', 
-                            { courseId },
-                            { withCredentials: true }
-                        )
-                        
-                        if (response.data.success) {
-                            showToast('수강 기록이 등록되었습니다. 내 강의실에서 확인할 수 있어요.', 'success')
-                            await loadEnrollmentCoursesPage()
+                        const detail = await axios.get('/api/courses/' + encodeURIComponent(courseId), { withCredentials: true })
+                        const guide = detail.data && detail.data.data && detail.data.data.certificate_enrollment_guide
+                        const runFree = async () => {
+                            const response = await axios.post('/api/enrollments', { courseId }, { withCredentials: true })
+                            if (response.data.success) {
+                                showToast('수강 기록이 등록되었습니다. 내 강의실에서 확인할 수 있어요.', 'success')
+                                await loadEnrollmentCoursesPage()
+                            }
+                        }
+                        if (guide && typeof openCertificateEnrollmentModal === 'function') {
+                            openCertificateEnrollmentModal(guide, function () {
+                                runFree().catch(function (e) {
+                                    showToast(e.response?.data?.error || '수강 신청에 실패했습니다.', 'error')
+                                })
+                            })
+                        } else {
+                            await runFree()
                         }
                     } else {
-                        // 유료 강좌: 결제 페이지로 이동
-                        window.location.href = '/payment/checkout/' + courseId
+                        const detailPaid = await axios.get('/api/courses/' + encodeURIComponent(courseId), { withCredentials: true })
+                        const guidePaid = detailPaid.data && detailPaid.data.data && detailPaid.data.data.certificate_enrollment_guide
+                        const goPay = () => { window.location.href = '/payment/checkout/' + courseId }
+                        if (guidePaid && typeof openCertificateEnrollmentModal === 'function') {
+                            openCertificateEnrollmentModal(guidePaid, goPay)
+                        } else {
+                            goPay()
+                        }
                     }
                 } catch (error) {
                     const message = error.response?.data?.error || '수강 신청에 실패했습니다.'

@@ -68,97 +68,64 @@ async function assertInstructorExistsOrSkip(
   }
 }
 
-/** SQLite: `no such column: duration_days` 또는 INSERT 시 `table … has no column named duration_days` */
-function isNoSuchColumnDurationDays(err: unknown): boolean {
-  const m = String(err instanceof Error ? err.message : err)
-  return (
-    /no such column[^:]*:\s*duration_days/i.test(m) ||
-    /has no column named\s+['"]?duration_days['"]?/i.test(m)
-  )
+/** courses 실제 컬럼 집합 — SELECT … duration_days 시도 대신 PRAGMA로 판별 (D1·레거시 DB 호환) */
+async function getCoursesTableColumnNames(DB: D1Database): Promise<Set<string>> {
+  const r = await DB.prepare(`SELECT name FROM pragma_table_info('courses')`).all<{ name: string }>()
+  return new Set((r.results ?? []).map((row) => row.name))
 }
 
-/** duration_days 컬럼 없는 레거시 DB용 (스키마상 정식 컬럼명은 duration_days) */
-async function insertCourseRowWithoutDurationColumn(
+/** 강좌 연결 자격증명 — private_certificate_catalog 우선, 레거시 certification_types 폴백 */
+async function resolveCertificateNameForCourse(
   DB: D1Database,
-  params: {
-    title: string
-    descriptionText: string
-    thumbForInsert: string | null
-    instructorId: number | null
-    status: string
-    regular_price: number
-    sale_price: number | null
-    discount_price: number | null
-    certificateId: number | null
-    validityUnlimited: number
-    categoryGroup: string
-    scheduleInfo: string | null
-    difficulty: string
-    priceRemarks: string | null
-  },
-): Promise<{ meta: { last_row_id?: number | bigint | null } }> {
-  const cols = [
-    'title',
-    'description',
-    'thumbnail_url',
-    'instructor_id',
-    'status',
-    'price',
-    'sale_price',
-    'discount_price',
-    'certificate_id',
-    'validity_unlimited',
-    'category_group',
-    'schedule_info',
-    'offline_info',
-    'difficulty',
-    'regular_price',
-    'price_remarks',
-  ] as const
-  const binds = [
-    params.title,
-    params.descriptionText,
-    params.thumbForInsert,
-    params.instructorId,
-    params.status,
-    params.regular_price,
-    params.sale_price,
-    params.discount_price,
-    params.certificateId,
-    params.validityUnlimited,
-    params.categoryGroup,
-    params.scheduleInfo,
-    params.scheduleInfo,
-    params.difficulty,
-    params.regular_price,
-    params.priceRemarks,
-  ]
-  const placeholders = cols.map(() => '?').join(', ')
-  const sql = `INSERT INTO courses (${cols.join(', ')}, created_at, updated_at) VALUES (${placeholders}, datetime('now'), datetime('now'))`
-  return await DB.prepare(sql).bind(...binds).run()
+  certificateId: number | null | undefined,
+): Promise<string | null> {
+  if (certificateId == null || Number(certificateId) <= 0) return null
+  try {
+    const r = await DB.prepare(`SELECT name FROM private_certificate_catalog WHERE id = ?`)
+      .bind(certificateId)
+      .first<{ name: string }>()
+    if (r?.name) return r.name
+  } catch {
+    /* 테이블 없음 등 */
+  }
+  try {
+    const r = await DB.prepare(`SELECT name FROM certification_types WHERE id = ?`)
+      .bind(certificateId)
+      .first<{ name: string }>()
+    return r?.name ?? null
+  } catch {
+    return null
+  }
 }
 
+type InsertCourseRowParams = {
+  title: string
+  descriptionText: string
+  thumbForInsert: string | null
+  instructorId: number | null
+  status: string
+  regular_price: number
+  sale_price: number | null
+  discount_price: number | null
+  certificateId: number | null
+  durationDays: number
+  validityUnlimited: number
+  categoryGroup: string
+  scheduleInfo: string | null
+  difficulty: string
+  priceRemarks: string | null
+}
+
+/**
+ * 강좌 INSERT — DB에 존재하는 컬럼만 사용.
+ * 정식 스키마: duration_days(migrations/0003, 0060), offline_info(0055, 0060).
+ */
 async function insertCourseRow(
   DB: D1Database,
-  params: {
-    title: string
-    descriptionText: string
-    thumbForInsert: string | null
-    instructorId: number | null
-    status: string
-    regular_price: number
-    sale_price: number | null
-    discount_price: number | null
-    certificateId: number | null
-    durationDays: number
-    validityUnlimited: number
-    categoryGroup: string
-    scheduleInfo: string | null
-    difficulty: string
-    priceRemarks: string | null
-  },
+  colSet: Set<string>,
+  params: InsertCourseRowParams,
 ): Promise<{ meta: { last_row_id?: number | bigint | null } }> {
-  const cols = [
+  const columns: string[] = [
     'title',
     'description',
     'thumbnail_url',
@@ -168,16 +135,8 @@ async function insertCourseRow(
     'sale_price',
     'discount_price',
     'certificate_id',
-    'duration_days',
-    'validity_unlimited',
-    'category_group',
-    'schedule_info',
-    'offline_info',
-    'difficulty',
-    'regular_price',
-    'price_remarks',
-  ] as const
-  const binds = [
+  ]
+  const binds: unknown[] = [
     params.title,
     params.descriptionText,
     params.thumbForInsert,
@@ -187,17 +146,21 @@ async function insertCourseRow(
     params.sale_price,
     params.discount_price,
     params.certificateId,
-    params.durationDays,
-    params.validityUnlimited,
-    params.categoryGroup,
-    params.scheduleInfo,
-    params.scheduleInfo,
-    params.difficulty,
-    params.regular_price,
-    params.priceRemarks,
   ]
-  const placeholders = cols.map(() => '?').join(', ')
-  const sql = `INSERT INTO courses (${cols.join(', ')}, created_at, updated_at) VALUES (${placeholders}, datetime('now'), datetime('now'))`
+  if (colSet.has('duration_days')) {
+    columns.push('duration_days')
+    binds.push(params.durationDays)
+  }
+  columns.push('validity_unlimited', 'category_group', 'schedule_info')
+  binds.push(params.validityUnlimited, params.categoryGroup, params.scheduleInfo)
+  if (colSet.has('offline_info')) {
+    columns.push('offline_info')
+    binds.push(params.scheduleInfo)
+  }
+  columns.push('difficulty', 'regular_price', 'price_remarks')
+  binds.push(params.difficulty, params.regular_price, params.priceRemarks)
+  const placeholders = columns.map(() => '?').join(', ')
+  const sql = `INSERT INTO courses (${columns.join(', ')}, created_at, updated_at) VALUES (${placeholders}, datetime('now'), datetime('now'))`
   return await DB.prepare(sql).bind(...binds).run()
 }
 
@@ -228,7 +191,9 @@ admin.get('/dashboard/stats', requireAdmin, async (c) => {
     // 기본 통계
     const [users, courses, activeEnroll] = await Promise.all([
       DB.prepare(`SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL`).first(),
-      DB.prepare(`SELECT COUNT(*) as count FROM courses WHERE status = 'published'`).first(),
+      DB.prepare(
+        `SELECT COUNT(*) as count FROM courses WHERE status = 'published' AND (deleted_at IS NULL OR TRIM(COALESCE(deleted_at,'')) = '')`,
+      ).first(),
       DB.prepare(`SELECT COUNT(*) as count FROM enrollments WHERE completed_at IS NULL`).first(),
     ])
 
@@ -253,7 +218,9 @@ admin.get('/dashboard', requireAdmin, async (c) => {
 
   const [users, courses, enrollments, activeEnroll, completedEnroll] = await Promise.all([
     DB.prepare(`SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL`).first(),
-    DB.prepare(`SELECT COUNT(*) as count FROM courses WHERE status = 'published'`).first(),
+    DB.prepare(
+      `SELECT COUNT(*) as count FROM courses WHERE status = 'published' AND (deleted_at IS NULL OR TRIM(COALESCE(deleted_at,'')) = '')`,
+    ).first(),
     DB.prepare(`SELECT COUNT(*) as count FROM enrollments`).first(),
     DB.prepare(`SELECT COUNT(*) as count FROM enrollments WHERE completed_at IS NULL`).first(),
     DB.prepare(`SELECT COUNT(*) as count FROM enrollments WHERE completed_at IS NOT NULL`).first(),
@@ -275,7 +242,7 @@ admin.get('/dashboard', requireAdmin, async (c) => {
     SELECT c.*, COUNT(e.id) as enrollment_count
     FROM courses c
     LEFT JOIN enrollments e ON c.id = e.course_id
-    WHERE c.status = 'published'
+    WHERE c.status = 'published' AND (c.deleted_at IS NULL OR TRIM(COALESCE(c.deleted_at,'')) = '')
     GROUP BY c.id
     ORDER BY enrollment_count DESC
     LIMIT 5
@@ -994,7 +961,16 @@ admin.get('/course-form-options', requireAdmin, async (c) => {
   const { DB } = c.env
   try {
     let instructors: Array<{ id: number; name: string }> = []
-    let certificate_types: Array<{ id: number; name: string }> = []
+    let certificate_types: Array<{
+      id: number
+      name: string
+      type: string
+      registration_number: string
+      issuer_name: string
+      cost_total: string
+      cost_details: string
+      refund_policy: string
+    }> = []
 
     try {
       const inst = await DB.prepare(`
@@ -1013,16 +989,50 @@ admin.get('/course-form-options', requireAdmin, async (c) => {
 
     try {
       const certTypes = await DB.prepare(`
-        SELECT id, name
-        FROM certification_types
-        WHERE is_active = 1
-        ORDER BY sort_order ASC, id ASC
+        SELECT id, name, type, registration_number, issuer_name, cost_total, cost_details, refund_policy
+        FROM private_certificate_catalog
+        ORDER BY display_order ASC, id ASC
         LIMIT 200
-      `).all<{ id: number; name: string }>()
+      `).all<{
+        id: number
+        name: string
+        type: string
+        registration_number: string
+        issuer_name: string
+        cost_total: string
+        cost_details: string
+        refund_policy: string
+      }>()
       certificate_types = certTypes.results ?? []
     } catch (e) {
-      console.warn('[admin/course-form-options] certification_types load fail:', e)
-      certificate_types = []
+      console.warn('[admin/course-form-options] private_certificate_catalog load fail:', e)
+      try {
+        const legacy = await DB.prepare(`
+          SELECT id, name, '등록민간자격' AS type,
+                 '' AS registration_number,
+                 '(주)마인드스토리' AS issuer_name,
+                 '과정별 상이 (수강 신청 시 안내)' AS cost_total,
+                 COALESCE(description, '') AS cost_details,
+                 '환불은 당사 규정에 따릅니다.' AS refund_policy
+          FROM certification_types
+          WHERE is_active = 1
+          ORDER BY display_order ASC, id ASC
+          LIMIT 200
+        `).all<{
+          id: number
+          name: string
+          type: string
+          registration_number: string
+          issuer_name: string
+          cost_total: string
+          cost_details: string
+          refund_policy: string
+        }>()
+        certificate_types = legacy.results ?? []
+      } catch (e2) {
+        console.warn('[admin/course-form-options] certification_types legacy fail:', e2)
+        certificate_types = []
+      }
     }
 
     return c.json(successResponse({ instructors, certificate_types }))
@@ -1367,17 +1377,13 @@ admin.post('/courses', requireAdmin, async (c) => {
       return c.json(errorResponse('허용되지 않는 상태입니다'), 400)
     }
 
-    let coursesHasDurationDaysColumn = true
-    try {
-      await DB.prepare(`SELECT duration_days FROM courses LIMIT 1`).first()
-    } catch (e) {
-      if (isNoSuchColumnDurationDays(e)) coursesHasDurationDaysColumn = false
-      else throw e
-    }
+    const coursesColSet = await getCoursesTableColumnNames(DB)
+    const coursesHasDurationDaysColumn = coursesColSet.has('duration_days')
 
-    let result: { meta: { last_row_id?: number | bigint | null } }
-    if (coursesHasDurationDaysColumn) {
-      result = await insertCourseRow(DB, {
+    const result = await insertCourseRow(
+      DB,
+      coursesColSet,
+      {
         title: String(title),
         descriptionText,
         thumbForInsert,
@@ -1393,40 +1399,13 @@ admin.post('/courses', requireAdmin, async (c) => {
         scheduleInfo,
         difficulty,
         priceRemarks,
-      })
-    } else {
-      result = await insertCourseRowWithoutDurationColumn(DB, {
-        title: String(title),
-        descriptionText,
-        thumbForInsert,
-        instructorId,
-        status: statusNorm.value,
-        regular_price,
-        sale_price,
-        discount_price,
-        certificateId,
-        validityUnlimited,
-        categoryGroup,
-        scheduleInfo,
-        difficulty,
-        priceRemarks,
-      })
-    }
+      },
+    )
 
     const newId = Number(result.meta.last_row_id ?? 0)
 
     if (!String(thumbForInsert || '').trim()) {
-      let certName: string | null = null
-      if (certificateId) {
-        try {
-          const ct = await DB.prepare(`SELECT name FROM certification_types WHERE id = ?`)
-            .bind(certificateId)
-            .first<{ name: string }>()
-          certName = ct?.name ?? null
-        } catch {
-          /* certification_types 없음 */
-        }
-      }
+      const certName = await resolveCertificateNameForCourse(DB, certificateId)
       const gen = await generateCourseThumbnailAi(c.env, {
         title: String(title),
         certificateName: certName,
@@ -1586,17 +1565,7 @@ admin.post('/courses/:id/thumbnail-ai', requireAdmin, async (c) => {
     if (!row) {
       return c.json(errorResponse('강좌를 찾을 수 없습니다'), 404)
     }
-    let certName: string | null = null
-    if (row.certificate_id) {
-      try {
-        const ct = await DB.prepare(`SELECT name FROM certification_types WHERE id = ?`)
-          .bind(row.certificate_id)
-          .first<{ name: string }>()
-        certName = ct?.name ?? null
-      } catch {
-        /* */
-      }
-    }
+    const certName = await resolveCertificateNameForCourse(DB, row.certificate_id)
     const gen = await generateCourseThumbnailAi(c.env, {
       title: row.title,
       certificateName: certName,
@@ -1663,13 +1632,8 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
       thumbnail_image_ai: number | null
     }
 
-    let coursesHasDurationDaysColumn = true
-    try {
-      await DB.prepare(`SELECT duration_days FROM courses LIMIT 1`).first()
-    } catch (e) {
-      if (isNoSuchColumnDurationDays(e)) coursesHasDurationDaysColumn = false
-      else throw e
-    }
+    const coursesColSetPut = await getCoursesTableColumnNames(DB)
+    const coursesHasDurationDaysColumn = coursesColSetPut.has('duration_days')
 
     const durationSelectExpr = coursesHasDurationDaysColumn ? 'duration_days' : '90 AS duration_days'
     const sqlPutBase = `SELECT title, description, thumbnail_url, status, price, sale_price,
@@ -2070,6 +2034,10 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
       return c.json(errorResponse('강좌를 찾을 수 없습니다'), 404)
     }
 
+    if (result.meta.changes > 0 && status === 'published' && coursesColSetPut.has('deleted_at')) {
+      await DB.prepare(`UPDATE courses SET deleted_at = NULL WHERE id = ?`).bind(courseId).run()
+    }
+
     return c.json(successResponse({ message: '강좌가 수정되었습니다' }))
   } catch (error) {
     if (error instanceof Error && error.message === 'INVALID_JSON_BODY') {
@@ -2084,6 +2052,7 @@ admin.put('/courses/:id', requireAdmin, async (c) => {
 admin.patch('/courses/:id', requireAdmin, async (c) => {
   const { DB } = c.env
   const courseId = c.req.param('id')
+  const coursesCols = await getCoursesTableColumnNames(DB)
   try {
     const body = await c.req.json()
     const {
@@ -2112,6 +2081,9 @@ admin.patch('/courses/:id', requireAdmin, async (c) => {
       }
       sets.push('status = ?')
       vals.push(st.value)
+      if (st.value === 'published' && coursesCols.has('deleted_at')) {
+        sets.push(`deleted_at = NULL`)
+      }
     }
     if (highlight_classic !== undefined) {
       sets.push('highlight_classic = ?')
@@ -2154,31 +2126,56 @@ admin.patch('/courses/:id', requireAdmin, async (c) => {
   }
 })
 
-// 강좌 삭제
+// 강좌 삭제 — 기본 휴지통(soft), ?hard=true 시 영구 삭제(수강·주문 기록 있으면 거부)
 admin.delete('/courses/:id', requireAdmin, async (c) => {
   const { DB } = c.env
   const courseId = c.req.param('id')
+  const hard = c.req.query('hard') === 'true'
 
   try {
-    // 수강생 확인
-    const enrollments = await DB.prepare(`
-      SELECT COUNT(*) as count FROM enrollments WHERE course_id = ?
-    `).bind(courseId).first()
-
-    if (enrollments && enrollments.count > 0) {
-      return c.json(errorResponse('수강생이 있는 강좌는 삭제할 수 없습니다'), 400)
+    if (!hard) {
+      const r = await DB.prepare(
+        `UPDATE courses SET deleted_at = datetime('now'), status = 'inactive', updated_at = datetime('now') WHERE id = ?`,
+      )
+        .bind(courseId)
+        .run()
+      if (r.meta.changes === 0) {
+        return c.json(errorResponse('강좌를 찾을 수 없습니다'), 404)
+      }
+      return c.json(successResponse({ message: '강좌를 휴지통으로 옮겼습니다.' }))
     }
 
-    // 강좌 삭제
-    const result = await DB.prepare(`
-      DELETE FROM courses WHERE id = ?
-    `).bind(courseId).run()
+    const enrollments = await DB.prepare(`SELECT COUNT(*) as count FROM enrollments WHERE course_id = ?`)
+      .bind(courseId)
+      .first<{ count: number }>()
+    if (enrollments && enrollments.count > 0) {
+      return c.json(
+        errorResponse('수강 기록이 있는 강좌는 영구 삭제할 수 없습니다. 휴지통(안전 삭제)을 이용해 주세요.'),
+        400,
+      )
+    }
+
+    let orderCount = 0
+    try {
+      const o = await DB.prepare(`SELECT COUNT(*) as count FROM orders WHERE course_id = ?`)
+        .bind(courseId)
+        .first<{ count: number }>()
+      orderCount = o?.count ?? 0
+    } catch {
+      orderCount = 0
+    }
+    if (orderCount > 0) {
+      return c.json(errorResponse('주문 기록이 있어 영구 삭제할 수 없습니다.'), 400)
+    }
+
+    await DB.prepare(`DELETE FROM lessons WHERE course_id = ?`).bind(courseId).run()
+    const result = await DB.prepare(`DELETE FROM courses WHERE id = ?`).bind(courseId).run()
 
     if (result.meta.changes === 0) {
       return c.json(errorResponse('강좌를 찾을 수 없습니다'), 404)
     }
 
-    return c.json(successResponse({ message: '강좌가 삭제되었습니다' }))
+    return c.json(successResponse({ message: '강좌가 영구 삭제되었습니다.' }))
   } catch (error) {
     console.error('Delete course error:', error)
     return c.json(errorResponse('강좌 삭제 실패'), 500)
