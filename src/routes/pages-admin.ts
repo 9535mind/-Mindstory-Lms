@@ -336,28 +336,56 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                                 class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
                         </div>
 
-                        <!-- YouTube 영상 입력 (간단 버전) -->
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fab fa-youtube mr-2 text-red-600"></i>YouTube 영상 <span class="text-red-500">*</span>
-                            </label>
-                            
-                            <input type="text" id="lessonVideoUrl" placeholder="https://youtube.com/watch?v=dQw4w9WgXcQ 또는 dQw4w9WgXcQ"
-                                class="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
-                            
-                            <div class="flex items-center justify-between mt-2">
-                                <p class="text-xs text-gray-500">
-                                    <i class="fas fa-info-circle mr-1"></i>
-                                    YouTube URL 또는 영상 ID 입력
-                                </p>
-                                <a href="https://studio.youtube.com/channel/UCXF55ON7qD6Z_iVYhkcOffg/videos" 
-                                   target="_blank" 
-                                   class="inline-flex items-center px-2.5 py-1.5 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors">
-                                    <i class="fab fa-youtube mr-1.5"></i>내 YouTube
-                                    <i class="fas fa-external-link-alt ml-1.5 text-[10px]"></i>
-                                </a>
+                        <!-- 영상 출처: YouTube 또는 R2(mindstory-lms) -->
+                        <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/80 p-4 sm:p-5">
+                            <p class="text-sm font-semibold text-gray-800 mb-3">영상 출처</p>
+                            <div class="flex flex-wrap gap-2 sm:gap-4 mb-4">
+                                <label class="inline-flex items-center gap-2 cursor-pointer text-sm">
+                                    <input type="radio" name="lessonVideoSource" id="lessonVideoSourceYoutube" value="youtube" checked class="text-purple-600 focus:ring-purple-500" onchange="toggleLessonVideoSource()">
+                                    <span><i class="fab fa-youtube text-red-600 mr-1"></i>YouTube</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 cursor-pointer text-sm">
+                                    <input type="radio" name="lessonVideoSource" id="lessonVideoSourceR2" value="r2" class="text-orange-600 focus:ring-orange-500" onchange="toggleLessonVideoSource()">
+                                    <span><i class="fas fa-cloud text-orange-500 mr-1"></i>R2 저장소 (mindstory-lms)</span>
+                                </label>
                             </div>
-
+                            <div id="lessonYoutubeBlock">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fab fa-youtube mr-2 text-red-600"></i>YouTube URL 또는 영상 ID <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="lessonVideoUrl" placeholder="https://youtube.com/watch?v=… 또는 11자리 ID"
+                                    class="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                                <div class="flex items-center justify-between mt-2">
+                                    <p class="text-xs text-gray-500">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        YouTube 영상만 해당합니다.
+                                    </p>
+                                    <a href="https://studio.youtube.com/channel/UCXF55ON7qD6Z_iVYhkcOffg/videos" 
+                                       target="_blank" rel="noopener noreferrer"
+                                       class="inline-flex items-center px-2.5 py-1.5 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors">
+                                        <i class="fab fa-youtube mr-1.5"></i>내 YouTube
+                                        <i class="fas fa-external-link-alt ml-1.5 text-[10px]"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div id="lessonR2Block" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-database mr-2 text-orange-500"></i>R2 영상 URL (HTTPS)
+                                </label>
+                                <input type="url" id="lessonR2VideoUrl" placeholder="https://....r2.dev/경로/파일.mp4"
+                                    class="w-full px-4 py-2.5 border-2 border-orange-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400">
+                                <input type="hidden" id="lessonR2ObjectKey" value="">
+                                <div class="flex flex-wrap items-center gap-2 mt-2">
+                                    <button type="button" id="btnR2PickerOpen" onclick="openR2PickerModal()"
+                                        class="inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm font-semibold rounded-lg hover:bg-orange-700 shadow-sm">
+                                        <i class="fas fa-warehouse mr-2"></i>R2 창고에서 불러오기
+                                    </button>
+                                    <button type="button" onclick="runR2AutoMatch()" class="text-xs text-indigo-600 hover:underline">이 강좌 차시에 파일명(회차) 자동 매칭</button>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Cloudflare Pages에 <code class="bg-white px-1 rounded">R2_PUBLIC_URL</code> 또는 <code class="bg-white px-1 rounded">R2_PUBLIC_BASE_URL</code>로 퍼블릭 액세스 도메인을 맞춰 두면 재생 URL이 올바르게 열립니다.
+                                </p>
+                            </div>
                         </div>
 
                         <!-- 차시 설명 -->
@@ -427,6 +455,20 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <div id="r2PickerModal" class="fixed inset-0 bg-black/50 hidden z-[60] items-center justify-center p-4" aria-hidden="true">
+            <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-gray-900"><i class="fas fa-warehouse mr-2 text-orange-500"></i>R2 창고에서 선택</h3>
+                    <button type="button" onclick="closeR2PickerModal()" class="text-gray-500 hover:text-gray-800" aria-label="닫기"><i class="fas fa-times text-xl"></i></button>
+                </div>
+                <div class="p-3 border-b flex flex-wrap gap-2">
+                    <input type="text" id="r2PickerPrefix" placeholder="접두어 필터 (예: videos/ 또는 메타인지)" class="flex-1 min-w-[12rem] px-3 py-2 border rounded-lg text-sm" />
+                    <button type="button" onclick="loadR2ObjectList()" class="px-4 py-2 bg-slate-800 text-white text-sm rounded-lg hover:bg-slate-900">목록 새로고침</button>
+                </div>
+                <div id="r2PickerList" class="flex-1 overflow-y-auto p-3 text-sm min-h-[220px] max-h-[55vh] text-gray-700">목록을 불러오는 중…</div>
             </div>
         </div>
 
@@ -577,6 +619,10 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
               document.getElementById('lessonOrder').value = nextOrder;
               
               document.getElementById('lessonIsActive').checked = true;
+              document.getElementById('lessonVideoSourceYoutube').checked = true;
+              document.getElementById('lessonR2VideoUrl').value = '';
+              document.getElementById('lessonR2ObjectKey').value = '';
+              if (typeof toggleLessonVideoSource === 'function') toggleLessonVideoSource();
               document.getElementById('lessonModal').classList.remove('hidden');
               document.getElementById('lessonModal').classList.add('flex');
             }
@@ -587,7 +633,8 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                 const response = await apiRequest('GET', \`/api/courses/\${courseId}/lessons/\${lessonId}\`);
                 
                 if (response.success) {
-                  const lesson = response.data;
+                  const payload = response.data;
+                  const lesson = payload.lesson || payload;
                   
                   console.log('📝 Loaded lesson data:', lesson);
                   
@@ -601,69 +648,23 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                     lesson.is_preview === 1 || lesson.is_free_preview === 1;
                   document.getElementById('lessonIsActive').checked = lesson.status === 'active';
                   
-                  // 영상 데이터 설정
-                  if (lesson.video_url) {
-                    console.log('🎬 영상 URL 발견:', lesson.video_url);
-                    console.log('🎬 영상 제공자:', lesson.video_provider);
-                    
-                    // 현재 영상 정보 표시
-                    const currentVideoInfo = document.getElementById('currentVideoInfo');
-                    const currentVideoUrl = document.getElementById('currentVideoUrl');
-                    
-                    // YouTube인지 api.video인지 확인
-                    const isYoutube = lesson.video_provider === 'youtube' || 
-                                     lesson.video_url.includes('youtube.com') || 
-                                     lesson.video_url.includes('youtu.be');
-                    
-                    if (isYoutube) {
-                      // YouTube 영상인 경우
-                      switchVideoTab('youtube');
-                      document.getElementById('lessonVideoUrl').value = lesson.video_url;
-                      
-                      // YouTube는 현재 영상 정보 숨김 (URL 입력창에 표시되므로)
-                      currentVideoInfo.classList.add('hidden');
-                    } else {
-                      // api.video 또는 기타 URL인 경우
-                      switchVideoTab('urlupload');
-                      document.getElementById('videoUrlInput').value = lesson.video_url;
-                      
-                      // 현재 영상 정보 표시
-                      currentVideoInfo.classList.remove('hidden');
-                      currentVideoUrl.textContent = lesson.video_url;
-                      
-                      // 영상 플랫폼 구분하여 표시
-                      const platformBadge = currentVideoUrl.parentElement.querySelector('.platform-badge') || document.createElement('span');
-                      platformBadge.className = 'platform-badge text-xs px-2 py-1 rounded ml-2';
-                      
-                      if (lesson.video_url.includes('api.video')) {
-                        platformBadge.textContent = 'api.video';
-                        platformBadge.className += ' bg-purple-100 text-purple-700';
-                      } else if (lesson.video_url.includes('cloudflare')) {
-                        platformBadge.textContent = 'Cloudflare Stream';
-                        platformBadge.className += ' bg-blue-100 text-blue-700';
-                      } else if (lesson.video_url.includes('r2.dev')) {
-                        platformBadge.textContent = 'R2 Storage';
-                        platformBadge.className += ' bg-orange-100 text-orange-700';
-                      } else {
-                        platformBadge.textContent = '외부 URL';
-                        platformBadge.className += ' bg-gray-100 text-gray-700';
-                      }
-                      
-                      if (!currentVideoUrl.parentElement.querySelector('.platform-badge')) {
-                        currentVideoUrl.parentElement.insertBefore(platformBadge, currentVideoUrl);
-                      }
-                    }
-                    
-                    // 재생시간 표시
-                    if (lesson.video_duration_minutes && lesson.video_duration_minutes > 0) {
-                      console.log('⏱️ 재생시간:', lesson.video_duration_minutes, '분');
-                    }
+                  // 영상: YouTube vs R2
+                  document.getElementById('lessonVideoUrl').value = '';
+                  document.getElementById('lessonR2VideoUrl').value = '';
+                  document.getElementById('lessonR2ObjectKey').value = '';
+                  const url = String(lesson.video_url || '').trim();
+                  const vt = String(lesson.video_type || '').toUpperCase();
+                  const isR2 = vt === 'R2' || (url && (url.indexOf('.r2.dev') >= 0 || url.indexOf('r2.cloudflarestorage.com') >= 0));
+                  if (url && isR2) {
+                    document.getElementById('lessonVideoSourceR2').checked = true;
+                    document.getElementById('lessonR2VideoUrl').value = url;
+                  } else if (url) {
+                    document.getElementById('lessonVideoSourceYoutube').checked = true;
+                    document.getElementById('lessonVideoUrl').value = lesson.video_url;
                   } else {
-                    console.log('❌ 영상 URL이 없습니다');
-                    document.getElementById('currentVideoInfo').classList.add('hidden');
-                    document.getElementById('lessonVideoUrl').value = '';
-                    document.getElementById('videoUrlInput').value = '';
+                    document.getElementById('lessonVideoSourceYoutube').checked = true;
                   }
+                  if (typeof toggleLessonVideoSource === 'function') toggleLessonVideoSource();
                   
                   document.getElementById('lessonModal').classList.remove('hidden');
                   document.getElementById('lessonModal').classList.add('flex');
@@ -703,41 +704,129 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
               }
             }
 
-            // 영상 데이터 가져오기
+            function toggleLessonVideoSource() {
+              const r2 = document.getElementById('lessonVideoSourceR2');
+              const useR2 = r2 && r2.checked;
+              const yb = document.getElementById('lessonYoutubeBlock');
+              const r2b = document.getElementById('lessonR2Block');
+              if (yb) yb.classList.toggle('hidden', useR2);
+              if (r2b) r2b.classList.toggle('hidden', !useR2);
+            }
+
+            function openR2PickerModal() {
+              document.getElementById('lessonVideoSourceR2').checked = true;
+              toggleLessonVideoSource();
+              const m = document.getElementById('r2PickerModal');
+              m.classList.remove('hidden');
+              m.classList.add('flex');
+              loadR2ObjectList();
+            }
+
+            function closeR2PickerModal() {
+              const m = document.getElementById('r2PickerModal');
+              m.classList.add('hidden');
+              m.classList.remove('flex');
+            }
+
+            async function loadR2ObjectList() {
+              const listEl = document.getElementById('r2PickerList');
+              const prefix = (document.getElementById('r2PickerPrefix') && document.getElementById('r2PickerPrefix').value) || '';
+              listEl.innerHTML = '<p class="text-gray-500 p-2">불러오는 중…</p>';
+              try {
+                const r = await apiRequest('GET', '/api/admin/r2/list?prefix=' + encodeURIComponent(prefix) + '&limit=500');
+                if (!r.success) {
+                  listEl.innerHTML = '<p class="text-red-600">' + (r.error || '목록 실패') + '</p>';
+                  return;
+                }
+                const data = r.data || {};
+                const objs = data.objects || [];
+                const base = data.publicBaseUrl || '';
+                if (!objs.length) {
+                  listEl.innerHTML = '<p class="text-gray-500">해당 접두어에 MP4 등 영상 파일이 없습니다.</p>';
+                  return;
+                }
+                listEl.innerHTML = '<ul class="space-y-1">' + objs.map(function (o) {
+                  var k = String(o.key || '');
+                  var short = k.length > 72 ? k.slice(0, 70) + '…' : k;
+                  return '<li class="border rounded-lg p-2 hover:bg-orange-50 cursor-pointer flex justify-between gap-2 items-start" data-r2-key="' + encodeURIComponent(k) + '" data-r2-url="' + encodeURIComponent(String(o.publicUrl || '')) + '" onclick="selectR2FromPicker(this)">' +
+                    '<span class="break-all text-xs font-mono text-gray-800">' + short.replace(/</g, '&lt;') + '</span>' +
+                    '<span class="text-xs text-orange-600 shrink-0">선택</span></li>';
+                }).join('') + '</ul>' +
+                  (base ? '<p class="text-xs text-gray-500 mt-2">공개 베이스: ' + base + '</p>' : '');
+              } catch (e) {
+                listEl.innerHTML = '<p class="text-red-600">API 오류: ' + (e.message || '') + '</p>';
+              }
+            }
+
+            function selectR2FromPicker(el) {
+              if (!el) return;
+              var key = '';
+              var publicUrl = '';
+              try { key = decodeURIComponent(el.getAttribute('data-r2-key') || ''); } catch (e) { key = el.getAttribute('data-r2-key') || ''; }
+              try { publicUrl = decodeURIComponent(el.getAttribute('data-r2-url') || ''); } catch (e2) { publicUrl = el.getAttribute('data-r2-url') || ''; }
+              document.getElementById('lessonR2VideoUrl').value = publicUrl;
+              document.getElementById('lessonR2ObjectKey').value = key;
+              closeR2PickerModal();
+              if (typeof showSuccess === 'function') showSuccess('R2 영상이 선택되었습니다. 저장을 눌러 반영하세요.');
+            }
+
+            async function runR2AutoMatch() {
+              if (!confirm('이 강좌의 차시 번호·제목(○편)과 R2 파일명을 맞춰 영상 URL을 일괄 입력합니다. 계속할까요?')) return;
+              try {
+                const r = await apiRequest('POST', '/api/admin/r2/auto-match', { course_id: courseId, dry_run: false });
+                if (!r.success) {
+                  showError(r.error || '자동 매칭 실패');
+                  return;
+                }
+                const d = r.data || {};
+                const n = (d.updated && d.updated.length) || 0;
+                alert('반영된 차시: ' + n + '개');
+                await loadLessons();
+              } catch (e) {
+                showError(e.message || '자동 매칭 요청 실패');
+              }
+            }
+
+            // 영상 데이터 가져오기 (YouTube 또는 R2)
             function getVideoData() {
-              console.log('🎬 getVideoData 시작');
-              
-              // YouTube URL 입력 필드
+              const r2el = document.getElementById('lessonVideoSourceR2');
+              const useR2 = r2el && r2el.checked;
+              if (useR2) {
+                const url = (document.getElementById('lessonR2VideoUrl') && document.getElementById('lessonR2VideoUrl').value || '').trim();
+                if (!url || url.indexOf('https://') !== 0) {
+                  alert('R2 영상은 https:// 로 시작하는 공개 URL이어야 합니다. 창고에서 선택하거나 붙여넣어 주세요.');
+                  return null;
+                }
+                const keyEl = document.getElementById('lessonR2ObjectKey');
+                return {
+                  video_provider: 'r2',
+                  video_url: url,
+                  video_id: (keyEl && keyEl.value) ? keyEl.value : url.split('/').pop(),
+                  video_type: 'R2',
+                };
+              }
               const youtubeUrlField = document.getElementById('lessonVideoUrl');
               if (!youtubeUrlField) {
-                console.error('❌ lessonVideoUrl 필드를 찾을 수 없음');
-                alert('YouTube URL 입력 필드를 찾을 수 없습니다.');
+                alert('영상 입력 필드를 찾을 수 없습니다.');
                 return null;
               }
-              
               const youtubeUrl = youtubeUrlField.value.trim();
-              console.log('📝 YouTube URL:', youtubeUrl);
-              
               if (!youtubeUrl) {
                 alert('YouTube URL 또는 영상 ID를 입력해주세요.');
                 youtubeUrlField.focus();
                 return null;
               }
-              
-              // YouTube ID 추출
               const videoId = extractYouTubeId(youtubeUrl);
-              console.log('🆔 추출된 YouTube ID:', videoId);
-              
               if (!videoId) {
-                alert('유효하지 않은 YouTube URL입니다.\\n\\n예시:\\n- https://www.youtube.com/watch?v=dQw4w9WgXcQ\\n- dQw4w9WgXcQ');
+                alert('유효하지 않은 YouTube URL입니다.');
                 youtubeUrlField.focus();
                 return null;
               }
-              
               return {
                 video_provider: 'youtube',
                 video_url: videoId,
-                video_id: videoId
+                video_id: videoId,
+                video_type: 'YOUTUBE',
               };
             }
             
@@ -803,6 +892,7 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                 video_provider: videoData.video_provider,
                 video_url: videoData.video_url,
                 video_id: videoData.video_id,
+                video_type: videoData.video_type,
                 description: document.getElementById('lessonDescription').value || null,
                 is_preview: document.getElementById('lessonIsPreview').checked ? 1 : 0,
                 status: document.getElementById('lessonIsActive').checked ? 'active' : 'inactive'
@@ -871,9 +961,18 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
               }
             }
 
-            // 현재 영상 미리보기
+            // 현재 영상 미리보기 (모달 폼의 YouTube / R2 필드 기준)
             function previewCurrentVideo() {
-              const videoUrl = document.getElementById('currentVideoUrl').textContent.trim();
+              var r2Radio = document.getElementById('lessonVideoSourceR2');
+              var useR2 = r2Radio && r2Radio.checked;
+              var videoUrl = '';
+              if (useR2) {
+                var r2u = document.getElementById('lessonR2VideoUrl');
+                videoUrl = (r2u && r2u.value || '').trim();
+              } else {
+                var yu = document.getElementById('lessonVideoUrl');
+                videoUrl = (yu && yu.value || '').trim();
+              }
               if (!videoUrl) {
                 alert('미리보기할 영상 URL이 없습니다.');
                 return;
@@ -932,6 +1031,11 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
                     class="rounded-lg shadow-2xl">
                   </iframe>
                 \`;
+              } else if (/\\.m3u8(\\?|$)/i.test(videoUrl)) {
+                embedHtml = \`
+                  <video id="adminPreviewHls" controls width="960" height="540" class="rounded-lg shadow-2xl" playsinline></video>
+                  <p class="text-gray-400 text-xs mt-2">HLS(m3u8) — Safari는 네이티브 재생, 그 외는 자동으로 hls.js를 불러옵니다.</p>
+                \`;
               } else {
                 // 기타 영상 URL은 video 태그 사용
                 embedHtml = \`
@@ -958,6 +1062,36 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
               
               document.body.appendChild(previewModal);
               
+              if (/\\.m3u8(\\?|$)/i.test(videoUrl)) {
+                (function () {
+                  var el = document.getElementById('adminPreviewHls');
+                  if (!el) return;
+                  if (el.canPlayType && el.canPlayType('application/vnd.apple.mpegurl')) {
+                    el.src = videoUrl;
+                    return;
+                  }
+                  function loadHls() {
+                    return new Promise(function (resolve, reject) {
+                      if (typeof window.Hls !== 'undefined') return resolve();
+                      var s = document.createElement('script');
+                      s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js';
+                      s.onload = function () { resolve(); };
+                      s.onerror = reject;
+                      document.head.appendChild(s);
+                    });
+                  }
+                  loadHls().then(function () {
+                    if (window.Hls && window.Hls.isSupported()) {
+                      var hls = new window.Hls();
+                      hls.loadSource(videoUrl);
+                      hls.attachMedia(el);
+                    } else {
+                      el.outerHTML = '<p class="text-red-300">이 브라우저에서 HLS(m3u8)를 재생할 수 없습니다. Safari 또는 학습 화면에서 확인해 주세요.</p>';
+                    }
+                  }).catch(function () {});
+                })();
+              }
+              
               // ESC 키로 닫기
               const closeOnEsc = (e) => {
                 if (e.key === 'Escape') {
@@ -974,9 +1108,15 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
             // 현재 영상 삭제
             function removeCurrentVideo() {
               if (confirm('영상을 삭제하시겠습니까? 저장 후에 적용됩니다.')) {
-                document.getElementById('currentVideoInfo').classList.add('hidden');
+                var cv = document.getElementById('currentVideoInfo');
+                if (cv) cv.classList.add('hidden');
                 document.getElementById('lessonVideoUrl').value = '';
-                document.getElementById('videoUrlInput').value = '';
+                var vi = document.getElementById('videoUrlInput');
+                if (vi) vi.value = '';
+                var r2u = document.getElementById('lessonR2VideoUrl');
+                if (r2u) r2u.value = '';
+                var r2k = document.getElementById('lessonR2ObjectKey');
+                if (r2k) r2k.value = '';
                 
                 // 업로드된 파일 정보도 초기화
                 const uploadedInfo = document.getElementById('uploadedInfo');

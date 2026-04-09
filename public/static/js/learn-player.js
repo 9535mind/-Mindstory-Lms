@@ -534,7 +534,13 @@ async function loadVideoPlayer(lesson) {
     
     try {
         const vtRaw = String(lesson.video_type || '').toUpperCase();
-        if (vtRaw === 'R2' || vtRaw === 'UPLOAD') {
+        const rawUrl = String(lesson.video_url || '').trim();
+        const looksLikeR2 =
+            rawUrl &&
+            (rawUrl.indexOf('.r2.dev') !== -1 ||
+                rawUrl.indexOf('r2.cloudflarestorage.com') !== -1 ||
+                /\.(mp4|webm|mov|m4v|m3u8)(\?|$)/i.test(rawUrl));
+        if (vtRaw === 'R2' || vtRaw === 'UPLOAD' || (looksLikeR2 && vtRaw !== 'YOUTUBE')) {
             console.log('▶️ Loading HTML5 / R2 video');
             await loadHtml5VideoPlayer(lesson);
             return;
@@ -578,6 +584,24 @@ async function loadVideoPlayer(lesson) {
 /**
  * R2 등 직접 URL — HTML5 video
  */
+function loadHlsScript() {
+    return new Promise(function (resolve, reject) {
+        if (typeof window.Hls !== 'undefined') {
+            resolve();
+            return;
+        }
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js';
+        s.onload = function () {
+            resolve();
+        };
+        s.onerror = function () {
+            reject(new Error('hls.js load failed'));
+        };
+        document.head.appendChild(s);
+    });
+}
+
 async function loadHtml5VideoPlayer(lesson) {
     const container = document.getElementById('videoPlayer');
     if (!container) return;
@@ -596,7 +620,41 @@ async function loadHtml5VideoPlayer(lesson) {
     video.controls = true;
     video.playsInline = true;
     video.preload = 'metadata';
-    video.src = src;
+
+    const isHls = /\.m3u8(\?|$)/i.test(src);
+    if (isHls) {
+        if (video.canPlayType && video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = src;
+        } else {
+            try {
+                await loadHlsScript();
+                if (window.Hls && window.Hls.isSupported()) {
+                    var hls = new window.Hls();
+                    hls.loadSource(src);
+                    hls.attachMedia(video);
+                    player = video;
+                    video.addEventListener('ended', function () {
+                        markLessonCompleted();
+                    });
+                    video.addEventListener('pause', function () {
+                        void flushLessonProgressSync('html5-pause');
+                    });
+                    wrap.appendChild(video);
+                    container.appendChild(wrap);
+                    return;
+                }
+            } catch (e) {
+                console.error('HLS load error', e);
+            }
+            container.innerHTML =
+                '<div class="text-center p-12 bg-gray-900 rounded-lg"><p class="text-white">HLS(m3u8) 재생을 지원하지 않는 환경입니다. MP4 URL을 사용하거나 Safari에서 시도해 주세요.</p></div>';
+            player = null;
+            return;
+        }
+    } else {
+        video.src = src;
+    }
+
     player = video;
     video.addEventListener('ended', () => {
         markLessonCompleted();

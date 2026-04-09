@@ -21,6 +21,8 @@
     }
   ],
   "vars": {
+    // R2 퍼블릭 URL (Custom Domain 또는 *.r2.dev) — 비워두면 코드 기본값·R2_PUBLIC_BASE_URL 사용. Pages 대시보드에서도 설정 가능.
+    "R2_PUBLIC_URL": "",
     "OPENAI_BASE_URL": "https://api.openai.com/v1",
     "OPENAI_MODEL": "gpt-4o",
     // GAS 웹앱 [새 배포] 시 URL 변경 가능 — forest.html FOREST_SHEETS_WEBHOOK_URL 과 맞출 것

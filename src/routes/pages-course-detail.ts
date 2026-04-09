@@ -19,6 +19,7 @@ import {
   siteFloatingQuickMenuStyles,
 } from '../utils/site-floating-quick-menu'
 import { siteFooterLegalBlockHtml } from '../utils/site-footer-legal'
+import { privateQualificationStudentNoticeBlockHtml } from '../utils/private-qualification-notice-html'
 import { adminMagicPencilHtml, siteHeaderNavCoursesGlassStyles } from '../utils/site-header-courses-nav'
 
 const app = new Hono<{ Bindings: Bindings; Variables: { user?: User } }>()
@@ -222,6 +223,17 @@ app.get('/courses/:id', async (c) => {
                     <p class="px-6 pb-6 text-sm font-semibold text-indigo-900 leading-relaxed border-t border-slate-100 pt-4 bg-indigo-50/40">
                         상기 자격은 자격기본법 규정에 따라 등록한 민간자격으로, 국가로부터 인정받은 공인자격이 아닙니다.
                     </p>
+                </div>
+            </section>
+
+            <section class="mb-8" aria-labelledby="coursePrivateQualNoticeHeading">
+                <div class="bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden">
+                    <h2 id="coursePrivateQualNoticeHeading" class="px-6 py-4 text-lg font-bold text-gray-900 border-b border-slate-200 bg-slate-50">
+                        자격증 취득 시 유의사항
+                    </h2>
+                    <div class="p-6">
+                        ${privateQualificationStudentNoticeBlockHtml()}
+                    </div>
                 </div>
             </section>
         </main>
