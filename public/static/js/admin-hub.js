@@ -53,6 +53,8 @@ const PANEL_TO_GROUP = {
 let hubUserPage = 1
 let currentUserId = null
 let currentCourseId = null
+/** setupCourseTabs activate(0)=기본정보, 1=차시·영상, 2=차시전체, 3=모임 */
+let hubCourseTabIndex = 0
 let courseModalLessons = []
 let hubDescAiGen = 0
 let hubCourseTitleAiTimer = null
@@ -860,6 +862,24 @@ async function hubSaveAllLessonDrafts(courseId) {
     }
   }
   return true
+}
+
+function hubLessonTitleFromR2Key(key) {
+  const base = String(key || '')
+    .split('/')
+    .pop() || ''
+  const stem = base.replace(/\.(mp4|webm|mov|m4v)$/i, '').trim()
+  return stem || '차시'
+}
+
+function hubSyncLessonFloatBar() {
+  const bar = document.getElementById('hubCourseLessonFloatBar')
+  const modal = document.getElementById('courseModal')
+  if (!bar) return
+  const open = !!(modal && !modal.classList.contains('hidden'))
+  const show = open && currentCourseId != null && hubCourseTabIndex === 1
+  bar.classList.toggle('hidden', !show)
+  bar.setAttribute('aria-hidden', show ? 'false' : 'true')
 }
 
 function hasUnsavedLessonDrafts() {
@@ -3776,6 +3796,8 @@ function setupCourseTabs() {
     if (p2) p2.classList.toggle('hidden', n !== 1)
     if (p3) p3.classList.toggle('hidden', n !== 2)
     if (p4) p4.classList.toggle('hidden', n !== 3)
+    hubCourseTabIndex = n
+    hubSyncLessonFloatBar()
   }
   if (t1) t1.onclick = () => void activate(0)
   if (t2) t2.onclick = () => void activate(1)
@@ -3786,8 +3808,8 @@ function setupCourseTabs() {
 
 function hubLessonVideoSourceFromRow(l) {
   const s = String(l.video_type || '').trim().toLowerCase()
-  if (s === 'r2' || s === 'upload') return 'R2'
   if (s === 'youtube' || s === 'youtubing') return 'YOUTUBE'
+  if (s === 'r2' || s === 'upload') return 'R2'
   const url = String(l.video_url || '').trim().toLowerCase()
   if (url.includes('youtube.com') || url.includes('youtu.be')) return 'YOUTUBE'
   return 'R2'
@@ -3814,10 +3836,10 @@ function renderLessonEditors(courseId) {
   const lessons = document.getElementById('courseTabPanelLessons')
   if (!lessons) return
   const toolbar =
-    '<div class="flex flex-wrap items-center justify-between gap-2 mb-3">' +
-    '<p class="text-sm text-slate-600 max-w-xl">차시별 <strong>영상 소스</strong>(기본: R2 직접 업로드 · 필요 시 유튜브)·제목·학습 시간을 입력합니다. 강좌 <strong>저장</strong> 시 기본 정보와 차시가 함께 반영됩니다.</p>' +
-    '<button type="button" onclick="hubAddLesson()" class="shrink-0 text-sm bg-slate-700 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800">+ 차시 추가</button></div>' +
-    '<p class="text-xs text-slate-500 mb-2"><button type="button" class="text-indigo-600 hover:underline" onclick="hubSaveLessonsOnly()">차시 변경만 저장</button></p>'
+    '<div class="mb-3 space-y-1 max-w-xl">' +
+    '<p class="text-sm text-slate-600">차시별 <strong>영상 소스</strong>(기본: <strong>직접 업로드 (R2)</strong> · 필요 시 유튜브)·제목·학습 시간을 입력합니다. 강좌 <strong>저장</strong> 시 기본 정보와 차시가 함께 반영됩니다.</p>' +
+    '<p class="text-xs text-slate-500">우측 하단의 <strong>+ 차시 추가</strong>, <strong>현재 모든 차시 일괄 저장</strong>, <strong>R2 영상 일괄 가져오기</strong>를 사용할 수 있습니다.</p></div>' +
+    '<p class="text-xs text-slate-500 mb-2"><button type="button" class="text-indigo-600 hover:underline" onclick="hubSaveAllLessonsBulk()">현재 모든 차시 일괄 저장</button></p>'
 
   if (!courseModalLessons.length) {
     lessons.innerHTML =
@@ -3918,6 +3940,129 @@ function renderLessonEditors(courseId) {
   hubWireLessonSourceRadios()
 }
 
+window.hubOpenR2BatchImport = async function () {
+  if (!currentCourseId) {
+    showToast('강좌를 먼저 저장한 뒤 차시·영상 탭에서 사용해 주세요.', 'error')
+    return
+  }
+  const prev = document.getElementById('hubR2BatchModal')
+  if (prev) prev.remove()
+  const wrap = document.createElement('div')
+  wrap.id = 'hubR2BatchModal'
+  wrap.className = 'fixed inset-0 z-[10060] flex items-center justify-center bg-slate-900/50 p-4'
+  wrap.setAttribute('role', 'dialog')
+  wrap.setAttribute('aria-modal', 'true')
+  wrap.innerHTML =
+    '<div class="hub-r2-batch-inner bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200">' +
+    '<div class="p-4 border-b flex justify-between items-center shrink-0">' +
+    '<h4 class="text-lg font-bold text-slate-800">R2 영상 일괄 가져오기</h4>' +
+    '<button type="button" class="text-slate-500 hover:text-slate-800 text-2xl leading-none p-1 hub-r2-batch-close" aria-label="닫기">&times;</button>' +
+    '</div>' +
+    '<div class="p-4 flex-1 overflow-hidden flex flex-col min-h-0">' +
+    '<p class="text-sm text-slate-600 mb-3">mindstory-lms 버킷의 동영상 목록입니다. 여러 개 선택 후 가져오면 차시가 자동 생성됩니다. (파일명 → 차시 제목, HTTPS URL → 재생 URL)</p>' +
+    '<div id="hubR2BatchListMount" class="flex-1 overflow-y-auto border border-slate-200 rounded-lg min-h-[12rem]">' +
+    '<p class="p-4 text-slate-500">불러오는 중…</p></div></div>' +
+    '<div class="p-4 border-t flex flex-wrap gap-2 justify-end bg-slate-50 rounded-b-2xl shrink-0">' +
+    '<button type="button" class="hub-r2-batch-close px-4 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-white">취소</button>' +
+    '<button type="button" id="hubR2BatchImportBtn" class="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">선택한 차시 생성</button>' +
+    '</div></div>'
+  document.body.appendChild(wrap)
+
+  const inner = wrap.querySelector('.hub-r2-batch-inner')
+  const close = () => {
+    wrap.remove()
+    document.removeEventListener('keydown', onKey)
+  }
+  const onKey = (e) => {
+    if (e.key === 'Escape') close()
+  }
+  document.addEventListener('keydown', onKey)
+  wrap.addEventListener('click', function (e) {
+    if (e.target === wrap) close()
+  })
+  if (inner) inner.addEventListener('click', function (e) { e.stopPropagation() })
+  wrap.querySelectorAll('.hub-r2-batch-close').forEach((b) => b.addEventListener('click', close))
+
+  const res = await apiRequest('GET', '/api/admin/r2/list?limit=1000')
+  const mount = document.getElementById('hubR2BatchListMount')
+  const btn = document.getElementById('hubR2BatchImportBtn')
+  if (!res.success || !res.data) {
+    if (mount) mount.innerHTML = '<p class="p-4 text-red-600">' + escapeHtml(res.error || '목록을 불러오지 못했습니다.') + '</p>'
+    return
+  }
+  const objs = Array.isArray(res.data.objects) ? res.data.objects : []
+  const truncated = res.data.truncated === true
+  if (!objs.length) {
+    if (mount) mount.innerHTML = '<p class="p-4 text-slate-500">동영상 파일이 없습니다.</p>'
+    return
+  }
+  let html =
+    (truncated
+      ? '<p class="px-3 py-2 text-xs text-amber-800 bg-amber-50 border-b border-amber-100">목록이 일부만 표시됩니다. prefix 검색·추가 목록은 추후 확장 가능합니다.</p>'
+      : '') +
+    '<div class="divide-y divide-slate-100">'
+  for (let i = 0; i < objs.length; i++) {
+    const o = objs[i]
+    const key = o.key || ''
+    const url = o.publicUrl || ''
+    const title = hubLessonTitleFromR2Key(key)
+    html +=
+      '<label class="flex items-start gap-3 p-3 hover:bg-slate-50 cursor-pointer">' +
+      '<input type="checkbox" class="hub-r2-batch-cb mt-1 rounded border-slate-300 text-emerald-600" data-key="' +
+      escapeAttr(key) +
+      '" data-url="' +
+      escapeAttr(url) +
+      '">' +
+      '<span class="min-w-0 flex-1"><span class="font-medium text-sm text-slate-800 block">' +
+      escapeHtml(title) +
+      '</span><span class="text-xs text-slate-500 break-all">' +
+      escapeHtml(key) +
+      '</span></span></label>'
+  }
+  html += '</div>'
+  if (mount) mount.innerHTML = html
+
+  if (btn)
+    btn.onclick = async function () {
+      const ordered = mount ? Array.from(mount.querySelectorAll('.hub-r2-batch-cb:checked')) : []
+      if (!ordered.length) {
+        showToast('가져올 파일을 선택해 주세요.', 'warning')
+        return
+      }
+      btn.disabled = true
+      const nums = courseModalLessons.map((l) => l.lesson_number)
+      let next = nums.length ? Math.max(...nums) + 1 : 1
+      let created = 0
+      for (let j = 0; j < ordered.length; j++) {
+        const el = ordered[j]
+        const k = el.getAttribute('data-key') || ''
+        const u = el.getAttribute('data-url') || ''
+        const tt = hubLessonTitleFromR2Key(k)
+        const r = await apiRequest('POST', '/api/courses/' + currentCourseId + '/lessons', {
+          lesson_number: next++,
+          title: tt,
+          description: '',
+          video_url: u,
+          video_type: 'R2',
+          video_duration_minutes: 0,
+          is_preview: 0,
+        })
+        if (!r.success) {
+          showToast(r.error || '차시 생성 실패: ' + tt, 'error')
+          btn.disabled = false
+          return
+        }
+        created++
+      }
+      btn.disabled = false
+      showToast(created + '개 차시가 추가되었습니다.', 'success')
+      close()
+      await reloadCourseModalLessons(currentCourseId)
+      loadCourses()
+      hubSyncLessonFloatBar()
+    }
+}
+
 window.hubAddLesson = async function () {
   if (!currentCourseId) return
   const nums = courseModalLessons.map((l) => l.lesson_number)
@@ -3947,15 +4092,19 @@ window.hubDeleteLesson = async function (courseId, lessonId) {
   } else showToast(res.error || '삭제 실패', 'error')
 }
 
-window.hubSaveLessonsOnly = async function () {
+window.hubSaveAllLessonsBulk = async function () {
   if (!currentCourseId) return
+  const panel = document.getElementById('courseTabPanelLessons')
+  const n = panel ? panel.querySelectorAll('[data-lesson-id]').length : 0
   const ok = await hubSaveAllLessonDrafts(currentCourseId)
   if (ok) {
-    showToast('차시 정보가 저장되었습니다.', 'success')
+    showToast(n ? '현재 ' + n + '개 차시가 모두 저장되었습니다.' : '저장할 차시가 없습니다.', n ? 'success' : 'info')
     await reloadCourseModalLessons(currentCourseId)
     loadCourses()
   }
 }
+
+window.hubSaveLessonsOnly = window.hubSaveAllLessonsBulk
 
 window.hubUploadLessonVideo = async function (courseId, lessonId, input) {
   const file = input && input.files && input.files[0]
@@ -4169,6 +4318,8 @@ window.closeCourseModal = function () {
   }
   const frame = document.getElementById('courseLessonsFrame')
   if (frame) frame.src = 'about:blank'
+  hubCourseTabIndex = 0
+  hubSyncLessonFloatBar()
 }
 
 async function loadEnrollmentsTable() {

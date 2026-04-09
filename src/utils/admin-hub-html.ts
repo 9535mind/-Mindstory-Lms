@@ -1425,6 +1425,15 @@ export function adminHubPageHtml(): string {
     </div>
   </div>
 
+  <!-- 강좌 편집 — 차시·영상 탭 전용 플로팅 액션 (모달 열림 + 차시 탭일 때만 표시) -->
+  <div id="hubCourseLessonFloatBar" class="hidden fixed bottom-28 right-4 sm:right-6 z-[10050] flex flex-col items-end gap-2 pointer-events-none" aria-hidden="true">
+    <div class="pointer-events-auto flex flex-col gap-2 rounded-2xl border border-slate-200/90 bg-white/95 p-2 shadow-2xl backdrop-blur-md ring-1 ring-slate-900/5 max-w-[min(100vw-2rem,18rem)]">
+      <button type="button" onclick="hubAddLesson()" class="whitespace-nowrap rounded-lg bg-slate-800 px-3 py-2 text-left text-sm font-medium text-white hover:bg-slate-900">+ 차시 추가</button>
+      <button type="button" onclick="hubSaveAllLessonsBulk()" class="whitespace-nowrap rounded-lg bg-indigo-600 px-3 py-2 text-left text-sm font-medium text-white hover:bg-indigo-700">현재 모든 차시 일괄 저장</button>
+      <button type="button" onclick="hubOpenR2BatchImport()" class="whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-left text-sm font-medium text-emerald-900 hover:bg-emerald-100">R2 영상 일괄 가져오기</button>
+    </div>
+  </div>
+
   <!-- 강좌 삭제 방식 선택 -->
   <div id="hubCourseDeleteModal" class="fixed inset-0 z-[56] hidden items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="hubCourseDeleteModalTitle" onclick="if (event.target === this) hubCloseCourseDeleteModal()">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200" onclick="event.stopPropagation()">
@@ -1507,7 +1516,7 @@ ${adminHubEntityDetailPanelHtml()}
   <script src="/static/js/admin-status-labels.js?v=20260402-course-status-3way"></script>
   <script src="/static/js/admin-hub-member-panel.js?v=20260330-members-page"></script>
   <script src="/static/js/admin-hub-entity-panel.js?v=20260330-hub-pillars"></script>
-  <script src="/static/js/admin-hub.js?v=20260409-cert-catalog-36-issuers"></script>
+  <script src="/static/js/admin-hub.js?v=20260409-hub-lesson-float-r2"></script>
   <script src="/static/js/admin-isbn.js"></script>
   <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
 </body>

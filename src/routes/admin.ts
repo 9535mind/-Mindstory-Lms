@@ -17,6 +17,7 @@ import { deriveCoursePricing } from '../utils/course-pricing'
 import { generateCourseThumbnailAi, normalizeThumbnailUrlInput } from '../utils/course-thumbnail-ai'
 import adminInstructors from './admin-instructors'
 import adminChatbotKnowledge from './admin-chatbot-knowledge'
+import adminR2 from './admin-r2'
 
 /** PUT/POST JSON — 잘못된 JSON·빈 본문 시 500 방지 */
 async function readJsonBody(c: Context): Promise<Record<string, unknown>> {
@@ -2836,5 +2837,6 @@ admin.get('/published-books/:id/report.html', requireAdmin, async (c) => {
 
 admin.route('/', adminChatbotKnowledge)
 admin.route('/', adminInstructors)
+admin.route('/', adminR2)
 
 export default admin
