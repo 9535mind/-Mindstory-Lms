@@ -847,8 +847,8 @@ async function hubSaveAllLessonDrafts(courseId) {
     const durEl = document.getElementById('lesson-dur-' + lessonId)
     const titleEl = document.getElementById('lesson-title-' + lessonId)
     const srcEl = document.querySelector('input[name="lesson-src-' + lessonId + '"]:checked')
-    const video_type = srcEl && srcEl.value === 'R2' ? 'R2' : 'YOUTUBE'
-    const video_url = video_type === 'YOUTUBE' ? String(urlEl?.value ?? '').trim() : String(urlEl?.value ?? '').trim()
+    const video_type = srcEl && srcEl.value === 'YOUTUBE' ? 'YOUTUBE' : 'R2'
+    const video_url = String(urlEl?.value ?? '').trim()
     const duration_minutes = Math.max(0, parseInt(String(durEl?.value ?? '0'), 10) || 0)
     const title = titleEl?.value?.trim()
     const payload = { video_url, duration_minutes, video_type }
@@ -3785,9 +3785,12 @@ function setupCourseTabs() {
 }
 
 function hubLessonVideoSourceFromRow(l) {
-  const s = String(l.video_type || 'youtube').toLowerCase()
+  const s = String(l.video_type || '').trim().toLowerCase()
   if (s === 'r2' || s === 'upload') return 'R2'
-  return 'YOUTUBE'
+  if (s === 'youtube' || s === 'youtubing') return 'YOUTUBE'
+  const url = String(l.video_url || '').trim().toLowerCase()
+  if (url.includes('youtube.com') || url.includes('youtu.be')) return 'YOUTUBE'
+  return 'R2'
 }
 
 function hubWireLessonSourceRadios() {
@@ -3796,7 +3799,7 @@ function hubWireLessonSourceRadios() {
     const radios = document.querySelectorAll('input[name="lesson-src-' + id + '"]')
     const sync = () => {
       const checked = document.querySelector('input[name="lesson-src-' + id + '"]:checked')
-      const v = checked ? checked.value : 'YOUTUBE'
+      const v = checked ? checked.value : 'R2'
       const pYt = document.getElementById('lesson-panel-yt-' + id)
       const pR2 = document.getElementById('lesson-panel-r2-' + id)
       if (pYt) pYt.classList.toggle('hidden', v !== 'YOUTUBE')
@@ -3812,7 +3815,7 @@ function renderLessonEditors(courseId) {
   if (!lessons) return
   const toolbar =
     '<div class="flex flex-wrap items-center justify-between gap-2 mb-3">' +
-    '<p class="text-sm text-slate-600 max-w-xl">차시별 <strong>영상 소스</strong>(유튜브 또는 R2 직접 업로드)·제목·학습 시간을 입력합니다. 강좌 <strong>저장</strong> 시 기본 정보와 차시가 함께 반영됩니다.</p>' +
+    '<p class="text-sm text-slate-600 max-w-xl">차시별 <strong>영상 소스</strong>(기본: R2 직접 업로드 · 필요 시 유튜브)·제목·학습 시간을 입력합니다. 강좌 <strong>저장</strong> 시 기본 정보와 차시가 함께 반영됩니다.</p>' +
     '<button type="button" onclick="hubAddLesson()" class="shrink-0 text-sm bg-slate-700 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800">+ 차시 추가</button></div>' +
     '<p class="text-xs text-slate-500 mb-2"><button type="button" class="text-indigo-600 hover:underline" onclick="hubSaveLessonsOnly()">차시 변경만 저장</button></p>'
 
@@ -3829,6 +3832,12 @@ function renderLessonEditors(courseId) {
         const src = hubLessonVideoSourceFromRow(l)
         const checkedYt = src === 'YOUTUBE' ? ' checked' : ''
         const checkedR2 = src === 'R2' ? ' checked' : ''
+        const urlPlaceholder =
+          src === 'R2'
+            ? 'https://…r2.dev/…/파일명.mp4 — 아래에서 업로드하면 자동 입력'
+            : 'https://www.youtube.com/watch?v=… 또는 11자 영상 ID'
+        const urlLabel =
+          src === 'R2' ? '재생 URL (R2 공개 HTTPS)' : '재생 URL (유튜브 링크·ID 또는 R2 HTTPS)'
         return (
           '<div class="border border-slate-200 rounded-lg p-3 mb-2" data-lesson-id="' +
           l.id +
@@ -3853,33 +3862,37 @@ function renderLessonEditors(courseId) {
           '<label class="inline-flex items-center gap-2 cursor-pointer">' +
           '<input type="radio" name="lesson-src-' +
           l.id +
-          '" value="YOUTUBE"' +
-          checkedYt +
-          '> <span>🔗 유튜브 링크</span></label>' +
-          '<label class="inline-flex items-center gap-2 cursor-pointer">' +
-          '<input type="radio" name="lesson-src-' +
-          l.id +
           '" value="R2"' +
           checkedR2 +
           '> <span>☁️ 직접 업로드 (R2)</span></label>' +
+          '<label class="inline-flex items-center gap-2 cursor-pointer">' +
+          '<input type="radio" name="lesson-src-' +
+          l.id +
+          '" value="YOUTUBE"' +
+          checkedYt +
+          '> <span>🔗 유튜브 링크</span></label>' +
           '</div></div>' +
-          '<label class="block text-xs text-slate-500 mb-0.5">재생 URL (유튜브 주소·ID 또는 R2 HTTPS URL)</label>' +
+          '<label class="block text-xs text-slate-500 mb-0.5">' +
+          urlLabel +
+          '</label>' +
           '<input type="text" id="lesson-url-' +
           l.id +
           '" class="w-full border rounded px-2 py-1 text-sm mb-2" value="' +
           escapeAttr(l.video_url || '') +
-          '" placeholder="유튜브: https://… 또는 11자 ID · R2: 업로드 후 자동 입력">' +
+          '" placeholder="' +
+          escapeAttr(urlPlaceholder) +
+          '">' +
           '<div id="lesson-panel-yt-' +
           l.id +
           '" class="' +
           (src === 'R2' ? 'hidden ' : '') +
-          'text-xs text-slate-500 mb-2">유튜브 공개 영상 링크 또는 video ID를 입력하세요.</div>' +
+          'text-xs text-slate-500 mb-2">유튜브 공개 영상 링크 또는 11자 video ID를 입력하세요.</div>' +
           '<div id="lesson-panel-r2-' +
           l.id +
           '" class="' +
           (src === 'YOUTUBE' ? 'hidden ' : '') +
           'space-y-2 mb-2">' +
-          '<p class="text-xs text-slate-500">아래에서 파일을 선택하면 R2에 업로드되며, 위 재생 URL 필드에 HTTPS 주소가 반영됩니다. (최대 500MB)</p>' +
+          '<p class="text-xs text-slate-500">파일을 선택하면 R2에 업로드되고, 위 <strong>재생 URL</strong> 칸에 HTTPS 주소가 채워집니다. 이미 올린 영상이면 URL만 붙여 넣어도 됩니다. (최대 500MB)</p>' +
           '<label class="block text-xs text-slate-600">영상 파일' +
           '<input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,.mp4,.webm,.mov,.avi,.m4v" class="block text-xs mt-1 w-full border rounded px-2 py-1 bg-white" onchange="hubUploadLessonVideo(' +
           courseId +
@@ -3914,7 +3927,7 @@ window.hubAddLesson = async function () {
     title: '차시 ' + next,
     description: '',
     video_url: null,
-    video_type: 'YOUTUBE',
+    video_type: 'R2',
     video_duration_minutes: 0,
     is_preview: 0,
   })
@@ -3999,7 +4012,7 @@ window.saveLessonVideo = async function (courseId, lessonId) {
   const durEl = document.getElementById('lesson-dur-' + lessonId)
   const titleEl = document.getElementById('lesson-title-' + lessonId)
   const srcEl = document.querySelector('input[name="lesson-src-' + lessonId + '"]:checked')
-  const video_type = srcEl && srcEl.value === 'R2' ? 'R2' : 'YOUTUBE'
+  const video_type = srcEl && srcEl.value === 'YOUTUBE' ? 'YOUTUBE' : 'R2'
   const video_url = urlEl?.value?.trim() || ''
   const duration_minutes = Math.max(0, parseInt(String(durEl?.value ?? '0'), 10) || 0)
   const title = titleEl?.value?.trim()
