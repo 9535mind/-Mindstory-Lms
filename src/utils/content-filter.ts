@@ -56,6 +56,7 @@ const APPROVED_VIDEO_PLATFORMS = [
   'videodelivery.net', // Cloudflare Stream
   'vimeo.com',
   'player.vimeo.com',
+  'r2.dev', // Cloudflare R2 public bucket (*.r2.dev)
 ]
 
 /**

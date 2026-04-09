@@ -24,6 +24,22 @@ import {
 
 const app = new Hono()
 
+function privateQualificationLegalArticleBodyHtml(): string {
+  return `
+<h2>민간자격의 성격</h2>
+<p>마인드스토리 원격평생교육원에서 연계·안내하는 자격은 「자격기본법」에 따라 민간자격 등록을 마친 <strong>등록민간자격</strong>에 해당합니다. 이는 국가가 직접 시행하거나 국가공인으로 인정한 자격과는 구별되며, <strong>국가공인 자격이 아님</strong>을 분명히 알려 드립니다.</p>
+
+<h2>효력·취업·수익에 관한 안내</h2>
+<p>등록민간자격의 취득은 교육 이수 및 발급 기준 충족에 따른 <strong>민간 영역의 자격 증명</strong>에 가깝습니다. 이 자격만으로 특정 직종 취업·승진·수익·사업 허가 등이 <strong>보장되지 않으며</strong>, 채용 주체·관계 기관의 요건과 개인 역량에 따라 달라질 수 있습니다.</p>
+
+<h2>표시·광고 시 유의사항</h2>
+<p>「자격기본법」·「표시·광고의 공정화에 관한 법률」 등에 따라, 국가자격을 사칭하거나 취업·수익을 단정적으로 보장하는 표현, 근거 없는 최상급·비교 우위 표시 등 <strong>과장광고</strong>는 제한될 수 있습니다. 강좌·자격 소개 시에는 위 법령과 고시·안내를 준수해 주시기 바랍니다.</p>
+
+<h2>강좌 페이지의 표시의무</h2>
+<p>자격이 연결된 강좌 상세에는 「자격기본법」에 따른 <strong>표시의무</strong> 사항(자격명, 자격의 종류, 등록번호, 발급기관, 총비용, 세부비용, 환불규정 등)을 표 형태로 게시합니다. 수강·발급 신청 전 해당 표를 반드시 확인해 주시기 바랍니다.</p>
+`.trim()
+}
+
 function pgBusinessInfoHtml() {
   const b = SITE_BUSINESS
   return `
@@ -104,7 +120,12 @@ function navClass(active: NavKey, key: NavKey) {
     : 'text-gray-600 hover:text-indigo-600'
 }
 
-function layout(title: string, active: NavKey, body: string, options?: { docMeta?: string }) {
+function navLinkClass(active: NavKey | false, key: NavKey) {
+  if (active === false) return 'text-gray-600 hover:text-indigo-600'
+  return navClass(active, key)
+}
+
+function layout(title: string, active: NavKey | false, body: string, options?: { docMeta?: string }) {
   const docMeta =
     options?.docMeta ?? '시행일: 2025년 1월 1일 · 최종 수정일: 2026년 3월 25일'
   return `<!DOCTYPE html>
@@ -381,6 +402,14 @@ app.get('/refund', (c) => {
   return c.html(
     layout('환불규정', 'refund', body, {
       docMeta: '시행일: 2025년 1월 1일 · 최종 수정일: 2026년 3월 26일',
+    }),
+  )
+})
+
+app.get('/legal/private-qualification', (c) => {
+  return c.html(
+    layout('민간자격 운영 안내', false, privateQualificationLegalArticleBodyHtml(), {
+      docMeta: '등록민간자격 안내 · 국가공인 자격과의 구별',
     }),
   )
 })

@@ -58,6 +58,7 @@ payments.post('/prepare', requireAuth, async (c) => {
   // 과정 정보 조회
   const course: any = await DB.prepare(`
     SELECT * FROM courses WHERE id = ? AND status = 'published'
+      AND (deleted_at IS NULL OR TRIM(COALESCE(deleted_at,'')) = '')
   `).bind(course_id).first()
 
   if (!course) {

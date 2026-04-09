@@ -3,7 +3,7 @@
  */
 
 /** 배포 반영 확인: 홈 페이지 소스 검색 또는 GET /api/health 의 footerRevision 참고 */
-export const FOOTER_HTML_REVISION = '20260401-pg-audit-footer-legal'
+export const FOOTER_HTML_REVISION = '20260409-private-qual-student-facing'
 
 export const SITE_BUSINESS = {
   companyName: '(주)마인드스토리',
@@ -49,6 +49,8 @@ const policyNavDark = () => `
                 <a href="/refund" class="hover:text-white px-1 py-0.5 rounded transition-colors">환불규정</a>
                 <span class="text-gray-600 select-none" aria-hidden="true">|</span>
                 <a href="/community" class="hover:text-white px-1 py-0.5 rounded transition-colors">공지 · FAQ</a>
+                <span class="text-gray-600 select-none" aria-hidden="true">|</span>
+                <a href="/legal/private-qualification" class="hover:text-white px-1 py-0.5 rounded transition-colors">민간자격 운영 가이드</a>
               </nav>`
 
 const ftcLinkDark = () => `
@@ -92,6 +94,7 @@ function siteFooterMarketingColumns(variant: 'dark' | 'light'): string {
               <li><a href="/refund" class="${linkSub}">환불규정</a></li>
               <li><a href="/company" class="${linkAccent}">사업자정보 (상세)</a></li>
               <li><a href="/community" class="${linkAccent}">공지사항 · FAQ</a></li>
+              <li><a href="/legal/private-qualification" class="${linkSub}">민간자격 운영 가이드</a></li>
             </ul>
           </div>
           <div>
@@ -155,6 +158,8 @@ export const siteFooterLegalBlockLightHtml = () => {
                 <a href="/refund" class="text-indigo-600 hover:underline px-1 py-0.5">환불규정</a>
                 <span class="text-gray-300 select-none" aria-hidden="true">|</span>
                 <a href="/community" class="text-indigo-600 hover:underline px-1 py-0.5">공지 · FAQ</a>
+                <span class="text-gray-300 select-none" aria-hidden="true">|</span>
+                <a href="/legal/private-qualification" class="text-indigo-600 hover:underline px-1 py-0.5">민간자격 운영 가이드</a>
               </nav>
               ${naverBlogLinkLight()}
               <a href="${SITE_FTC_BUSINESS_DETAIL_URL}" target="_blank" rel="noopener noreferrer" class="text-[11px] sm:text-sm text-gray-600 hover:text-gray-900 shrink-0 text-center sm:text-right whitespace-nowrap font-semibold">

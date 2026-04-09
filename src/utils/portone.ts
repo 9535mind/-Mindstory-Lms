@@ -27,6 +27,7 @@ export interface IamportPayment {
   status?: string
   pay_method?: string
   paid_at?: number
+  buyer_name?: string
   [key: string]: unknown
 }
 
@@ -85,4 +86,58 @@ export async function getIamportPayment(
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   return parsePaymentResponse(res2)
+}
+
+/** PortOne V1 본인인증 단건 조회 — GET /certifications/{imp_uid} */
+export interface IamportCertification {
+  imp_uid?: string
+  merchant_uid?: string
+  name?: string
+  birthday?: string
+  birth?: string
+  phone?: string
+  certified?: boolean
+  unique_key?: string
+  [key: string]: unknown
+}
+
+interface IamportCertificationEnvelope {
+  code?: number
+  message?: string | null
+  response?: IamportCertification
+}
+
+export async function getIamportCertification(
+  impUid: string,
+  accessToken: string,
+): Promise<IamportCertification> {
+  const url = `https://api.iamport.kr/certifications/${encodeURIComponent(impUid)}`
+
+  const res1 = await fetch(url, {
+    method: 'GET',
+    headers: { Authorization: accessToken },
+  })
+  const data1 = (await res1.json()) as IamportCertificationEnvelope
+  if (res1.ok && data1.code === 0 && data1.response) {
+    return data1.response
+  }
+
+  const res2 = await fetch(url, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  const data2 = (await res2.json()) as IamportCertificationEnvelope
+  if (!res2.ok || data2.code !== 0 || !data2.response) {
+    throw new Error(
+      typeof data2.message === 'string' ? data2.message : 'PortOne 본인인증 조회 실패',
+    )
+  }
+  return data2.response
+}
+
+/** 실명 비교용 정규화 (공백·대소문자 무시) */
+export function normalizeKoreanName(s: string | null | undefined): string {
+  return String(s ?? '')
+    .trim()
+    .replace(/\s+/g, '')
 }

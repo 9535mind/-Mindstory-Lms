@@ -41,6 +41,7 @@ app.get('/payment/checkout/:courseId', (c) => {
         <script src="https://cdn.iamport.kr/js/iamport.payment-1.2.0.js"></script>
         <script src="/static/js/auth.js?v=20260329-admin-name"></script>
         <script src="/static/js/utils.js${STATIC_JS_CACHE_QUERY}"></script>
+        <script src="/static/js/certificate-enrollment-popup.js${STATIC_JS_CACHE_QUERY}"></script>
         ${siteFloatingQuickMenuStyles()}
         ${siteAiChatWidgetStyles()}
     </head>
@@ -138,6 +139,7 @@ app.get('/payment/checkout/:courseId', (c) => {
             let paymentData = null
             let portoneConfig = null
             let courseSnapshot = null
+            let certGuideForCheckout = null
 
             function friendlyClientMessage(err) {
                 var d = err && err.response && err.response.data
@@ -211,6 +213,7 @@ app.get('/payment/checkout/:courseId', (c) => {
                     throw new Error(er)
                 }
                 var course = res.data.data.course
+                certGuideForCheckout = res.data.data.certificate_enrollment_guide || null
                 courseSnapshot = course
                 var rawDesc = course.description || ''
                 var desc = escHtml(rawDesc).slice(0, 200)
@@ -226,6 +229,23 @@ app.get('/payment/checkout/:courseId', (c) => {
                     throw new Error('FREE_COURSE')
                 }
                 return course
+            }
+
+            function maybeShowCertModalBeforePay() {
+                return new Promise(function (resolve) {
+                    var g = certGuideForCheckout
+                    var ackKey = 'ms_cert_ack_' + String(courseId)
+                    if (!g || typeof openCertificateEnrollmentModal !== 'function' || sessionStorage.getItem(ackKey)) {
+                        resolve()
+                        return
+                    }
+                    openCertificateEnrollmentModal(g, function () {
+                        try {
+                            sessionStorage.setItem(ackKey, '1')
+                        } catch (e) {}
+                        resolve()
+                    })
+                })
             }
 
             // 약관 동의 체크
@@ -258,6 +278,8 @@ app.get('/payment/checkout/:courseId', (c) => {
                         showToast(ed.msg, 'error')
                         return
                     }
+
+                    await maybeShowCertModalBeforePay()
 
                     var cfgRes = await axios.get('/api/portone/public-config', { withCredentials: true })
                     if (!cfgRes.data?.success || !cfgRes.data?.data?.impCode) {

@@ -13,6 +13,12 @@ export function siteAiChatWidgetStyles(): string {
 }
 #ms-ai-chat-fab {
   -webkit-tap-highlight-color: transparent;
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+}
+#ms-ai-chat-fab:active {
+  cursor: grabbing;
 }
 @media (max-width: 768px) {
   #ms-ai-chat-fab {
@@ -165,6 +171,99 @@ export function siteAiChatWidgetScript(): string {
     var input = document.getElementById('ms-ai-chat-input');
     var sendBtn = document.getElementById('ms-ai-chat-send');
     if (!root || !fab || !panel) return;
+
+    /** FAB 드래그(위치는 저장하지 않음 — 새로고침 시 기본 우하단) */
+    var DRAG_THRESHOLD_PX = 8;
+    var EDGE_PAD = 8;
+    var dragPointerId = null;
+    var dragActive = false;
+    var dragMoved = false;
+    /** 드래그 직후 합성 click으로 패널이 열리지 않게 함 */
+    var suppressNextClick = false;
+    var dragStartClientX = 0;
+    var dragStartClientY = 0;
+    var grabOffX = 0;
+    var grabOffY = 0;
+
+    function msChatRootToLeftTop() {
+      var r = root.getBoundingClientRect();
+      root.style.left = r.left + 'px';
+      root.style.top = r.top + 'px';
+      root.style.right = 'auto';
+      root.style.bottom = 'auto';
+    }
+
+    function msChatClampRoot() {
+      var r = root.getBoundingClientRect();
+      var w = r.width;
+      var h = r.height;
+      var l = parseFloat(root.style.left);
+      var t = parseFloat(root.style.top);
+      if (isNaN(l) || isNaN(t)) return;
+      var maxL = Math.max(EDGE_PAD, window.innerWidth - w - EDGE_PAD);
+      var maxT = Math.max(EDGE_PAD, window.innerHeight - h - EDGE_PAD);
+      l = Math.min(maxL, Math.max(EDGE_PAD, l));
+      t = Math.min(maxT, Math.max(EDGE_PAD, t));
+      root.style.left = l + 'px';
+      root.style.top = t + 'px';
+    }
+
+    function msChatFabPointerDown(e) {
+      if (e.button !== 0) return;
+      suppressNextClick = false;
+      dragPointerId = e.pointerId;
+      dragActive = true;
+      dragMoved = false;
+      dragStartClientX = e.clientX;
+      dragStartClientY = e.clientY;
+      var rect = root.getBoundingClientRect();
+      grabOffX = e.clientX - rect.left;
+      grabOffY = e.clientY - rect.top;
+      try {
+        fab.setPointerCapture(e.pointerId);
+      } catch (err) {}
+    }
+
+    function msChatFabPointerMove(e) {
+      if (!dragActive || e.pointerId !== dragPointerId) return;
+      var dx = e.clientX - dragStartClientX;
+      var dy = e.clientY - dragStartClientY;
+      if (!dragMoved && dx * dx + dy * dy < DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX) return;
+      if (!dragMoved) {
+        dragMoved = true;
+        msChatRootToLeftTop();
+      }
+      root.style.left = e.clientX - grabOffX + 'px';
+      root.style.top = e.clientY - grabOffY + 'px';
+      root.style.right = 'auto';
+      root.style.bottom = 'auto';
+      msChatClampRoot();
+    }
+
+    function msChatFabPointerUp(e) {
+      if (e.pointerId !== dragPointerId) return;
+      try {
+        fab.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+      var didDrag = dragMoved;
+      dragActive = false;
+      dragPointerId = null;
+      dragMoved = false;
+      if (didDrag) suppressNextClick = true;
+    }
+
+    fab.addEventListener('pointerdown', msChatFabPointerDown);
+    fab.addEventListener('pointermove', msChatFabPointerMove);
+    fab.addEventListener('pointerup', msChatFabPointerUp);
+    fab.addEventListener('pointercancel', msChatFabPointerUp);
+
+    window.addEventListener(
+      'resize',
+      function () {
+        if (root.style.left && root.style.top) msChatClampRoot();
+      },
+      { passive: true }
+    );
 
     var turns = [];
     var loading = false;
@@ -355,7 +454,13 @@ export function siteAiChatWidgetScript(): string {
         });
     }
 
-    fab.addEventListener('click', function () {
+    fab.addEventListener('click', function (e) {
+      if (suppressNextClick) {
+        e.preventDefault();
+        e.stopPropagation();
+        suppressNextClick = false;
+        return;
+      }
       setOpen(!root.classList.contains('ms-ai-chat--open'));
     });
     if (closeBtn) closeBtn.addEventListener('click', function () { setOpen(false); });

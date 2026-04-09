@@ -28,6 +28,7 @@ app.get('/overview', async (c) => {
     // Total courses
     const totalCourses = await DB.prepare(`
       SELECT COUNT(*) as count FROM courses WHERE status = 'published'
+        AND (deleted_at IS NULL OR TRIM(COALESCE(deleted_at,'')) = '')
     `).first()
 
     // Total enrollments
