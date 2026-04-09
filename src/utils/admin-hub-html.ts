@@ -219,6 +219,7 @@ export function adminHubPageHtml(): string {
         <summary class="px-3 py-3 cursor-pointer font-medium text-indigo-100 list-none flex justify-between items-center after:content-['+'] after:text-indigo-300 group-open:after:content-['−'] [&::-webkit-details-marker]:hidden">시스템 지원</summary>
         <div class="pb-2 pl-2 flex flex-col gap-0.5">
           <a href="#sys-dashboard" data-hub-panel="sys-dashboard" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200 font-medium">🛡️ 시스템 대시보드</a>
+          <a href="/admin/chatbot-knowledge" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200">💬 챗봇 지식 관리</a>
           <a href="#support" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200">공지 · Q&amp;A</a>
           <a href="#popups" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200">팝업</a>
           <a href="#settings" class="hub-mobile-nav-link block px-3 py-2 rounded-lg hover:bg-white/10 text-slate-200">사이트 · 연동 설정</a>
@@ -430,6 +431,7 @@ export function adminHubPageHtml(): string {
                 </button>
                 <div class="hub-ops-acc-panel hidden border-t border-white/5 bg-slate-900/50">
                   <div class="flex flex-col gap-0.5 py-1.5 pl-3 pr-2 ml-4 border-l-2 border-sky-500/40">
+                    <a href="/admin/chatbot-knowledge" class="block w-full text-left rounded-md px-3 py-1.5 text-slate-200 hover:bg-indigo-600/85 text-[13px]">💬 챗봇 지식 관리</a>
                     <button type="button" data-hub-dash-detail="sys-ai-agent" class="block w-full text-left rounded-md px-3 py-1.5 text-slate-200 hover:bg-indigo-600/85 text-[13px]">🤖 AI 에이전트 설정 (데모)</button>
                     <button type="button" data-hub-dash-detail="sys-site-content" class="block w-full text-left rounded-md px-3 py-1.5 text-slate-200 hover:bg-indigo-600/85 text-[13px]">🌐 사이트 기본 설정 (데모)</button>
                   </div>

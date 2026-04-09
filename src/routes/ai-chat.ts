@@ -14,6 +14,8 @@ import { MINDSTORY_LMS_AI_GUIDE_SYSTEM, MINDSTORY_LMS_RAG_INTERNAL_SYSTEM } from
 import { buildLmsFallbackSiteContext, retrieveLmsHybridContext } from '../utils/chat-rag-context'
 import { SQL_COURSE_CATALOG_VISIBLE } from '../utils/course-visibility'
 import { buildCertificateBenefitChatReply } from '../utils/certificate-enrollment-guide'
+import { getCurrentUser } from '../utils/helpers'
+import { insertChatbotConversationLog, matchChatbotKnowledge } from '../utils/chatbot-knowledge'
 
 const aiChat = new Hono<{ Bindings: Bindings }>()
 
@@ -73,16 +75,6 @@ async function logAiChatOutcome(
 
 aiChat.post('/chat', async (c) => {
   const { DB } = c.env
-  const apiKey = (c.env.OPENAI_API_KEY || '').trim()
-  if (!apiKey) {
-    return c.json(
-      { success: false, error: 'AI 서비스 키가 설정되지 않았습니다. 관리자에게 문의해 주세요.' },
-      503
-    )
-  }
-
-  const base = normalizeOpenAIBase(c.env.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE).replace(/\/$/, '')
-  const model = (c.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL).trim() || DEFAULT_OPENAI_MODEL
 
   let body: {
     message?: string
@@ -106,12 +98,38 @@ aiChat.post('/chat', async (c) => {
   const displayName = normalizeDisplayName(userNameRaw)
   const historyIn = Array.isArray(body.history) ? body.history : []
 
-  // 자격증 관련 질문: 강좌·카탈로그 매칭 답변 → 없으면 고정 가이드
+  const sessionUser = await getCurrentUser(c)
+  const logUserId = sessionUser && typeof sessionUser.id === 'number' ? sessionUser.id : null
+
+  // 1순위: 관리자 등록 chatbot_knowledge (키워드 포함 시 고정 답변)
+  try {
+    const kb = await matchChatbotKnowledge(DB, userMessage)
+    if (kb) {
+      await logAiChatOutcome(DB, true, 'knowledge_base')
+      await insertChatbotConversationLog(DB, {
+        userId: logUserId,
+        userMessage,
+        assistantReply: kb.answer_text,
+        source: 'knowledge_base',
+      })
+      return c.json({ success: true, reply: kb.answer_text })
+    }
+  } catch (e) {
+    console.warn('[ai-chat] knowledge base', e)
+  }
+
+  // 2순위: 자격증·강좌 카탈로그(DB) 매칭 → 없으면 고정 가이드
   if (isCertificateQuestion(userMessage)) {
     try {
       const matched = await buildCertificateBenefitChatReply(DB, userMessage)
       if (matched) {
         await logAiChatOutcome(DB, true, 'cert_course_match')
+        await insertChatbotConversationLog(DB, {
+          userId: logUserId,
+          userMessage,
+          assistantReply: matched,
+          source: 'cert_course_match',
+        })
         return c.json({ success: true, reply: matched })
       }
     } catch (e) {
@@ -119,14 +137,33 @@ aiChat.post('/chat', async (c) => {
     }
     const fixedReply =
       `${displayName}, 자격증 취득에 대해 명확히 안내해 드립니다.\n\n` +
+      `지금 공부하시면 나중에 자격증 발급 시 2만원 할인 혜택을 받으실 수 있어요! 수강생 특별가로 자격증 발급비는 보통 **7만원** 수준으로 안내되며(과정·시기에 따라 상이), 정상가 대비 유리한 혜택입니다.\n\n` +
       `마인드스토리의 공식 입장은 다음과 같습니다.\n` +
       `- 국가 공인/공인 민간 자격증은 마인드스토리에서 직접 발행하지 않습니다.\n` +
       `- 다만, **자격기본법**에 의한 **등록 민간자격증**과 연계된 과정을 운영하고 있습니다.\n` +
       `- 과정별 발급 주체, 등록번호, 취득 조건(출석·평가·실습)은 상이할 수 있어, 최종 기준은 각 과정 상세 페이지에 안내된 내용을 기준으로 합니다.\n\n` +
       `관심 있으신 과정명을 알려 주시면, 해당 과정 상세 페이지 기준으로 자격 연계와 준비 절차를 구체적으로 짚어 드리겠습니다.`
     await logAiChatOutcome(DB, true, 'cert_guide')
+    await insertChatbotConversationLog(DB, {
+      userId: logUserId,
+      userMessage,
+      assistantReply: fixedReply,
+      source: 'cert_guide',
+    })
     return c.json({ success: true, reply: fixedReply })
   }
+
+  // 3순위: 범용 AI (OpenAI 키 필요)
+  const apiKey = (c.env.OPENAI_API_KEY || '').trim()
+  if (!apiKey) {
+    return c.json(
+      { success: false, error: 'AI 서비스 키가 설정되지 않았습니다. 관리자에게 문의해 주세요.' },
+      503
+    )
+  }
+
+  const base = normalizeOpenAIBase(c.env.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE).replace(/\/$/, '')
+  const model = (c.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL).trim() || DEFAULT_OPENAI_MODEL
 
   let ragInternalBlock = ''
   try {
@@ -252,6 +289,12 @@ aiChat.post('/chat', async (c) => {
     }
 
     await logAiChatOutcome(DB, true, ragInternalBlock.trim() ? 'openai_rag' : 'openai')
+    await insertChatbotConversationLog(DB, {
+      userId: logUserId,
+      userMessage,
+      assistantReply: reply,
+      source: ragInternalBlock.trim() ? 'openai_rag' : 'openai',
+    })
     return c.json({ success: true, reply })
   } catch (e) {
     console.error('[ai-chat]', e)

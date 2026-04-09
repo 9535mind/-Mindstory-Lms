@@ -9,6 +9,7 @@
 import { Hono } from 'hono'
 import { adminHubPageHtml } from '../utils/admin-hub-html'
 import { adminMembersPageHtml } from '../utils/admin-members-page-html'
+import { adminChatbotKnowledgePageHtml } from '../utils/admin-chatbot-knowledge-html'
 import { Bindings } from '../types/database'
 import { STATIC_JS_CACHE_QUERY } from '../utils/static-js-cache-bust'
 import { requireAdmin } from '../middleware/auth'
@@ -47,6 +48,14 @@ pagesAdmin.get('/dashboard', async (c) => {
  */
 pagesAdmin.get('/members', requireAdmin, async (c) => {
   return c.html(adminMembersPageHtml())
+})
+
+/**
+ * GET /admin/chatbot-knowledge
+ * 챗봇 지식 베이스·대화 로그 (관리자)
+ */
+pagesAdmin.get('/chatbot-knowledge', requireAdmin, async (c) => {
+  return c.html(adminChatbotKnowledgePageHtml())
 })
 
 pagesAdmin.get('/courses', (c) => {
