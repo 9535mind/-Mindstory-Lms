@@ -4061,7 +4061,7 @@ window.hubOpenR2BatchImport = async function () {
           description: '',
           video_url: u,
           video_type: 'R2',
-          video_duration_minutes: 0,
+          video_duration_minutes: 20,
           is_preview: 0,
         })
         if (!r.success) {

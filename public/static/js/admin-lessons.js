@@ -412,9 +412,19 @@ async function generateLessonDescription() {
 }
 
 // 전역 함수로 노출
+// pages-admin 차시 관리 페이지(/admin/courses/:id/lessons)는 인라인 스크립트에 자체 editLesson/deleteLesson 이 있음.
+// 이 파일을 같은 페이지에서 로드하면 아래 할당이 인라인 구현을 덮어써 삭제·수정이 동작하지 않으므로 제외한다.
+const __msInlineLessonsPage =
+  typeof window !== 'undefined' &&
+  window.location &&
+  /^\/admin\/courses\/\d+\/lessons\/?$/.test(window.location.pathname || '')
+
 window.openAddLessonModal = openAddLessonModal;
 window.closeAddLessonModal = closeAddLessonModal;
-window.editLesson = editLesson;
 window.closeEditLessonModal = closeEditLessonModal;
-window.deleteLesson = deleteLesson;
 window.generateLessonDescription = generateLessonDescription;
+
+if (!__msInlineLessonsPage) {
+  window.editLesson = editLesson;
+  window.deleteLesson = deleteLesson;
+}
