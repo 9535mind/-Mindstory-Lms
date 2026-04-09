@@ -24,8 +24,6 @@ export type Bindings = {
   OPENAI_IMAGE_MODEL?: string;
   /** R2 공개 URL 베이스 (미설정 시 코드 기본값 사용) */
   R2_PUBLIC_BASE_URL?: string;
-  /** R2 퍼블릭 액세스 URL (Custom Domain 또는 *.r2.dev) — 설정 시 R2_PUBLIC_BASE_URL보다 우선 */
-  R2_PUBLIC_URL?: string;
   TOSS_SECRET_KEY?: string;  // Toss Payments secret key
   /** PortOne(구 아임포트) — https://admin.portone.io */
   PORTONE_IMP_KEY?: string;
