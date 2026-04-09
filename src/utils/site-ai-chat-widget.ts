@@ -10,6 +10,8 @@ export function siteAiChatWidgetStyles(): string {
 #ms-ai-chat-root {
   padding-right: env(safe-area-inset-right, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  transform: scale(0.9);
+  transform-origin: bottom right;
 }
 #ms-ai-chat-fab {
   -webkit-tap-highlight-color: transparent;

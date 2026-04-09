@@ -29,17 +29,37 @@ export function siteFloatingQuickMenuStyles(): string {
   -webkit-backdrop-filter: blur(18px);
   overflow: hidden;
 }
-/* 데스크톱: 우측 중앙 세로 */
-.ms-float-rail-desktop {
+/* 데스크톱: 우측 중앙 세로 (10% 축소 · 드래그 시 left/top으로 전환) */
+#ms-float-quick-root.ms-float-rail-desktop {
   position: fixed;
   z-index: 90;
   right: max(0.75rem, env(safe-area-inset-right, 0px));
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-50%) scale(0.9);
+  transform-origin: center right;
   display: none;
 }
 @media (min-width: 768px) {
-  .ms-float-rail-desktop { display: block; }
+  #ms-float-quick-root.ms-float-rail-desktop { display: block; }
+}
+.ms-float-quick-drag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.35rem 0.28rem;
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+  flex-shrink: 0;
+}
+.ms-float-quick-drag:active {
+  cursor: grabbing;
+}
+.ms-float-quick-drag i {
+  font-size: 0.75rem;
+  opacity: 0.65;
 }
 .ms-float-rail-desktop .ms-float-link {
   display: flex;
@@ -79,6 +99,8 @@ export function siteFloatingQuickMenuStyles(): string {
   left: 0;
   right: 0;
   bottom: 0;
+  transform: scale(0.9);
+  transform-origin: bottom center;
   display: flex;
   align-items: stretch;
   justify-content: space-around;
@@ -126,7 +148,7 @@ export function siteFloatingQuickMenuStyles(): string {
   cursor: pointer;
 }
 .ms-float-mobile-spacer {
-  height: calc(4.15rem + env(safe-area-inset-bottom, 0px));
+  height: calc(3.735rem + env(safe-area-inset-bottom, 0px));
 }
 @media (min-width: 768px) {
   .ms-float-mobile-spacer { display: none !important; height: 0 !important; }
@@ -137,9 +159,12 @@ export function siteFloatingQuickMenuStyles(): string {
 export function siteFloatingQuickMenuMarkup(): string {
   return `
 <div class="ms-float-mobile-spacer" aria-hidden="true"></div>
-<aside class="ms-float-rail-desktop" aria-label="빠른 상담 메뉴">
+<aside id="ms-float-quick-root" class="ms-float-rail-desktop" aria-label="빠른 상담 메뉴">
   <div class="ms-float-titanium-outer">
     <div class="ms-float-titanium-inner py-1">
+      <div id="ms-float-quick-drag" class="ms-float-quick-drag" title="위치 이동" aria-label="빠른 메뉴 위치 이동">
+        <i class="fas fa-grip-vertical" aria-hidden="true"></i>
+      </div>
       <a href="${mailtoConsult}" class="ms-float-link" title="이메일로 1:1 상담">
         <i class="fas fa-envelope" aria-hidden="true"></i>
         <span>1:1 상담</span>
@@ -174,8 +199,93 @@ export function siteFloatingQuickMenuMarkup(): string {
 /** 인라인 스크립트 문자열 — DOMContentLoaded 안에서 호출하거나 뒤에 붙여도 됨 */
 export function siteFloatingQuickMenuScript(): string {
   return `(function(){
-    document.querySelectorAll('[data-ms-float-top]').forEach(function(el){
-      el.addEventListener('click',function(e){ e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-    });
+    function initMsFloatQuickMenu() {
+      document.querySelectorAll('[data-ms-float-top]').forEach(function(el){
+        el.addEventListener('click',function(e){ e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+      });
+      var root = document.getElementById('ms-float-quick-root');
+      var handle = document.getElementById('ms-float-quick-drag');
+      if (!root || !handle) return;
+      var DRAG_THRESHOLD_PX = 8;
+      var EDGE_PAD = 8;
+      var dragPointerId = null;
+      var dragActive = false;
+      var dragMoved = false;
+      var dragStartClientX = 0;
+      var dragStartClientY = 0;
+      var grabOffX = 0;
+      var grabOffY = 0;
+      function msFloatQuickRootToLeftTop() {
+        var r = root.getBoundingClientRect();
+        root.style.left = r.left + 'px';
+        root.style.top = r.top + 'px';
+        root.style.right = 'auto';
+        root.style.transform = 'scale(0.9)';
+      }
+      function msFloatQuickClampRoot() {
+        var r = root.getBoundingClientRect();
+        var w = r.width;
+        var h = r.height;
+        var l = parseFloat(root.style.left);
+        var t = parseFloat(root.style.top);
+        if (isNaN(l) || isNaN(t)) return;
+        var maxL = Math.max(EDGE_PAD, window.innerWidth - w - EDGE_PAD);
+        var maxT = Math.max(EDGE_PAD, window.innerHeight - h - EDGE_PAD);
+        l = Math.min(maxL, Math.max(EDGE_PAD, l));
+        t = Math.min(maxT, Math.max(EDGE_PAD, t));
+        root.style.left = l + 'px';
+        root.style.top = t + 'px';
+      }
+      function onDown(e) {
+        if (e.button !== 0) return;
+        dragPointerId = e.pointerId;
+        dragActive = true;
+        dragMoved = false;
+        dragStartClientX = e.clientX;
+        dragStartClientY = e.clientY;
+        var rect = root.getBoundingClientRect();
+        grabOffX = e.clientX - rect.left;
+        grabOffY = e.clientY - rect.top;
+        try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+      }
+      function onMove(e) {
+        if (!dragActive || e.pointerId !== dragPointerId) return;
+        var dx = e.clientX - dragStartClientX;
+        var dy = e.clientY - dragStartClientY;
+        if (!dragMoved && dx * dx + dy * dy < DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX) return;
+        if (!dragMoved) {
+          dragMoved = true;
+          msFloatQuickRootToLeftTop();
+        }
+        root.style.left = e.clientX - grabOffX + 'px';
+        root.style.top = e.clientY - grabOffY + 'px';
+        root.style.right = 'auto';
+        root.style.transform = 'scale(0.9)';
+        msFloatQuickClampRoot();
+      }
+      function onUp(e) {
+        if (e.pointerId !== dragPointerId) return;
+        try { handle.releasePointerCapture(e.pointerId); } catch (err) {}
+        dragActive = false;
+        dragPointerId = null;
+        dragMoved = false;
+      }
+      handle.addEventListener('pointerdown', onDown);
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp);
+      handle.addEventListener('pointercancel', onUp);
+      window.addEventListener(
+        'resize',
+        function () {
+          if (root.style.left && root.style.top) msFloatQuickClampRoot();
+        },
+        { passive: true }
+      );
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initMsFloatQuickMenu);
+    } else {
+      initMsFloatQuickMenu();
+    }
   })();`
 }
