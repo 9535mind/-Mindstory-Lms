@@ -100,10 +100,13 @@ pagesAdmin.get('/courses/:courseId/lessons', async (c) => {
         <nav class="ms-admin-top-bar bg-purple-700 text-white shadow-lg">
             <div class="max-w-7xl mx-auto px-4 py-4">
                 <div class="flex justify-between items-center">
-                    <h1 class="text-2xl font-bold">
+                    <div class="min-w-0">
+                        <a href="/" class="ms-admin-brand-link ms-admin-brand-link--purple mb-0.5" title="서비스 홈">Mindstory LMS</a>
+                        <h1 class="text-2xl font-bold">
                         <i class="fas fa-list mr-2"></i>
                         차시 관리
                     </h1>
+                    </div>
                     <div class="flex items-center space-x-4">
                         <a href="/" class="bg-indigo-500 hover:bg-indigo-400 border border-white/25 text-white px-4 py-2 rounded font-semibold shadow-sm transition-colors">
                             <i class="fas fa-users mr-1"></i>수강생 모드
@@ -1316,10 +1319,13 @@ pagesAdmin.get('/users/:userId/classroom', async (c) => {
         <nav class="ms-admin-top-bar bg-purple-700 text-white shadow-lg">
             <div class="max-w-7xl mx-auto px-4 py-4">
                 <div class="flex justify-between items-center">
-                    <h1 class="text-2xl font-bold">
+                    <div class="min-w-0">
+                        <a href="/" class="ms-admin-brand-link ms-admin-brand-link--purple mb-0.5" title="서비스 홈">Mindstory LMS</a>
+                        <h1 class="text-2xl font-bold">
                         <i class="fas fa-chalkboard-teacher mr-2"></i>
                         학생 내강의실
                     </h1>
+                    </div>
                     <div class="flex items-center space-x-4">
                         <span class="inline-flex items-center max-w-[min(14rem,55vw)]"><span id="adminName" class="text-purple-100 text-sm font-medium truncate" data-ms-name-default="text-purple-100 text-sm font-medium truncate">로딩중...</span></span>
                         <a href="/admin/users" class="bg-white text-purple-700 px-4 py-2 rounded hover:bg-gray-100">
@@ -1582,10 +1588,13 @@ pagesAdmin.get('/users/:userId', async (c) => {
         <nav class="ms-admin-top-bar bg-purple-700 text-white shadow-lg">
             <div class="max-w-7xl mx-auto px-4 py-4">
                 <div class="flex justify-between items-center">
-                    <h1 class="text-2xl font-bold">
+                    <div class="min-w-0">
+                        <a href="/" class="ms-admin-brand-link ms-admin-brand-link--purple mb-0.5" title="서비스 홈">Mindstory LMS</a>
+                        <h1 class="text-2xl font-bold">
                         <i class="fas fa-user-circle mr-2"></i>
                         회원 상세
                     </h1>
+                    </div>
                     <div class="flex items-center space-x-4">
                         <span class="inline-flex items-center max-w-[min(14rem,55vw)]"><span id="adminName" class="text-purple-100 text-sm font-medium truncate" data-ms-name-default="text-purple-100 text-sm font-medium truncate">로딩중...</span></span>
                         <a href="/admin/users" class="bg-white text-purple-700 px-4 py-2 rounded hover:bg-gray-100">

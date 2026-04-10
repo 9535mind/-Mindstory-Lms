@@ -231,7 +231,7 @@ export function adminHubPageHtml(): string {
   <nav class="ms-admin-top-bar bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 text-white shadow-xl sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
       <div class="min-w-0 flex-1 md:flex-none">
-        <p class="text-xs text-indigo-200 uppercase tracking-widest">Mindstory LMS</p>
+        <a href="/" class="ms-admin-brand-link ms-admin-brand-link--indigo" title="서비스 홈">Mindstory LMS</a>
         <h1 class="text-lg sm:text-xl md:text-2xl font-bold flex items-center gap-2 truncate">
           <i class="fas fa-satellite-dish text-indigo-300 shrink-0"></i>
           <span class="truncate">중앙 관제탑</span>

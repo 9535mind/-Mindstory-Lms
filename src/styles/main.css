@@ -28,6 +28,18 @@
       0 0 0 1px rgba(15, 23, 42, 0.12),
       0 2px 8px rgba(5, 150, 105, 0.4);
   }
+
+  /** 관리자 헤더 좌측 상단 브랜드 → 서비스 홈(/) */
+  .ms-admin-brand-link {
+    @apply inline-block cursor-pointer no-underline rounded-md px-1 -mx-1 text-xs uppercase tracking-widest transition-colors duration-150;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30;
+  }
+  .ms-admin-brand-link--indigo {
+    @apply text-indigo-200 hover:text-indigo-100 hover:bg-white/5;
+  }
+  .ms-admin-brand-link--purple {
+    @apply text-purple-200 hover:text-white hover:bg-white/10;
+  }
 }
 
 .header-user-admin-badge:hover {
