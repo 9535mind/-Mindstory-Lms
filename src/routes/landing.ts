@@ -36,6 +36,68 @@ import {
   siteHeaderFullMarkup,
   siteHeaderNavCoursesGlassStyles,
 } from '../utils/site-header-courses-nav'
+import {
+  escapeHtml,
+  loadLandingSignatureCardsFromDb,
+  type SignatureCardContent,
+  type SignatureCardId,
+} from '../utils/landing-signature-data'
+
+function renderSignatureLineupSection(cards: Record<SignatureCardId, SignatureCardContent>): string {
+  const cl = cards.classic
+  const nx = cards.next
+  const nc = cards.ncs
+  return `
+        <!-- MINDSTORY 시그니처 라인업 -->
+        <section id="signature-lineup" class="py-20 border-y border-stone-200/45 bg-transparent scroll-mt-24">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-2">MINDSTORY 시그니처 라인업</h2>
+                <div class="w-14 h-0.5 rounded-full bg-[#8a9b8e]/35 mx-auto mb-4" aria-hidden="true"></div>
+                <p class="text-center text-gray-600 text-lg mb-12 max-w-3xl mx-auto">Classic · Next · 공동훈련(NCS) 세 가지 로드맵으로 목표와 수준에 맞는 학습을 설계합니다.</p>
+                <div class="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:items-stretch">
+                    <div class="spring-lineup-card group relative flex h-full min-h-[300px] rounded-3xl border border-yellow-900/10 bg-gradient-to-br from-white via-slate-50 to-slate-100 shadow-lg backdrop-blur-md" data-ms-signature-lineup-card="classic">
+                        <a href="${escapeHtml(cl.button_href)}" class="absolute inset-0 z-0 rounded-3xl" aria-label="${escapeHtml(cl.title)} 안내로 이동"></a>
+                        <div class="relative z-10 flex h-full min-h-[300px] flex-1 flex-col p-8 sm:p-10 pointer-events-none">
+                            <span class="text-xs font-bold text-classic-sage tracking-widest uppercase">FUNDAMENTAL COURSE</span>
+                            <div class="relative mt-3 pr-2">
+                                <h3 class="text-2xl md:text-3xl xl:text-4xl font-extrabold leading-tight text-classic-forest tracking-tight transition-colors group-hover:text-classic-sage pointer-events-none">${escapeHtml(cl.title)}</h3>
+                            </div>
+                            <div class="relative mt-4 flex flex-1 flex-col pr-2">
+                                <p class="text-classic-forest/80 flex-1 leading-relaxed pointer-events-none">${escapeHtml(cl.description)}</p>
+                            </div>
+                            <span class="mt-6 inline-flex items-center rounded-full border border-amber-900/25 bg-emerald-50/90 px-5 py-2 text-sm font-semibold text-classic-forest shadow-sm transition-all duration-300 group-hover:border-classic-sage group-hover:bg-classic-sage group-hover:text-white group-hover:shadow-md pointer-events-none sm:px-6">${escapeHtml(cl.button_label)} <i class="fas fa-arrow-right ml-2 text-xs transition-transform group-hover:translate-x-1"></i></span>
+                        </div>
+                    </div>
+                    <div class="spring-lineup-card group relative flex h-full min-h-[300px] rounded-3xl border border-slate-300 bg-gradient-to-br from-white via-slate-50 to-slate-100 shadow-lg backdrop-blur-md" data-ms-signature-lineup-card="next">
+                        <a href="${escapeHtml(nx.button_href)}" class="absolute inset-0 z-0 rounded-3xl" aria-label="${escapeHtml(nx.title)} 안내로 이동"></a>
+                        <div class="relative z-10 flex h-full min-h-[300px] flex-1 flex-col p-8 sm:p-10 pointer-events-none">
+                            <span class="text-xs font-bold text-next-accent tracking-widest uppercase">ADVANCED MASTER</span>
+                            <div class="relative mt-3 pr-2">
+                                <h3 class="text-2xl md:text-3xl xl:text-4xl font-extrabold leading-tight text-next-ink tracking-tight transition-colors group-hover:text-next-accent pointer-events-none">${escapeHtml(nx.title)}</h3>
+                            </div>
+                            <div class="relative mt-4 flex flex-1 flex-col pr-2">
+                                <p class="flex-1 leading-relaxed text-slate-600 pointer-events-none">${escapeHtml(nx.description)}</p>
+                            </div>
+                            <span class="mt-6 inline-flex items-center rounded-full border border-slate-400/55 bg-blue-50/90 px-5 py-2 text-sm font-semibold text-next-ink shadow-sm transition-all duration-300 group-hover:border-next-accent group-hover:bg-next-accent group-hover:text-white group-hover:shadow-md pointer-events-none sm:px-6">${escapeHtml(nx.button_label)} <i class="fas fa-arrow-right ml-2 text-xs transition-transform group-hover:translate-x-1"></i></span>
+                        </div>
+                    </div>
+                    <div class="spring-lineup-card group relative flex h-full min-h-[300px] rounded-3xl border border-indigo-300/50 bg-gradient-to-br from-white via-slate-50 to-indigo-50/50 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-400/25 backdrop-blur-md" data-ms-signature-lineup-card="ncs">
+                        <a href="${escapeHtml(nc.button_href)}" class="absolute inset-0 z-0 rounded-3xl" aria-label="${escapeHtml(nc.title)} 안내로 이동"></a>
+                        <div class="relative z-10 flex h-full min-h-[300px] flex-1 flex-col p-8 sm:p-10 pointer-events-none">
+                            <span class="text-xs font-bold tracking-widest text-indigo-700 uppercase">NCS 직업훈련</span>
+                            <div class="relative mt-3 pr-2">
+                                <h3 class="text-2xl md:text-3xl xl:text-[1.65rem] font-extrabold leading-snug tracking-tight text-indigo-950 transition-colors group-hover:text-indigo-700 pointer-events-none xl:leading-tight">${escapeHtml(nc.title)}</h3>
+                            </div>
+                            <div class="relative mt-4 flex flex-1 flex-col pr-2">
+                                <p class="flex-1 leading-relaxed text-slate-700 pointer-events-none">${escapeHtml(nc.description)}</p>
+                            </div>
+                            <span class="mt-6 inline-flex items-center rounded-full border border-indigo-400/40 bg-indigo-50/95 px-5 py-2 text-sm font-semibold text-indigo-900 shadow-sm transition-all duration-300 group-hover:border-indigo-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-md pointer-events-none sm:px-6">${escapeHtml(nc.button_label)} <i class="fas fa-arrow-right ml-2 text-xs transition-transform group-hover:translate-x-1"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>`
+}
 
 const landing = new Hono<{ Bindings: Bindings; Variables: { user?: User } }>()
 landing.use('*', optionalAuth)
@@ -46,6 +108,7 @@ landing.use('*', optionalAuth)
  */
 landing.get('/', async (c) => {
   const adminCommandPulse = await resolveAdminCommandPulse(c)
+  const signatureCards = await loadLandingSignatureCardsFromDb(c.env)
   return c.html(`
     <!DOCTYPE html>
     <html lang="ko">
@@ -82,6 +145,7 @@ landing.get('/', async (c) => {
         
         <!-- Custom Scripts -->
         <script src="/static/js/auth.js?v=20260329-magic-pencil"></script>
+        <script src="/static/js/landing-signature-admin.js${STATIC_JS_CACHE_QUERY}"></script>
         <script src="/static/js/utils.js?v=20260327-2"></script>
         
         <style>
@@ -447,55 +511,7 @@ landing.get('/', async (c) => {
                 </svg>
             </div>
 
-        <!-- MINDSTORY 시그니처 라인업 -->
-        <section id="signature-lineup" class="py-20 border-y border-stone-200/45 bg-transparent scroll-mt-24">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-2">MINDSTORY 시그니처 라인업</h2>
-                <div class="w-14 h-0.5 rounded-full bg-[#8a9b8e]/35 mx-auto mb-4" aria-hidden="true"></div>
-                <p class="text-center text-gray-600 text-lg mb-12 max-w-3xl mx-auto">Classic · Next · 공동훈련(NCS) 세 가지 로드맵으로 목표와 수준에 맞는 학습을 설계합니다.</p>
-                <div class="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:items-stretch">
-                    <div class="spring-lineup-card group relative flex h-full min-h-[300px] rounded-3xl border border-yellow-900/10 bg-gradient-to-br from-white via-slate-50 to-slate-100 shadow-lg backdrop-blur-md">
-                        <a href="/courses/classic" class="absolute inset-0 z-0 rounded-3xl" aria-label="MindStory Classic 강좌 목록으로 이동"></a>
-                        <div class="relative z-10 flex h-full min-h-[300px] flex-1 flex-col p-8 sm:p-10 pointer-events-none">
-                            <span class="text-xs font-bold text-classic-sage tracking-widest uppercase">FUNDAMENTAL COURSE</span>
-                            <div class="relative mt-3 pr-7" data-ms-magic-pencil-wrap data-ms-pencil-href="/admin/dashboard#courses" data-ms-pencil-label="랜딩 시그니처 Classic 제목 편집 (교육·강좌)">
-                                <h3 class="text-2xl md:text-3xl xl:text-4xl font-extrabold leading-tight text-classic-forest tracking-tight transition-colors group-hover:text-classic-sage pointer-events-none">MindStory Classic</h3>
-                            </div>
-                            <div class="relative mt-4 flex flex-1 flex-col pr-7" data-ms-magic-pencil-wrap data-ms-pencil-href="/admin/dashboard#courses" data-ms-pencil-label="랜딩 시그니처 Classic 설명 편집 (교육·강좌)">
-                                <p class="text-classic-forest/80 flex-1 leading-relaxed pointer-events-none">상담·진로·학습의 뿌리를 내립니다. 변하지 않는 가치를 배우는 프리미엄 입문 과정.</p>
-                            </div>
-                            <span class="mt-6 inline-flex items-center rounded-full border border-amber-900/25 bg-emerald-50/90 px-5 py-2 text-sm font-semibold text-classic-forest shadow-sm transition-all duration-300 group-hover:border-classic-sage group-hover:bg-classic-sage group-hover:text-white group-hover:shadow-md pointer-events-none sm:px-6">Classic 강좌 보기 <i class="fas fa-arrow-right ml-2 text-xs transition-transform group-hover:translate-x-1"></i></span>
-                        </div>
-                    </div>
-                    <div class="spring-lineup-card group relative flex h-full min-h-[300px] rounded-3xl border border-slate-300 bg-gradient-to-br from-white via-slate-50 to-slate-100 shadow-lg backdrop-blur-md">
-                        <a href="/courses/next" class="absolute inset-0 z-0 rounded-3xl" aria-label="MindStory Next 강좌 목록으로 이동"></a>
-                        <div class="relative z-10 flex h-full min-h-[300px] flex-1 flex-col p-8 sm:p-10 pointer-events-none">
-                            <span class="text-xs font-bold text-next-accent tracking-widest uppercase">ADVANCED MASTER</span>
-                            <div class="relative mt-3 pr-7" data-ms-magic-pencil-wrap data-ms-pencil-href="/admin/dashboard#courses" data-ms-pencil-label="랜딩 시그니처 Next 제목 편집 (교육·강좌)">
-                                <h3 class="text-2xl md:text-3xl xl:text-4xl font-extrabold leading-tight text-next-ink tracking-tight transition-colors group-hover:text-next-accent pointer-events-none">MindStory Next</h3>
-                            </div>
-                            <div class="relative mt-4 flex flex-1 flex-col pr-7" data-ms-magic-pencil-wrap data-ms-pencil-href="/admin/dashboard#courses" data-ms-pencil-label="랜딩 시그니처 Next 설명 편집 (교육·강좌)">
-                                <p class="flex-1 leading-relaxed text-slate-600 pointer-events-none">AI 동화·창작·기술을 융합합니다. 한계를 넘어 전문가로 도약하는 심화 실전 과정.</p>
-                            </div>
-                            <span class="mt-6 inline-flex items-center rounded-full border border-slate-400/55 bg-blue-50/90 px-5 py-2 text-sm font-semibold text-next-ink shadow-sm transition-all duration-300 group-hover:border-next-accent group-hover:bg-next-accent group-hover:text-white group-hover:shadow-md pointer-events-none sm:px-6">Next 강좌 보기 <i class="fas fa-arrow-right ml-2 text-xs transition-transform group-hover:translate-x-1"></i></span>
-                        </div>
-                    </div>
-                    <div class="spring-lineup-card group relative flex h-full min-h-[300px] rounded-3xl border border-indigo-300/50 bg-gradient-to-br from-white via-slate-50 to-indigo-50/50 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-400/25 backdrop-blur-md">
-                        <a href="/courses/consortium" class="absolute inset-0 z-0 rounded-3xl" aria-label="Consortium 공동훈련 안내 페이지로 이동"></a>
-                        <div class="relative z-10 flex h-full min-h-[300px] flex-1 flex-col p-8 sm:p-10 pointer-events-none">
-                            <span class="text-xs font-bold tracking-widest text-indigo-700 uppercase">NCS 직업훈련</span>
-                            <div class="relative mt-3 pr-7" data-ms-magic-pencil-wrap data-ms-pencil-href="/admin/dashboard#courses" data-ms-pencil-label="랜딩 시그니처 공동훈련 제목 편집 (교육·강좌)">
-                                <h3 class="text-2xl md:text-3xl xl:text-[1.65rem] font-extrabold leading-snug tracking-tight text-indigo-950 transition-colors group-hover:text-indigo-700 pointer-events-none xl:leading-tight">MindStory Consortium : 국가인증 공동훈련</h3>
-                            </div>
-                            <div class="relative mt-4 flex flex-1 flex-col pr-7" data-ms-magic-pencil-wrap data-ms-pencil-href="/admin/dashboard#courses" data-ms-pencil-label="랜딩 시그니처 공동훈련 설명 편집 (교육·강좌)">
-                                <p class="flex-1 leading-relaxed text-slate-700 pointer-events-none">산업인력공단 협약 기업 및 자사 직원을 위한 국가 직무능력표준(NCS) 기반의 전문 직업훈련 과정입니다.</p>
-                            </div>
-                            <span class="mt-6 inline-flex items-center rounded-full border border-indigo-400/40 bg-indigo-50/95 px-5 py-2 text-sm font-semibold text-indigo-900 shadow-sm transition-all duration-300 group-hover:border-indigo-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-md pointer-events-none sm:px-6">협약 및 서류 안내 <i class="fas fa-arrow-right ml-2 text-xs transition-transform group-hover:translate-x-1"></i></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+        ${renderSignatureLineupSection(signatureCards)}
 
         <!-- 주요 특징 (Bento Grid - 8개 카드) -->
         <section class="py-24">

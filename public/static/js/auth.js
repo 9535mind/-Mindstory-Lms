@@ -392,6 +392,9 @@ async function updateHeader() {
     if (logoutBtn) logoutBtn.classList.remove('hidden')
     setupAdminViewToggleButtons(user)
     mountGlobalMagicPencils(user)
+    if (typeof window.msInitLandingSignatureAdmin === 'function') {
+      window.msInitLandingSignatureAdmin(user)
+    }
   } else {
     if (authButtons) authButtons.style.display = 'flex'
     if (userMenu) userMenu.style.display = 'none'
@@ -415,6 +418,9 @@ async function updateHeader() {
     if (logoutBtn) logoutBtn.classList.add('hidden')
     setupAdminViewToggleButtons(null)
     mountGlobalMagicPencils(null)
+    if (typeof window.msInitLandingSignatureAdmin === 'function') {
+      window.msInitLandingSignatureAdmin(null)
+    }
   }
 }
 

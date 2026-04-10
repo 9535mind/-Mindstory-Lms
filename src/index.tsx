@@ -24,6 +24,7 @@ import paymentVerify from './routes/payment-verify'
 import certificates from './routes/certificates'  // Phase 4: 수료증 시스템
 import admin from './routes/admin'
 import landing from './routes/landing'  // 신규 랜딩 페이지
+import landingSignatureApi from './routes/landing-signature-api'
 import pages from './routes/pages'
 import pagesMy from './routes/pages-my'
 import pagesAbout from './routes/pages-about'
@@ -186,6 +187,7 @@ app.use('/api/forest-gas-webhook', generalRateLimiter)
 // 관대한 제한: 읽기 전용 API (1분에 200회)
 app.use('/api/auth/me', lenientRateLimiter)
 app.use('/api/health', lenientRateLimiter)
+app.use('/api/landing', lenientRateLimiter)
 
 // AI 비서(OpenAI): 토큰·비용 보호 — 경로별 레이트 리밋
 app.use(
@@ -215,6 +217,7 @@ app.route('/api/certificate-issuance', certificateIssuance)
 app.route('/api/payment', paymentVerify)
 app.route('/api', certificates)  // 수료증 API (courses/:id/certificate, my/certificates, certificates/:number)
 app.route('/api/admin', admin)
+app.route('/api', landingSignatureApi)
 app.route('/api/popups', popups)
 app.route('/api/notices', notices)
 app.route('/api/posts', posts)

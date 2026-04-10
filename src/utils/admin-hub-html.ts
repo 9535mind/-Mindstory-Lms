@@ -231,11 +231,13 @@ export function adminHubPageHtml(): string {
   <nav class="ms-admin-top-bar bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 text-white shadow-xl sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
       <div class="min-w-0 flex-1 md:flex-none">
-        <a href="/" class="ms-admin-brand-link ms-admin-brand-link--indigo" title="서비스 홈">Mindstory LMS</a>
-        <h1 class="text-lg sm:text-xl md:text-2xl font-bold flex items-center gap-2 truncate">
-          <i class="fas fa-satellite-dish text-indigo-300 shrink-0"></i>
-          <span class="truncate">중앙 관제탑</span>
-        </h1>
+        <a href="/" class="block shrink min-w-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60" title="수강생 홈(/)으로 이동">
+          <span class="ms-admin-brand-link ms-admin-brand-link--indigo">Mindstory LMS</span>
+          <h1 class="text-lg sm:text-xl md:text-2xl font-bold flex items-center gap-2 truncate text-white mt-0.5">
+            <i class="fas fa-satellite-dish text-indigo-300 shrink-0" aria-hidden="true"></i>
+            <span class="truncate">중앙 관제탑</span>
+          </h1>
+        </a>
       </div>
       <div class="flex items-center gap-2 flex-wrap justify-end">
         <button type="button" id="hubMobileNavToggle" class="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15" aria-label="메뉴 열기" aria-expanded="false">

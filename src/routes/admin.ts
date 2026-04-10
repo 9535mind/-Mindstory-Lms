@@ -18,6 +18,12 @@ import { generateCourseThumbnailAi, normalizeThumbnailUrlInput } from '../utils/
 import adminInstructors from './admin-instructors'
 import adminChatbotKnowledge from './admin-chatbot-knowledge'
 import adminR2 from './admin-r2'
+import {
+  DEFAULT_LANDING_SIGNATURE,
+  loadLandingSignatureCardsFromDb,
+  sanitizeSignatureHref,
+  type SignatureCardId,
+} from '../utils/landing-signature-data'
 
 /** PUT/POST JSON — 잘못된 JSON·빈 본문 시 500 방지 */
 async function readJsonBody(c: Context): Promise<Record<string, unknown>> {
@@ -2832,6 +2838,49 @@ admin.get('/published-books/:id/report.html', requireAdmin, async (c) => {
   } catch (error) {
     console.error('report.html error:', error)
     return c.text('Error', 500)
+  }
+})
+
+/**
+ * PUT /api/admin/landing/signature-lineup/:id
+ * 메인(/) 시그니처 라인업 카드 — 제목·설명·버튼·링크 (classic | next | ncs)
+ */
+admin.put('/landing/signature-lineup/:id', requireAdmin, async (c) => {
+  const rawId = c.req.param('id')
+  if (rawId !== 'classic' && rawId !== 'next' && rawId !== 'ncs') {
+    return c.json(errorResponse('유효하지 않은 카드입니다.'), 400)
+  }
+  const id = rawId as SignatureCardId
+  const { DB } = c.env
+  let body: Record<string, unknown>
+  try {
+    body = await readJsonBody(c)
+  } catch {
+    return c.json(errorResponse('JSON 본문이 올바르지 않습니다.'), 400)
+  }
+  const def = DEFAULT_LANDING_SIGNATURE[id]
+  const title = String(body.title ?? '').trim() || def.title
+  const description = String(body.description ?? '').trim() || def.description
+  const button_label = String(body.button_label ?? '').trim() || def.button_label
+  const button_href = sanitizeSignatureHref(String(body.button_href ?? def.button_href))
+  try {
+    await DB.prepare(
+      `INSERT INTO landing_signature_cards (id, title, description, button_label, button_href, updated_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(id) DO UPDATE SET
+         title = excluded.title,
+         description = excluded.description,
+         button_label = excluded.button_label,
+         button_href = excluded.button_href,
+         updated_at = excluded.updated_at`,
+    )
+      .bind(id, title, description, button_label, button_href)
+      .run()
+    const full = await loadLandingSignatureCardsFromDb(c.env)
+    return c.json(successResponse({ card: full[id], cards: full }))
+  } catch (e) {
+    console.error('[admin] landing/signature-lineup PUT', e)
+    return c.json(errorResponse('저장에 실패했습니다. DB 마이그레이션을 확인해 주세요.'), 500)
   }
 })
 
