@@ -277,6 +277,9 @@ function sectionBlock(
 </section>`
 }
 
+/** 과제·워크북 제출 안내 — 커뮤니티 게시판 섹션으로 유도 */
+app.get('/community/assignments', (c) => c.redirect('/community#board-posts', 302))
+
 app.get('/community', async (c) => {
   const adminCommandPulse = await resolveAdminCommandPulse(c)
   const isAdmin = (c.get('user') as User | undefined)?.role === 'admin'

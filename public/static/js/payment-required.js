@@ -86,13 +86,13 @@ function showPaymentRequiredModal(options) {
             </div>
           </div>
           <h3 class="text-xl font-bold text-white text-center leading-snug">
-            무료 강좌 전 차시를 완료했습니다
+            전체 차시 학습 완료
           </h3>
         </div>
         <div class="p-6">
           <p class="text-center text-gray-700 mb-2"><strong class="text-indigo-700">"${courseTitle}"</strong></p>
-          <p class="text-sm text-gray-600 text-center mb-4">
-            다음 회기·신규 과정은 <strong>수강신청</strong> 페이지에서 안내됩니다. 관심 있는 유료 과정도 함께 둘러보세요.
+          <p class="text-sm text-gray-600 text-center mb-4 leading-relaxed">
+            🎉 축하합니다! 모든 차시를 완료했습니다! 이제 마이페이지에서 수료증을 확인하거나 자격증 신청을 진행하실 수 있습니다.
           </p>
           ${totalLessons ? `<p class="text-xs text-center text-gray-500">완료 차시: ${totalLessons}차시</p>` : ''}
         </div>
@@ -102,7 +102,7 @@ function showPaymentRequiredModal(options) {
               닫기
             </button>
             <button type="button" onclick="proceedToEnrollmentPage()" class="flex-1 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition shadow-lg">
-              <i class="fas fa-clipboard-list mr-2"></i>수강신청·과정 보기
+              <i class="fas fa-check mr-2"></i>확인
             </button>
           </div>
         </div>
@@ -227,6 +227,17 @@ function handleEscapeKey(e) {
   if (e.key === 'Escape') {
     closePaymentRequiredModal();
   }
+}
+
+/**
+ * 무료 전체 완료 등 — 학습 플레이어와 동일한 이동(나의 학습 현황 → 조건부 자격증/과제)
+ */
+function proceedToEnrollmentPage() {
+  if (typeof window.msNavigateAfterLessonComplete === 'function') {
+    window.msNavigateAfterLessonComplete();
+    return;
+  }
+  window.location.href = '/my-courses?from=lessonComplete';
 }
 
 /**

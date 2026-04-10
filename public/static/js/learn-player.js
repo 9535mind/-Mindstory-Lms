@@ -311,7 +311,10 @@ async function loadEnrollment() {
         
         if (response.data.success && response.data.data) {
             const enrollments = response.data.data;
-            enrollmentData = enrollments.find(e => e.course_id === courseId);
+            const cid = Number(courseId);
+            enrollmentData = enrollments.find(function (e) {
+                return Number(e.course_id) === cid;
+            });
             
             if (enrollmentData) {
                 updateProgressUI(enrollmentData.progress_rate || 0);
@@ -995,6 +998,103 @@ function updateProgressUI(percentage) {
     }
 }
 
+/** 내 수강 전체 중 현재 강좌는 방금 완료한 것으로 간주 */
+function allEnrollmentsComplete(courses, currentCourseId) {
+    if (!Array.isArray(courses) || courses.length === 0) return false;
+    const cur = Number(currentCourseId);
+    return courses.every(function (row) {
+        const cid = Number(row.course_id);
+        if (cid === cur) return true;
+        const rate = Number(row.completion_rate) || 0;
+        const tl = Number(row.total_lessons) || 0;
+        const cl = Number(row.completed_lessons) || 0;
+        if (tl <= 0) return rate >= 100;
+        return cl >= tl || rate >= 99;
+    });
+}
+
+function courseHasCertificateLink(cd) {
+    if (!cd) return false;
+    const v = cd.certificate_id;
+    return v != null && v !== '' && Number(v) > 0;
+}
+
+/**
+ * 모든 차시 완료 후: 나의 학습 현황(/my-courses) 또는 전체 이수 시 자격증·과제 안내 경로
+ */
+async function navigateAfterCourseComplete() {
+    const existing = document.getElementById('msCourseCompleteModal');
+    if (existing) existing.remove();
+    if (typeof closePaymentRequiredModal === 'function') {
+        try {
+            closePaymentRequiredModal();
+        } catch (e) {
+            /* ignore */
+        }
+    }
+
+    const defaultUrl = '/my-courses?from=lessonComplete';
+    if (learnPlayerIsAdmin) {
+        window.location.href = defaultUrl;
+        return;
+    }
+
+    const certLinked = courseHasCertificateLink(courseData);
+    const eid = enrollmentData && enrollmentData.id;
+
+    try {
+        await new Promise(function (r) {
+            setTimeout(r, 350);
+        });
+        const res = await axios.get('/api/progress/my-courses', { withCredentials: true });
+        const courses = (res.data && res.data.courses) || [];
+        const allDone = allEnrollmentsComplete(courses, courseId);
+
+        if (allDone && certLinked && eid) {
+            window.location.href = '/certificates?enrollment=' + encodeURIComponent(String(eid));
+            return;
+        }
+        if (allDone && !certLinked) {
+            window.location.href = '/community/assignments';
+            return;
+        }
+    } catch (e) {
+        console.warn('[navigateAfterCourseComplete]', e);
+    }
+    window.location.href = defaultUrl;
+}
+
+function showAllLessonsCompleteModal() {
+    const existing = document.getElementById('msCourseCompleteModal');
+    if (existing) existing.remove();
+    const msg =
+        '🎉 축하합니다! 모든 차시를 완료했습니다! 이제 마이페이지에서 수료증을 확인하거나 자격증 신청을 진행하실 수 있습니다.';
+    const html =
+        '<div id="msCourseCompleteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">' +
+        '<div class="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">' +
+        '<div class="p-6 border-b bg-gradient-to-r from-emerald-500 to-teal-600">' +
+        '<div class="flex justify-center mb-2"><span class="text-4xl" aria-hidden="true">🎉</span></div>' +
+        '<h3 class="text-lg font-bold text-white text-center leading-snug">전체 차시 학습 완료</h3></div>' +
+        '<div class="p-6"><p class="text-sm text-slate-700 text-center leading-relaxed">' +
+        msg +
+        '</p></div>' +
+        '<div class="p-4 border-t bg-slate-50 flex justify-end">' +
+        '<button type="button" id="msCourseCompleteOk" class="px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 shadow-sm">' +
+        '확인</button></div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+    var btn = document.getElementById('msCourseCompleteOk');
+    if (btn) {
+        btn.onclick = function () {
+            btn.disabled = true;
+            navigateAfterCourseComplete();
+        };
+    }
+}
+
+window.msNavigateAfterLessonComplete = async function () {
+    await navigateAfterCourseComplete();
+};
+
 /**
  * 차시 완료 마킹 (종료 시 100%·완료 플래그 저장)
  */
@@ -1073,8 +1173,8 @@ async function markLessonCompleted() {
             await loadLesson(nextLesson.id);
         }
     } else {
-        // 마지막 차시 완료
-        alert('🎉 축하합니다! 모든 차시를 완료했습니다!');
+        // 마지막 차시 완료 (유료·결제 완료·관리자 등 — 무료 전체 완료는 위에서 모달 처리)
+        showAllLessonsCompleteModal();
     }
 }
 
