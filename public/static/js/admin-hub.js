@@ -3472,20 +3472,14 @@ window.hubConfirmCourseDelete = async function (hard) {
       '수강생 기록이 있는 강좌는 영구 삭제 시 시스템 오류가 발생할 수 있습니다.\n\n정말 DB에서 완전히 삭제할까요? (수강·주문 기록이 있으면 서버에서 거부됩니다.)',
     )
     if (!ok) return
-  } else {
-    if (
-      !confirm(
-        '강좌를 휴지통으로 옮길까요?\n\n카탈로그에서는 숨겨지며, 완전한 DB 삭제는 강좌 목록의 「휴지통 비우기」에서만 할 수 있습니다. 기존 수강생의 학습은 유지됩니다.',
-      )
-    ) {
-      return
-    }
   }
   const q = hard ? '?hard=true' : ''
   try {
     const res = await apiRequest('DELETE', '/api/admin/courses/' + courseIdToDelete + q)
-    hubCloseCourseDeleteModal()
     if (res.success) {
+      hubCloseCourseDeleteModal()
+      const det = document.getElementById('hubCourseDeleteDetails')
+      if (det) det.open = false
       if (hard) {
         showToast('이 강좌가 데이터베이스에서 삭제되었습니다.', 'success')
       } else {
@@ -3516,25 +3510,6 @@ function initHubCourseDeleteModal() {
       if (e.target === modal) hubCloseCourseDeleteModal()
     })
   }
-
-  function bindDelBtn(id, handler) {
-    const el = document.getElementById(id)
-    if (!el || el.dataset.hubDelBound === '1') return
-    el.dataset.hubDelBound = '1'
-    el.addEventListener('click', function (e) {
-      e.preventDefault()
-      e.stopPropagation()
-      handler()
-    })
-  }
-
-  bindDelBtn('hubCourseDeleteBtnSoft', function () {
-    void hubConfirmCourseDelete(false)
-  })
-  bindDelBtn('hubCourseDeleteBtnHard', function () {
-    void hubConfirmCourseDelete(true)
-  })
-  bindDelBtn('hubCourseDeleteBtnCancel', hubCloseCourseDeleteModal)
 }
 
 window.hubCloseCourseTrashEmptyModal = function () {

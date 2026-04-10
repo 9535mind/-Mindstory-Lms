@@ -1532,25 +1532,25 @@ export function adminHubPageHtml(): string {
       <h4 id="hubCourseDeleteModalTitle" class="text-lg font-bold text-slate-900">강좌를 휴지통으로</h4>
       <p class="text-sm text-slate-600 mt-2 leading-relaxed">기본 동작은 <strong class="text-slate-800">휴지통 보관</strong>입니다. 카탈로그에서 숨겨지며, 수강 중인 학습은 유지됩니다. DB에서 완전히 지우려면 목록의 <strong class="text-slate-800">「휴지통 비우기」</strong>에서만 일괄로 진행할 수 있습니다.</p>
       <div class="mt-4 space-y-2">
-        <button type="button" id="hubCourseDeleteBtnSoft" class="w-full text-left rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-900 hover:bg-indigo-100">
+        <button type="button" id="hubCourseDeleteBtnSoft" class="w-full text-left rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-900 hover:bg-indigo-100" onclick="event.preventDefault();event.stopPropagation();void hubConfirmCourseDelete(false);">
           휴지통으로 이동 (권장)
         </button>
-        <details class="group rounded-lg border border-slate-200 bg-slate-50/80 open:bg-white">
-          <summary class="cursor-pointer list-none px-4 py-2.5 text-xs font-medium text-slate-600 marker:content-none [&::-webkit-details-marker]:hidden flex items-center justify-between">
+        <details id="hubCourseDeleteDetails" class="group rounded-lg border border-slate-200 bg-slate-50/80 open:bg-white">
+          <summary class="cursor-pointer list-none px-4 py-2.5 text-xs font-medium text-slate-600 marker:content-none [&::-webkit-details-marker]:hidden flex items-center justify-between" onclick="event.stopPropagation();">
             <span>고급: 이 강좌만 DB에서 즉시 영구 삭제</span>
             <span class="text-slate-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <div class="border-t border-slate-100 px-4 pb-3 pt-1 space-y-2">
+          <div class="border-t border-slate-100 px-4 pb-3 pt-1 space-y-2" onclick="event.stopPropagation();">
             <p class="text-[11px] text-red-800 leading-relaxed bg-red-50 border border-red-100 rounded-lg px-2.5 py-2">
               수강·주문 없는 빈 강좌에만 사용하세요. 복구할 수 없습니다.
             </p>
-            <button type="button" id="hubCourseDeleteBtnHard" class="w-full text-left rounded-lg border border-red-200 bg-red-50/80 px-4 py-2.5 text-sm font-medium text-red-900 hover:bg-red-100">
+            <button type="button" id="hubCourseDeleteBtnHard" class="w-full text-left rounded-lg border border-red-200 bg-red-50/80 px-4 py-2.5 text-sm font-medium text-red-900 hover:bg-red-100" onclick="event.preventDefault();event.stopPropagation();void hubConfirmCourseDelete(true);">
               이 강좌만 영구 삭제
             </button>
           </div>
         </details>
       </div>
-      <button type="button" id="hubCourseDeleteBtnCancel" class="mt-4 w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">닫기</button>
+      <button type="button" id="hubCourseDeleteBtnCancel" class="mt-4 w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50" onclick="event.preventDefault();event.stopPropagation();hubCloseCourseDeleteModal();">닫기</button>
     </div>
   </div>
 
@@ -1634,7 +1634,7 @@ ${adminHubEntityDetailPanelHtml()}
   <script src="/static/js/admin-status-labels.js?v=20260402-course-status-3way"></script>
   <script src="/static/js/admin-hub-member-panel.js?v=20260330-members-page"></script>
   <script src="/static/js/admin-hub-entity-panel.js?v=20260330-hub-pillars"></script>
-  <script src="/static/js/admin-hub.js?v=20260410-ebook-store-admin"></script>
+  <script src="/static/js/admin-hub.js?v=20260410-course-delete-inline-fix"></script>
   <script src="/static/js/admin-isbn.js"></script>
   <script src="/static/js/security.js${STATIC_JS_CACHE_QUERY}"></script>
 </body>
