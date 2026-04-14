@@ -983,9 +983,10 @@
     /** 진행 장소(숲/실내) — 검사 설정 모달과 동기 */
     const LS_OBS_LOCATION = 'ms_forest_obs_location';
     /**
-     * GAS 웹앱 /exec URL — 로컬·디버그용. 운영 POST 는 Worker 의 FOREST_GAS_WEBHOOK_URL(wrangler.jsonc vars 또는 Pages Secrets)을 씁니다.
+     * GAS 웹앱 /exec URL — 로컬·디버그용. 운영 POST 는 Worker 의 FOREST_GAS_WEBHOOK_URL(Pages Secrets 등)을 씁니다.
      * 시트 POST 는 동일 출처 POST /api/forest-gas-webhook → Worker→GAS (클라이언트가 이 상수를 직접 호출하지 않음).
      * GAS doPost: JSON.parse(e.postData.contents), 응답은 JSON MIME 권장. 배포 액세스: 모든 사용자.
+     * 배포 버전(v47 등) 변경 시: 이 URL과 Cloudflare 의 FOREST_GAS_WEBHOOK_URL 을 동일한 /exec 로 맞출 것.
      */
     const FOREST_SHEETS_WEBHOOK_URL =
         'https://script.google.com/macros/s/AKfycbwD4vtRsnmQQyMoTb5TLyapdeBAX9Gwicekvwk0v7bQhKln_NvqrFfdhHza34BFcMWV/exec';
@@ -5917,6 +5918,56 @@
             `;
             document.body.style.overflow = 'hidden';
         },
+        /** 결과 보고서 PDF·Word 저장 영역으로 스크롤 (전송 완료 후 안내용) */
+        scrollToForestReportExports() {
+            requestAnimationFrame(function () {
+                const el =
+                    document.getElementById('ms-report-pdf-download-btn') ||
+                    document.getElementById('ms-report-docx-download-btn') ||
+                    document.getElementById('ms-report-capture-root') ||
+                    document.getElementById('report-container');
+                if (!el) return;
+                try {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } catch (_) {
+                    try {
+                        el.scrollIntoView(true);
+                    } catch (_) {
+                        /* ignore */
+                    }
+                }
+            });
+        },
+        finishForestGasGraceModalAndGoReport() {
+            MS.closeForestTransmitModal();
+            MS.scrollToForestReportExports();
+        },
+        /**
+         * 시트(GAS) 전송만 실패했고 LMS 저장은 성공한 경우 — 부드러운 안내 (alert 대신).
+         * MS.downloadReportDocx 등은 전송과 무관하게 동일하게 동작합니다.
+         */
+        showForestGasSheetGraceModal() {
+            const root = document.getElementById('ms-modal-root');
+            if (!root) return;
+            root.className = 'print-hidden fixed inset-0 z-[200] flex items-center justify-center p-4';
+            root.innerHTML = `
+                <div class="absolute inset-0 bg-black/45" onclick="MS.finishForestGasGraceModalAndGoReport()" aria-hidden="true"></div>
+                <div class="relative w-full max-w-md rounded-[2rem] bg-[#FDFBF7] shadow-2xl border-2 border-[#2D4A3E]/28 p-6 md:p-8 text-center" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="ms-gas-grace-title">
+                    <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[radial-gradient(ellipse_at_30%_30%,rgba(168,201,184,0.55),rgba(45,74,62,0.12))] text-3xl" aria-hidden="true">🛡️</div>
+                    <p id="ms-gas-grace-title" class="text-lg font-black text-[#2D4A3E] mb-3 leading-snug">시트로 보내는 단계만 잠시 지연됐어요</p>
+                    <p class="text-sm text-ms-body mb-4 leading-relaxed text-left">
+                        데이터를 구글 시트로 보내는 중 일시적인 지연이 발생했습니다. 하지만 걱정 마세요! 모든 데이터는 현재 기기에 안전하게 백업되었으며, 서버(LMS) 저장은 정상적으로 완료되었습니다.
+                    </p>
+                    <p class="text-xs text-[#2D4A3E]/90 mb-6 flex items-start gap-2 text-left rounded-2xl border border-[#2D4A3E]/15 bg-white/90 px-3 py-2.5 leading-relaxed">
+                        <span class="shrink-0 text-base" aria-hidden="true">🔄</span>
+                        <span>인터넷이 안정되면 결과 화면에서 <strong class="font-black">동기화</strong>를 눌러 시트로 다시 보낼 수 있어요.</span>
+                    </p>
+                    <button type="button" class="ms-btn w-full !rounded-2xl bg-[#2D4A3E] text-white font-black py-4 text-base shadow-lg"
+                        onclick="MS.finishForestGasGraceModalAndGoReport()">확인</button>
+                </div>
+            `;
+            document.body.style.overflow = 'hidden';
+        },
         /** GAS 시트용 페이로드 로컬 백업 (no-cors 실패 시) — 키 ms_forest_gas_backup */
         backupGasSheetPayload(sheetPayload) {
             try {
@@ -8166,13 +8217,6 @@
                     } catch (_) {
                         /* ignore */
                     }
-                    try {
-                        alert(
-                            '구글 시트(웹앱) 전송에 실패했습니다. 네트워크를 확인해 주세요.\n시트용 데이터는 로컬(ms_forest_gas_backup)에 백업되었습니다.\n\n서버(LMS) 저장은 이어서 시도합니다.'
-                        );
-                    } catch (_) {
-                        /* ignore */
-                    }
                 }
 
                 const ridForServer =
@@ -8256,13 +8300,12 @@
                 }
                 if (gasNetworkFailed) {
                     try {
-                        MS.showForestTransmitErrorModal(
-                            '서버 저장은 완료되었습니다.',
-                            '구글 시트로의 전송은 실패했습니다. 로컬 백업(localStorage 키 ms_forest_gas_backup)을 확인하거나, GAS 웹앱을 "모든 사용자" 권한으로 다시 배포해 주세요.'
-                        );
+                        MS.showForestGasSheetGraceModal();
                     } catch (_) {
                         try {
-                            alert('서버 저장은 되었으나 구글 시트 전송은 실패했습니다. 로컬 백업을 확인해 주세요.');
+                            alert(
+                                '서버(LMS) 저장은 완료되었습니다. 구글 시트 전송은 실패했으며, 로컬(ms_forest_gas_backup)에 백업되었습니다.'
+                            );
                         } catch (_) {
                             /* ignore */
                         }

@@ -40,6 +40,7 @@ forestGasWebhook.post('/', async (c) => {
     const res = await fetch(gasUrl.toString(), {
       method: 'POST',
       redirect: 'follow',
+      cache: 'no-store',
       headers: { 'Content-Type': 'text/plain;charset=utf-8', Accept: 'application/json,text/plain,*/*' },
       body: raw
     })

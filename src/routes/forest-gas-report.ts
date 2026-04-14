@@ -83,6 +83,7 @@ forestGasReport.get('/', async (c) => {
     const res = await fetch(url.toString(), {
       method: 'GET',
       redirect: 'follow',
+      cache: 'no-store',
       headers: { Accept: 'application/json,text/plain,*/*' },
     })
     const text = await res.text()
