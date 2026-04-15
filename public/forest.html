@@ -1032,6 +1032,8 @@
     const LS_ADMIN_UNLOCKED = 'ms_forest_admin_unlocked_v12';
     /** 검사 완료(goResult) 직후 개별 결과 바로가기용 — { id, updatedAt } */
     const LS_FOREST_LAST_RESULT_REF = 'ms_forest_last_result_ref';
+    /** postSubmitChoiceViewReport: 결과 화면 복구 후 스크롤 — 새로고침 1회만 유도 */
+    const SS_FOREST_SCROLL_REPORT = 'ms_forest_scroll_report_v1';
     /** 보고서 딥링크(?view=report&id=) — 전송 시 저장: ms_forest_report:${requestId} */
     const LS_FOREST_REPORT_PREFIX = 'ms_forest_report:';
     const ADMIN_PASSWORDS = ['9535', '0000'];
@@ -1120,6 +1122,68 @@
         }
     }
 
+    /**
+     * GAS 전송 직전: answers { "1": number, … "12": number } 보장 (△+□ 합).
+     * 우선 동일 requestId 기관 → MS.buildForestSheetAnswersPayload, 없으면 rawInputs·q1y/n에서 산출.
+     */
+    function ensureForestGasSheetAnswersOnPayload(canon) {
+        const p = canon && typeof canon === 'object' ? canon : {};
+        try {
+            if (typeof MS !== 'undefined' && MS.buildForestSheetAnswersPayload && typeof STATE !== 'undefined') {
+                const rid = String(p.requestId || '').trim();
+                if (rid && STATE.institutions && STATE.institutions.length) {
+                    let inst = null;
+                    let ii;
+                    for (ii = 0; ii < STATE.institutions.length; ii++) {
+                        const x = STATE.institutions[ii];
+                        if (
+                            String(x.lastReportRequestId || '').trim() === rid ||
+                            String(x.pendingForestRequestId || '').trim() === rid
+                        ) {
+                            inst = x;
+                            break;
+                        }
+                    }
+                    if (inst && typeof MS.resolveForestTargetGroup === 'function') {
+                        const tg = MS.resolveForestTargetGroup(inst);
+                        p.answers = MS.buildForestSheetAnswersPayload(inst, tg);
+                        return;
+                    }
+                }
+            }
+        } catch (_) {
+            /* ignore */
+        }
+        const ri = p.rawInputs && typeof p.rawInputs === 'object' ? p.rawInputs : {};
+        const isEl =
+            p.isElementary === true ||
+            p.isElementary === 'true' ||
+            String(p.age_group || '').indexOf('초등') === 0;
+        const g = isEl ? 'elementary' : 'preschool';
+        const answers = {};
+        for (let qi = 1; qi <= 12; qi++) {
+            if (g === 'preschool' && qi > 8) {
+                answers[String(qi)] = 0;
+                continue;
+            }
+            let yv = 0;
+            let nv = 0;
+            const tk = 'q' + qi + '_triangle';
+            const sk = 'q' + qi + '_square';
+            if (ri[tk] !== undefined || ri[sk] !== undefined) {
+                yv = Number(ri[tk]);
+                nv = Number(ri[sk]);
+            } else {
+                yv = Number(p['q' + qi + 'y']);
+                nv = Number(p['q' + qi + 'n']);
+            }
+            if (!Number.isFinite(yv)) yv = 0;
+            if (!Number.isFinite(nv)) nv = 0;
+            answers[String(qi)] = yv + nv;
+        }
+        p.answers = answers;
+    }
+
     /** jsPDF 문서에 헤더 라인·푸터(저작권·페이지) 오버레이 */
     function applyForestReportPdfHeaderFooter(pdf) {
         try {
@@ -1179,6 +1243,7 @@
                 canon.requestId = Date.now() + '-' + Math.random().toString(36).slice(2, 10);
             }
         }
+        ensureForestGasSheetAnswersOnPayload(canon);
         let body;
         try {
             body = JSON.stringify(canon);
@@ -4811,7 +4876,7 @@
                     </div>`;
 
             el.innerHTML = `
-                <div class="max-w-lg mx-auto">
+                <div id="result-section" class="max-w-lg mx-auto scroll-mt-4">
                     ${reportPrintStripHtml}
                     ${reportQuickActionsStripHtml}
                     <div id="ms-report-capture-root" class="ms-report-document ms-report-capture ms-card px-5 py-8 sm:px-6 sm:py-9 md:px-9 md:py-10 text-center border-t-[10px] border-[#2D4A3E] fade-in">
@@ -6042,29 +6107,64 @@
             document.body.style.overflow = '';
         },
         /**
+         * 결과 보고서 PDF·Word 영역이 실제로 보이는지(0 크기·display:none·부모 숨김 제외).
+         */
+        forestReportExportTargetUsable(el) {
+            if (!el || !el.isConnected) return false;
+            try {
+                const r = el.getBoundingClientRect();
+                if (r.width < 2 && r.height < 2) return false;
+                const st = window.getComputedStyle(el);
+                if (st.display === 'none' || st.visibility === 'hidden' || Number(st.opacity) === 0) return false;
+                let p = el.parentElement;
+                while (p && p !== document.body) {
+                    const ps = window.getComputedStyle(p);
+                    if (ps.display === 'none' || ps.visibility === 'hidden') return false;
+                    p = p.parentElement;
+                }
+            } catch (_) {
+                return false;
+            }
+            return true;
+        },
+        /**
          * 결과 보고서 PDF·Word 저장 영역으로 스크롤 (모달 닫은 직후 DOM이 늦을 수 있어 재시도).
          * @param {{ attempt?: number }} [opt]
          */
         scrollToForestReportExports(opt) {
             const attempt = opt && typeof opt.attempt === 'number' ? opt.attempt : 0;
-            const maxAttempts = 8;
+            const maxAttempts = 14;
+            const delayMs = attempt < 4 ? 60 : attempt < 9 ? 120 : 200;
             requestAnimationFrame(function () {
-                const el =
-                    document.getElementById('ms-report-pdf-download-btn') ||
-                    document.getElementById('ms-report-docx-download-btn') ||
-                    document.getElementById('ms-report-capture-root') ||
-                    document.getElementById('report-container') ||
-                    document.getElementById('view-content');
-                if (!el) {
+                const ids = ['result-section', 'ms-report-pdf-download-btn', 'ms-report-docx-download-btn', 'ms-report-capture-root'];
+                let el = null;
+                let k;
+                for (k = 0; k < ids.length; k++) {
+                    const cand = document.getElementById(ids[k]);
+                    if (cand && MS.forestReportExportTargetUsable(cand)) {
+                        el = cand;
+                        break;
+                    }
+                }
+                if (!el && attempt >= 10) {
+                    const fb =
+                        document.getElementById('report-container') ||
+                        document.getElementById('view-content');
+                    if (fb && MS.forestReportExportTargetUsable(fb)) {
+                        el = fb;
+                    }
+                }
+                if (!el || !MS.forestReportExportTargetUsable(el)) {
                     if (attempt < maxAttempts) {
                         setTimeout(function () {
                             MS.scrollToForestReportExports({ attempt: attempt + 1 });
-                        }, 100);
+                        }, delayMs);
                     }
                     return;
                 }
                 try {
-                    el.scrollIntoView({ behavior: attempt > 0 ? 'auto' : 'smooth', block: 'center' });
+                    const block = el.id === 'result-section' ? 'start' : 'center';
+                    el.scrollIntoView({ behavior: attempt > 0 ? 'auto' : 'smooth', block: block });
                 } catch (_) {
                     try {
                         el.scrollIntoView(true);
@@ -6142,13 +6242,66 @@
         },
         postSubmitChoiceViewReport() {
             MS.closeForestModal();
+            if (STATE.step !== 'result' || !STATE.selectedId) {
+                try {
+                    MS.openLastCompletedExamResult();
+                } catch (_) {
+                    /* ignore */
+                }
+            }
+            if (STATE.step !== 'result') {
+                try {
+                    sessionStorage.setItem(SS_FOREST_SCROLL_REPORT, '1');
+                    location.reload();
+                } catch (_) {
+                    /* ignore */
+                }
+                return;
+            }
+            try {
+                STATE.persist();
+            } catch (_) {
+                /* ignore */
+            }
+            UI.render();
             setTimeout(function () {
                 MS.scrollToForestReportExports({ attempt: 0 });
-            }, 50);
+            }, 200);
         },
         postSubmitChoiceNewExam() {
             MS.closeForestModal();
-            MS.resetForestProgressForNewExam();
+            try {
+                Object.keys(localStorage).forEach(function (k) {
+                    if (k.indexOf('ms_forest') === 0) {
+                        try {
+                            localStorage.removeItem(k);
+                        } catch (_) {
+                            /* ignore */
+                        }
+                    }
+                });
+                try {
+                    localStorage.removeItem('jtt_backup');
+                } catch (_) {
+                    /* ignore */
+                }
+            } catch (_) {
+                /* ignore */
+            }
+            try {
+                sessionStorage.clear();
+            } catch (_) {
+                /* ignore */
+            }
+            try {
+                location.reload();
+            } catch (_) {
+                try {
+                    location.href = String(location.pathname || '/forest.html') + '?t=' + Date.now();
+                } catch (_) {
+                    /* ignore */
+                }
+            }
         },
         postSubmitChoiceGoHome() {
             MS.closeForestModal();
@@ -6758,6 +6911,30 @@
                 out['q' + i + '_square'] = nv;
             }
             return out;
+        },
+
+        /**
+         * GAS 시트·문항 점수 열용: 문항 번호 1~12 키, 값은 해당 문항 △+□ 합(숫자). 유아 Q9~Q12는 0.
+         */
+        buildForestSheetAnswersPayload(inst, tg) {
+            const answers = {};
+            const g = tg === 'elementary' ? 'elementary' : 'preschool';
+            try {
+                STATE.ensureCounts(inst);
+            } catch (_) {
+                /* ignore */
+            }
+            for (let i = 1; i <= 12; i++) {
+                if (g === 'preschool' && i > 8) {
+                    answers[String(i)] = 0;
+                    continue;
+                }
+                const row = SCHEMA.getCountRowForQuestionIndex(inst.counts, g, i - 1);
+                const yv = parseInt(String((row && row.yes) || '').trim(), 10) || 0;
+                const nv = parseInt(String((row && row.no) || '').trim(), 10) || 0;
+                answers[String(i)] = yv + nv;
+            }
+            return answers;
         },
 
         /** 전송·보고서 링크용 고유 ID (시트 requestId 열과 동일 문자열) — Date.now + 랜덤 */
@@ -8292,6 +8469,7 @@
                 sheetPayload.institutionType = sheetPayload.institution_type;
                 sheetPayload.institutionName = sheetPayload.institution_name;
                 sheetPayload.testType = observation_stage === 'post' ? '사후' : '사전';
+                sheetPayload.answers = MS.buildForestSheetAnswersPayload(inst, tg);
                 MS.saveForestReportSnapshot(requestId, sheetPayload, inst, tg);
                 inst.lastReportRequestId = requestId;
                 STATE.persist();
@@ -10267,6 +10445,47 @@
         }
         defaultForestBootstrap();
         UI.render();
+        try {
+            if (sessionStorage.getItem(SS_FOREST_SCROLL_REPORT) === '1') {
+                sessionStorage.removeItem(SS_FOREST_SCROLL_REPORT);
+                let pick = null;
+                try {
+                    const ref = JSON.parse(localStorage.getItem(LS_FOREST_LAST_RESULT_REF) || 'null');
+                    if (ref && ref.id) {
+                        pick = STATE.institutions.find((i) => i.id === ref.id) || null;
+                    }
+                } catch (_) {
+                    pick = null;
+                }
+                if (!pick && typeof MS.getMostRecentCompletedInst === 'function') {
+                    pick = MS.getMostRecentCompletedInst();
+                }
+                if (
+                    pick &&
+                    typeof UI.allInputQuestionsFilled === 'function' &&
+                    UI.allInputQuestionsFilled(pick) &&
+                    typeof MS.forestRespondentTotalsOk === 'function' &&
+                    MS.forestRespondentTotalsOk(pick)
+                ) {
+                    STATE.selectedId = pick.id;
+                    STATE.isPreviewSample = false;
+                    STATE.step = 'result';
+                    STATE.persist();
+                    UI.render();
+                }
+                if (STATE.step === 'result') {
+                    requestAnimationFrame(function () {
+                        requestAnimationFrame(function () {
+                            setTimeout(function () {
+                                MS.scrollToForestReportExports({ attempt: 0 });
+                            }, 80);
+                        });
+                    });
+                }
+            }
+        } catch (_) {
+            /* ignore */
+        }
     })();
 })();
 </script>
