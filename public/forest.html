@@ -9,6 +9,7 @@
     <meta http-equiv="Expires" content="0">
     <title>JTT-Kinder · Jahreszeiten Temperament-Test für Kinder · 마인드스토리</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap');
@@ -264,10 +265,7 @@
             letter-spacing: -0.02em;
             font-feature-settings: 'kern' 1;
         }
-        /* PDF는 jsPDF 텍스트 렌더 — html2canvas·화면 캡처 미사용 */
-        #ms-pdf-preview-overlay {
-            font-family: 'Noto Sans KR', system-ui, sans-serif;
-        }
+        /* PDF는 html2pdf.js(html2canvas) — 보고서용 DOM을 캡처, Noto Sans KR 유지 */
         /* 결과 화면 — JSON 데이터 관리 토글 (그리드 0fr→1fr) */
         .ms-report-json-menu-grid {
             display: grid;
@@ -1161,39 +1159,23 @@
         p.answers = a;
     }
 
-    /** jsPDF 문서에 헤더 라인·푸터(저작권·페이지) 오버레이 */
-    function applyForestReportPdfHeaderFooter(pdf) {
-        try {
-            const total = pdf.internal.getNumberOfPages();
-            const pageW = pdf.internal.pageSize.getWidth();
-            const pageH = pdf.internal.pageSize.getHeight();
-            const mx = 14;
-            let i;
-            for (i = 1; i <= total; i++) {
-                pdf.setPage(i);
-                try {
-                    pdf.setFont(pdf.__msNotoOk ? 'NotoSansKR' : 'helvetica', 'normal');
-                } catch (_) {
-                    pdf.setFont('helvetica', 'normal');
-                }
-                pdf.setDrawColor(218, 218, 218);
-                pdf.setLineWidth(0.3);
-                pdf.line(mx, 17, pageW - mx, 17);
-                pdf.setFontSize(7.5);
-                pdf.setTextColor(45, 74, 62);
-                pdf.text('MINDSTORY · 포레스트 기질 보고서', pageW / 2, 11, { align: 'center' });
-                pdf.setFontSize(7);
-                pdf.setTextColor(115, 115, 115);
-                pdf.text('\u00A9 MINDSTORY All rights reserved', mx, pageH - 7);
-                pdf.text(String(i) + ' / ' + String(total), pageW - mx, pageH - 7, { align: 'right' });
-            }
-        } catch (e) {
-            try {
-                console.error('[forest] PDF footer overlay', e);
-            } catch (_) {
-                /* ignore */
-            }
+    /** GAS 응답 drive.pdfUrl — 시트 E열과 동일(드라이브 PDF 뷰어) */
+    function extractGasDrivePdfUrl_(parsed) {
+        if (!parsed || typeof parsed !== 'object') return '';
+        const dr = parsed.drive;
+        if (dr && typeof dr === 'object' && dr.pdfUrl != null && String(dr.pdfUrl).trim() !== '') {
+            return String(dr.pdfUrl).trim();
         }
+        return '';
+    }
+
+    /** href용 — 따옴표만 이스케이프(구글 드라이브 URL) */
+    function forestEscAttrUrl_(u) {
+        return String(u || '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/'/g, '&#39;');
     }
 
     /** 평생교육원 랜딩(동일 origin 루트). forest.html 이 서브경로여도 상위 도메인 홈으로 이동 */
@@ -1209,7 +1191,7 @@
      * GAS 시트 웹훅 POST — 동일 출처 /api/forest-gas-webhook → Worker → GAS (모바일·CORS 안정).
      * 본문은 JSON.stringify 문자열. Worker→GAS는 application/json(권장). 브라우저→Worker도 동일 MIME 권장.
      * 디버그 시에만 직접 script.google.com URL 로 CORS 확인.
-     * @returns {Promise<void>} 네트워크 실패 시 reject
+     * @returns {Promise<object|void>} 성공 시 GAS JSON(파싱 객체, drive.pdfUrl 포함 가능). no-cors 직접 URL은 본문 없음.
      */
     function postForestGasSheetFetch(payloadObj) {
         const directUrl = String(FOREST_SHEETS_WEBHOOK_URL || '').trim();
@@ -1322,6 +1304,7 @@
                     console.error('[forest GAS debug] success:false', parsed);
                     throw new Error(String(parsed.message || 'GAS success:false'));
                 }
+                return parsed && typeof parsed === 'object' ? parsed : {};
             });
         }
         if (proxyUrl && !debug) {
@@ -1398,7 +1381,7 @@
                         }
                         throw new Error(String(parsed.error));
                     }
-                    return r;
+                    return parsed && typeof parsed === 'object' ? parsed : {};
                 })
                 .catch(function (err) {
                     try {
@@ -6175,12 +6158,15 @@
         },
         /**
          * 전송 시도 후(시트 성공·지연·백업 등) — 선택의 갈림길 모달.
-         * @param {{ gasFailed?: boolean, gasErrorMessage?: string, submitHardFail?: boolean }} [opt]
+         * @param {{ gasFailed?: boolean, gasErrorMessage?: string, submitHardFail?: boolean, drivePdfUrl?: string }} [opt]
          */
         showPostSubmitChoiceModal(opt) {
             const o = opt && typeof opt === 'object' ? opt : {};
             const gasFailed = !!o.gasFailed;
             const submitHardFail = !!o.submitHardFail;
+            const drivePdfUrlRaw = String(o.drivePdfUrl || '').trim();
+            const drivePdfHref =
+                drivePdfUrlRaw && /^https?:\/\//i.test(drivePdfUrlRaw) ? drivePdfUrlRaw : '';
             const errRaw = String(o.gasErrorMessage || '').trim();
             try {
                 if (errRaw) {
@@ -6201,6 +6187,15 @@
                       errEsc +
                       '</p>'
                     : '';
+            const driveBlock =
+                !gasFailed && drivePdfHref
+                    ? '<div class="mb-4 rounded-2xl border border-[#2D4A3E]/18 bg-white/90 px-4 py-3 text-center">' +
+                      '<p class="text-xs font-bold text-[#2D4A3E] mb-2">구글 드라이브에 PDF가 저장되었습니다</p>' +
+                      '<a href="' +
+                      forestEscAttrUrl_(drivePdfHref) +
+                      '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#2D4A3E] px-4 py-2.5 text-sm font-black text-white shadow-md hover:brightness-105">PDF 열기 (드라이브)</a>' +
+                      '</div>'
+                    : '';
             const root = document.getElementById('ms-modal-root');
             if (!root) return;
             root.className =
@@ -6215,6 +6210,7 @@
                     <p class="text-sm text-ms-body leading-relaxed mb-5 text-center">
                         제출된 데이터는 안전하게 기록되었습니다. 다음 단계를 선택해 주세요.
                     </p>
+                    ${driveBlock}
                     ${backupNote}
                     <div class="flex flex-col gap-2.5">
                         <button type="button" class="ms-btn w-full rounded-2xl bg-[#2D4A3E] text-white font-black py-3.5 text-sm shadow-lg hover:brightness-[0.97] active:scale-[0.99] transition-all"
@@ -6257,30 +6253,22 @@
                 /* ignore */
             }
             const instPost = STATE.selected();
-            /* 결과 DOM → 스크롤 → jsPDF 전문 보고서 미리보기(캡처 없음, 모바일 안정) */
+            /* 결과 DOM → 스크롤 → html2pdf.js로 PDF 저장 */
             requestAnimationFrame(function () {
                 requestAnimationFrame(function () {
                     UI.render();
                     setTimeout(function () {
                         MS.scrollToForestReportExports({ attempt: 0 });
-                        if (
-                            instPost &&
-                            typeof MS.buildForestReportPdfBlob === 'function' &&
-                            typeof MS.openPdfPreviewModal === 'function'
-                        ) {
+                        if (instPost && typeof MS.runForestReportPdfSave === 'function') {
                             if (
                                 STATE.isPreviewSample ||
                                 (typeof UI.allInputQuestionsFilled === 'function' &&
                                     UI.allInputQuestionsFilled(instPost))
                             ) {
-                                const fn =
-                                    typeof MS.buildForestReportPdfFilename === 'function'
-                                        ? MS.buildForestReportPdfFilename(instPost)
-                                        : '유아숲_결과보고서.pdf';
-                                Promise.resolve(MS.buildForestReportPdfBlob(instPost))
-                                    .then(function (blob) {
-                                        if (blob && blob instanceof Blob) {
-                                            MS.openPdfPreviewModal(blob, fn);
+                                Promise.resolve(MS.runForestReportPdfSave(instPost))
+                                    .then(function () {
+                                        if (typeof MS.showForestToast === 'function') {
+                                            MS.showForestToast('PDF 저장이 시작되었습니다.', 3200);
                                         }
                                     })
                                     .catch(function () {
@@ -6351,7 +6339,7 @@
         },
         /**
          * 전송 시도 후 UI — 선택의 갈림길 모달 (성공/시트 지연 공통).
-         * @param {{ ok: boolean, gasFailed?: boolean, gasErrorMessage?: string }} r
+         * @param {{ ok: boolean, gasFailed?: boolean, gasErrorMessage?: string, drivePdfUrl?: string }} r
          */
         afterForestSheetTransmitUi(r) {
             if (!r || !r.ok) return;
@@ -6360,7 +6348,8 @@
                     MS.showPostSubmitChoiceModal({
                         gasFailed: !!r.gasFailed,
                         gasErrorMessage: String(r.gasErrorMessage || ''),
-                        submitHardFail: false
+                        submitHardFail: false,
+                        drivePdfUrl: String(r.drivePdfUrl || '').trim()
                     });
                 });
             });
@@ -7438,119 +7427,47 @@
             }
         },
 
-        _jspdfModule: null,
-        _jspdfLoadPromise: null,
-        /** NotoSansKR TTF base64 — fetch 1회 캐시, 각 jsPDF 문서마다 addFileToVFS 필요 */
-        _notoSansKrTtfB64: null,
-        _notoSansKrTtfFailed: false,
-        loadJsPdfModule() {
-            if (MS._jspdfModule) return Promise.resolve(MS._jspdfModule);
-            if (!MS._jspdfLoadPromise) {
-                MS._jspdfLoadPromise = import('https://esm.sh/jspdf@2.5.2?bundle').then(function (m) {
-                    MS._jspdfModule = m;
-                    return m;
+        _html2pdfFn: null,
+        _html2pdfLoadPromise: null,
+        loadHtml2Pdf() {
+            if (MS._html2pdfFn) return Promise.resolve(MS._html2pdfFn);
+            if (!MS._html2pdfLoadPromise) {
+                MS._html2pdfLoadPromise = import('https://esm.sh/html2pdf.js@0.10.2?bundle').then(function (m) {
+                    const fn = m.default || m;
+                    MS._html2pdfFn = fn;
+                    return fn;
                 });
             }
-            return MS._jspdfLoadPromise;
+            return MS._html2pdfLoadPromise;
         },
-        /**
-         * jsPDF 한글 출력용 TTF — 원본은 1회만 fetch·캐시, 매 문서마다 VFS 등록.
-         */
-        async ensureJsPdfKoreanFont(doc) {
-            if (MS._notoSansKrTtfFailed) {
-                try {
-                    doc.setFont('helvetica', 'normal');
-                } catch (_) {
-                    /* ignore */
-                }
-                doc.__msNotoOk = false;
-                return;
-            }
-            if (MS._notoSansKrTtfB64 === null && !MS._notoSansKrTtfFailed) {
-                const urls = [
-                    'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-kr@5.0.18/files/noto-sans-kr-korean-400-normal.ttf'
-                ];
-                let buf = null;
-                let ui;
-                for (ui = 0; ui < urls.length; ui++) {
-                    try {
-                        const res = await fetch(urls[ui], { mode: 'cors', cache: 'force-cache' });
-                        if (res && res.ok) {
-                            buf = await res.arrayBuffer();
-                            break;
-                        }
-                    } catch (_) {
-                        buf = null;
-                    }
-                }
-                if (!buf || buf.byteLength < 1000) {
-                    MS._notoSansKrTtfFailed = true;
-                    try {
-                        doc.setFont('helvetica', 'normal');
-                    } catch (_) {
-                        /* ignore */
-                    }
-                    doc.__msNotoOk = false;
-                    return;
-                }
-                try {
-                    const bytes = new Uint8Array(buf);
-                    let bin = '';
-                    const step = 0x8000;
-                    let i;
-                    for (i = 0; i < bytes.length; i += step) {
-                        bin += String.fromCharCode.apply(
-                            null,
-                            bytes.subarray(i, Math.min(i + step, bytes.length))
-                        );
-                    }
-                    MS._notoSansKrTtfB64 = btoa(bin);
-                } catch (_) {
-                    MS._notoSansKrTtfFailed = true;
-                    MS._notoSansKrTtfB64 = null;
-                }
-            }
-            if (!MS._notoSansKrTtfB64) {
-                try {
-                    doc.setFont('helvetica', 'normal');
-                } catch (_) {
-                    /* ignore */
-                }
-                doc.__msNotoOk = false;
-                return;
-            }
+        async waitForForestPdfFonts() {
             try {
-                doc.addFileToVFS('NotoSansKR-Regular.ttf', MS._notoSansKrTtfB64);
-                doc.addFont('NotoSansKR-Regular.ttf', 'NotoSansKR', 'normal');
-                doc.__msNotoOk = true;
-                doc.setFont('NotoSansKR', 'normal');
-            } catch (_) {
-                try {
-                    doc.setFont('helvetica', 'normal');
-                } catch (__) {
-                    /* ignore */
+                if (document.fonts && document.fonts.ready) {
+                    await document.fonts.ready;
+                    await document.fonts.load('16px "Noto Sans KR"');
                 }
-                doc.__msNotoOk = false;
+            } catch (_) {
+                /* ignore */
             }
+            await new Promise(function (r) {
+                setTimeout(r, 120);
+            });
         },
-
+        getOrCreateForestPdfHtmlRoot() {
+            let el = document.getElementById('ms-forest-pdf-html-root');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'ms-forest-pdf-html-root';
+                el.setAttribute('aria-hidden', 'true');
+                document.body.appendChild(el);
+            }
+            return el;
+        },
         /**
-         * Word(docx)와 동일 데이터(Schema 해석·표)로 텍스트 기반 PDF 생성 — 화면 캡처 없음.
+         * 보고서 PDF용 HTML — Word(docx)·화면 리포트와 동일 Schema 데이터, UI.esc로 이스케이프.
          */
-        async buildForestReportPdfBlob(inst) {
-            const mod = await MS.loadJsPdfModule();
-            const JsPDF = mod.jsPDF || mod.default;
-            if (!JsPDF) throw new Error('jsPDF module');
-            const doc = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-            await MS.ensureJsPdfKoreanFont(doc);
-            const pageW = doc.internal.pageSize.getWidth();
-            const pageH = doc.internal.pageSize.getHeight();
-            const ml = 15;
-            const mr = 15;
-            const mw = pageW - ml - mr;
-            const lh = 5.2;
-            const lhT = 6;
-            let y = 18;
+        buildForestReportPdfHtmlContent(inst) {
+            const esc = UI.esc.bind(UI);
             const tgRes = SCHEMA.getTargetGroup(inst);
             const brandShort = getAppBrandShortForGroup(tgRes);
             const totalsO = SCHEMA.rawOTotalsFromCounts(inst.counts, tgRes);
@@ -7567,20 +7484,6 @@
             const qCount = qs.length;
             const oxMode = tgRes === 'preschool' || tgRes === 'elementary';
             const axisCountLabel = oxMode ? '△·□ 집계' : 'O·X 축 누적';
-
-            function setFontBody() {
-                try {
-                    doc.setFont(doc.__msNotoOk ? 'NotoSansKR' : 'helvetica', 'normal');
-                } catch (_) {
-                    doc.setFont('helvetica', 'normal');
-                }
-            }
-            function newPageIf(n) {
-                if (y + n > pageH - 14) {
-                    doc.addPage();
-                    y = 18;
-                }
-            }
             function pdfNorm(t) {
                 return String(t != null ? t : '')
                     .replace(/\r/g, '')
@@ -7588,194 +7491,205 @@
                     .replace(/\s+/g, ' ')
                     .trim();
             }
-            function writeHeading(txt, size) {
-                setFontBody();
-                doc.setFontSize(size || 12);
-                doc.setTextColor(45, 74, 62);
-                newPageIf(lhT * 2);
-                doc.text(pdfNorm(txt), ml, y);
-                y += lhT;
+            function nl2br(s) {
+                return String(s).replace(/\n/g, '<br/>');
             }
-            function writePara(text, size) {
-                setFontBody();
-                doc.setFontSize(size || 10);
-                doc.setTextColor(45, 52, 48);
-                const raw = pdfNorm(text);
-                if (!raw) return;
-                const lines = doc.splitTextToSize(raw, mw);
-                let li;
-                for (li = 0; li < lines.length; li++) {
-                    newPageIf(lh + 1);
-                    doc.text(lines[li], ml, y);
-                    y += lh;
-                }
-                y += 1;
-            }
-
-            doc.setFontSize(17);
-            setFontBody();
-            doc.setTextColor(45, 74, 62);
-            doc.text('포레스트 기질검사 결과 보고서', pageW / 2, y, { align: 'center' });
-            y += 10;
-            doc.setFontSize(10.5);
-            doc.text('MINDSTORY JTT · ' + ageLabel + ' · ' + qCount + '문항', pageW / 2, y, { align: 'center' });
-            y += 9;
-
-            writeHeading('Ⅰ. 기관·관찰 정보', 12);
-            writePara('기관명: ' + instName);
-            if (gn) writePara('반 이름: ' + gn);
-            writePara(
-                '연령대: ' +
-                    ageLabel +
-                    ' (' +
-                    qCount +
-                    '문항) · 참가 인원: ' +
-                    (oxMode ? 'Q1 △+□ ' : 'Q1 O+X ') +
-                    participantCountSheet +
-                    '명 · 관찰 슬롯 합: ' +
-                    totalOXSlots +
-                    '명'
-            );
-            if (rid) writePara('보고서 요청 ID: ' + rid);
+            let issueDate = '';
             try {
-                writePara(
-                    '발행일: ' +
-                        new Date().toLocaleString('ko-KR', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        })
-                );
+                issueDate = new Date().toLocaleString('ko-KR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
             } catch (_) {
-                writePara('발행일: ' + new Date().toISOString().slice(0, 16));
+                issueDate = new Date().toISOString().slice(0, 16);
             }
-
-            y += 2;
-            writeHeading('Ⅱ. 요약 — 네 축 밸런스(%)', 12);
-            doc.setFontSize(9.5);
-            setFontBody();
-            const col1 = ml;
-            const col2 = ml + 72;
-            const col3 = ml + 118;
-            newPageIf(12);
-            doc.setTextColor(60, 60, 60);
-            doc.text('기질 축', col1, y);
-            doc.text('비율(%)', col2, y);
-            doc.text(axisCountLabel, col3, y);
-            y += lh;
-            doc.setDrawColor(220, 220, 220);
-            doc.line(ml, y - 1, pageW - mr, y - 1);
+            let rowsHtml = '';
             SCHEMA.categories.forEach(function (cat) {
-                newPageIf(lh + 1);
-                doc.text(
-                    (SCHEMA.temperamentRankLabel[cat] || cat) + ' (' + cat + ')',
-                    col1,
-                    y
-                );
-                doc.text(String(percentByAxis[cat] || 0), col2, y);
-                doc.text(String(totalsO[cat] || 0), col3, y);
-                y += lh;
+                rowsHtml +=
+                    '<tr><td style="padding:4px 6px;border-bottom:1px solid #eee;">' +
+                    esc((SCHEMA.temperamentRankLabel[cat] || cat) + ' (' + cat + ')') +
+                    '</td><td style="text-align:right;padding:4px 6px;border-bottom:1px solid #eee;">' +
+                    esc(String(percentByAxis[cat] || 0)) +
+                    '</td><td style="text-align:right;padding:4px 6px;border-bottom:1px solid #eee;">' +
+                    esc(String(totalsO[cat] || 0)) +
+                    '</td></tr>';
             });
-
-            y += 2;
-            writeHeading('요약 그래프(축별 비율)', 11);
-            const barMaxW = pageW - mr - ml - 24;
-            const barH = 3.2;
+            let barsHtml = '';
             SCHEMA.categories.forEach(function (cat) {
                 const pct = Math.max(0, Math.min(100, Number(percentByAxis[cat]) || 0));
-                newPageIf(barH + 14);
-                setFontBody();
-                doc.setFontSize(8.5);
-                doc.setTextColor(45, 52, 48);
-                doc.text(
-                    (SCHEMA.temperamentRankLabel[cat] || cat) + ' (' + cat + ')',
-                    ml,
-                    y
-                );
-                y += 4;
-                doc.setDrawColor(230, 230, 230);
-                doc.rect(ml, y - 2.2, barMaxW, barH, 'S');
-                const fillW = (barMaxW * pct) / 100;
-                doc.setFillColor(45, 74, 62);
-                if (fillW > 0) {
-                    doc.rect(ml, y - 2.2, fillW, barH, 'F');
-                }
-                doc.setFontSize(8);
-                doc.setTextColor(45, 74, 62);
-                doc.text(String(pct) + '%', ml + barMaxW + 3, y + 0.8);
-                y += barH + 7;
+                barsHtml +=
+                    '<div class="ms-pdf-avoid-break" style="margin:10px 0;">' +
+                    '<div style="font-size:8.5pt;color:#2d3430;">' +
+                    esc((SCHEMA.temperamentRankLabel[cat] || cat) + ' (' + cat + ')') +
+                    '</div>' +
+                    '<div style="height:8px;background:#e8e8e8;border-radius:2px;overflow:hidden;margin:4px 0;">' +
+                    '<div style="height:100%;width:' +
+                    pct +
+                    '%;background:#2d4a3e;"></div></div>' +
+                    '<div style="font-size:8pt;color:#2d4a3e;">' +
+                    pct +
+                    '%</div></div>';
             });
-
-            y += 3;
-            writeHeading('Ⅲ. 기질 순위', 12);
+            let rankHtml = '';
             rankedTemperaments.forEach(function (r) {
-                writePara(
-                    '[' +
-                        r.rank +
-                        '순위] ' +
-                        r.label +
-                        ' — ' +
-                        r.score +
-                        '명 (전체 대비 약 ' +
-                        r.density_pct +
-                        '%)'
-                );
+                rankHtml +=
+                    '<p style="margin:0.35em 0;">[' +
+                    esc(String(r.rank)) +
+                    '순위] ' +
+                    esc(r.label) +
+                    ' — ' +
+                    esc(String(r.score)) +
+                    '명 (전체 대비 약 ' +
+                    esc(String(r.density_pct)) +
+                    '%)</p>';
             });
-
-            y += 2;
-            writeHeading('Ⅳ. 집단 조화 요약', 12);
-            writePara(harmony);
-
-            y += 2;
-            writeHeading('Ⅴ. 기질별 상세 해석', 12);
+            let detailHtml = '';
             SCHEMA.categories.forEach(function (cat) {
                 const pct = percentByAxis[cat];
                 const seg = SCHEMA.segmentForScore(pct, cat);
-                writeHeading(
-                    (SCHEMA.temperamentRankLabel[cat] || cat) +
-                        ' (' +
-                        cat +
-                        ') · ' +
-                        pct +
-                        '% · ' +
-                        pdfNorm(seg.badge || ''),
-                    11
-                );
-                if (seg.quote) writePara('「' + pdfNorm(seg.quote) + '」', 9.5);
-                writePara(pdfNorm(seg.headline), 11);
-                if (seg.narrative) writePara(pdfNorm(seg.narrative), 10);
+                detailHtml +=
+                    '<div class="ms-pdf-avoid-break" style="margin-bottom:1.2em;">' +
+                    '<h3 style="font-size:11pt;color:#2d4a3e;margin:0.8em 0 0.4em;">' +
+                    esc((SCHEMA.temperamentRankLabel[cat] || cat) + ' (' + cat + ') · ' + pct + '% · ' + pdfNorm(seg.badge || '')) +
+                    '</h3>';
+                if (seg.quote) {
+                    detailHtml += '<p style="font-size:9.5pt;">「' + esc(pdfNorm(seg.quote)) + '」</p>';
+                }
+                detailHtml += '<p style="font-size:11pt;font-weight:600;">' + esc(pdfNorm(seg.headline)) + '</p>';
+                if (seg.narrative) {
+                    detailHtml += '<p style="font-size:10pt;">' + nl2br(esc(pdfNorm(seg.narrative))) + '</p>';
+                }
                 if (seg.psychDeep) {
-                    writeHeading('심층 심리 해석', 10);
-                    writePara(pdfNorm(seg.psychDeep), 9.5);
+                    detailHtml +=
+                        '<h4 style="font-size:10pt;color:#2d4a3e;">심층 심리 해석</h4>' +
+                        '<p style="font-size:9.5pt;">' + nl2br(esc(pdfNorm(seg.psychDeep))) + '</p>';
                 }
                 if (seg.forestPortrait) {
-                    writeHeading('숲에서의 모습', 10);
-                    writePara(pdfNorm(seg.forestPortrait), 9.5);
+                    detailHtml +=
+                        '<h4 style="font-size:10pt;color:#2d4a3e;">숲에서의 모습</h4>' +
+                        '<p style="font-size:9.5pt;">' + nl2br(esc(pdfNorm(seg.forestPortrait))) + '</p>';
                 }
                 if (seg.parentHeart) {
-                    writeHeading('부모님을 위한 마음 처방', 10);
-                    writePara(pdfNorm(seg.parentHeart), 9.5);
+                    detailHtml +=
+                        '<h4 style="font-size:10pt;color:#2d4a3e;">부모님을 위한 마음 처방</h4>' +
+                        '<p style="font-size:9.5pt;">' + nl2br(esc(pdfNorm(seg.parentHeart))) + '</p>';
                 }
                 if (seg.actionGuide) {
-                    writeHeading('구체적 액션 가이드', 10);
-                    writePara(pdfNorm(seg.actionGuide), 9.5);
+                    detailHtml +=
+                        '<h4 style="font-size:10pt;color:#2d4a3e;">구체적 액션 가이드</h4>' +
+                        '<p style="font-size:9.5pt;">' + nl2br(esc(pdfNorm(seg.actionGuide))) + '</p>';
                 }
-                y += 3;
+                detailHtml += '</div>';
             });
-
-            y += 2;
-            writeHeading('Ⅵ. 참고', 11);
-            writePara(
-                '본 보고서는 유아숲 활동 기질 관찰(JTT) 규격에 따른 교육·참고용 해석이며, 진단명이나 임상적 판정을 대체하지 않습니다.'
+            const gnBlock = gn ? '<p>반 이름: ' + esc(gn) + '</p>' : '';
+            const ridBlock = rid ? '<p>보고서 요청 ID: ' + esc(rid) + '</p>' : '';
+            return (
+                '<div class="ms-forest-pdf-html-inner" style="font-family:\'Noto Sans KR\',\'Malgun Gothic\',sans-serif;color:#2d3430;font-size:10.5pt;line-height:1.55;width:100%;max-width:190mm;box-sizing:border-box;padding:0;">' +
+                '<h1 style="text-align:center;font-size:17pt;color:#2d4a3e;margin:0 0 0.4em;">포레스트 기질검사 결과 보고서</h1>' +
+                '<p style="text-align:center;font-size:10.5pt;color:#2d4a3e;margin:0 0 1.2em;">MINDSTORY JTT · ' +
+                esc(ageLabel) +
+                ' · ' +
+                esc(String(qCount)) +
+                '문항</p>' +
+                '<h2 style="font-size:12pt;color:#2d4a3e;border-bottom:1px solid #ddd;padding-bottom:0.25em;">Ⅰ. 기관·관찰 정보</h2>' +
+                '<p>기관명: ' +
+                esc(instName) +
+                '</p>' +
+                gnBlock +
+                '<p>연령대: ' +
+                esc(ageLabel) +
+                ' (' +
+                esc(String(qCount)) +
+                '문항) · 참가 인원: ' +
+                esc((oxMode ? 'Q1 △+□ ' : 'Q1 O+X ') + String(participantCountSheet)) +
+                '명 · 관찰 슬롯 합: ' +
+                esc(String(totalOXSlots)) +
+                '명</p>' +
+                ridBlock +
+                '<p>발행일: ' +
+                esc(issueDate) +
+                '</p>' +
+                '<h2 style="font-size:12pt;color:#2d4a3e;margin-top:1.2em;border-bottom:1px solid #ddd;padding-bottom:0.25em;">Ⅱ. 요약 — 네 축 밸런스(%)</h2>' +
+                '<table style="width:100%;border-collapse:collapse;font-size:9.5pt;margin:0.5em 0;">' +
+                '<thead><tr style="border-bottom:1px solid #ccc;">' +
+                '<th style="text-align:left;padding:4px 6px;">기질 축</th>' +
+                '<th style="text-align:right;padding:4px 6px;">비율(%)</th>' +
+                '<th style="text-align:right;padding:4px 6px;">' +
+                esc(axisCountLabel) +
+                '</th></tr></thead><tbody>' +
+                rowsHtml +
+                '</tbody></table>' +
+                '<h2 style="font-size:11pt;color:#2d4a3e;margin-top:1em;">요약 그래프(축별 비율)</h2>' +
+                barsHtml +
+                '<h2 style="font-size:12pt;color:#2d4a3e;margin-top:1.2em;border-bottom:1px solid #ddd;padding-bottom:0.25em;">Ⅲ. 기질 순위</h2>' +
+                '<div>' +
+                rankHtml +
+                '</div>' +
+                '<h2 style="font-size:12pt;color:#2d4a3e;margin-top:1.2em;border-bottom:1px solid #ddd;padding-bottom:0.25em;">Ⅳ. 집단 조화 요약</h2>' +
+                '<p>' +
+                nl2br(esc(pdfNorm(harmony))) +
+                '</p>' +
+                '<h2 style="font-size:12pt;color:#2d4a3e;margin-top:1.2em;border-bottom:1px solid #ddd;padding-bottom:0.25em;">Ⅴ. 기질별 상세 해석</h2>' +
+                detailHtml +
+                '<h2 style="font-size:11pt;color:#2d4a3e;margin-top:1.2em;">Ⅵ. 참고</h2>' +
+                '<p style="font-size:11pt;">본 보고서는 유아숲 활동 기질 관찰(JTT) 규격에 따른 교육·참고용 해석이며, 진단명이나 임상적 판정을 대체하지 않습니다.</p>' +
+                '<p style="font-size:7pt;color:#888;margin-top:2em;text-align:center;border-top:1px solid #eee;padding-top:8px;">MINDSTORY · Temperament Report · © MINDSTORY</p>' +
+                '</div>'
             );
-
-            applyForestReportPdfHeaderFooter(doc);
+        },
+        /**
+         * html2pdf.js — 숨김 HTML(Noto Sans KR)을 A4 PDF로 렌더링. jsPDF 텍스트 API의 CJK 한계 회피.
+         */
+        async buildForestReportPdfBlob(inst) {
+            const html2pdfFn = await MS.loadHtml2Pdf();
+            const html = MS.buildForestReportPdfHtmlContent(inst);
+            const host = MS.getOrCreateForestPdfHtmlRoot();
+            host.innerHTML = '';
+            host.style.cssText =
+                'position:fixed;left:-9999px;top:0;width:794px;max-width:100vw;z-index:-1;opacity:0.01;pointer-events:none;background:#fff;overflow:visible;';
+            host.innerHTML = html;
+            const el = host.firstElementChild;
+            if (!el) {
+                throw new Error('PDF HTML mount failed');
+            }
             try {
-                return doc.output('blob');
-            } catch (e) {
-                throw e || new Error('PDF output failed');
+                await MS.waitForForestPdfFonts();
+                const opt = {
+                    margin: [10, 10, 14, 10],
+                    filename: 'forest-report.pdf',
+                    image: { type: 'jpeg', quality: 0.96 },
+                    html2canvas: {
+                        scale: 2,
+                        useCORS: true,
+                        letterRendering: true,
+                        logging: false,
+                        backgroundColor: '#ffffff'
+                    },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'], avoid: ['.ms-pdf-avoid-break'] }
+                };
+                let blob;
+                const worker = html2pdfFn().set(opt).from(el);
+                if (typeof worker.outputPdf === 'function') {
+                    blob = await worker.outputPdf('blob');
+                } else {
+                    const pdf = await worker.toPdf().get('pdf');
+                    blob = pdf.output('blob');
+                }
+                if (!blob || !(blob instanceof Blob)) {
+                    throw new Error('PDF Blob 생성 실패');
+                }
+                return blob;
+            } finally {
+                try {
+                    host.innerHTML = '';
+                    host.removeAttribute('style');
+                } catch (_) {
+                    /* ignore */
+                }
             }
         },
 
@@ -8596,7 +8510,7 @@
 
         /**
          * 구글 시트(webhook)만 전송 — 평생교육원 DB·로그인 API 호출 없음.
-         * @returns {Promise<{ ok: boolean, gasFailed?: boolean, gasErrorMessage?: string }>}
+         * @returns {Promise<{ ok: boolean, gasFailed?: boolean, gasErrorMessage?: string, drivePdfUrl?: string, gasResponse?: object }>}
          */
         submitForestGroupResult() {
             if (STATE.isPreviewSample) return Promise.resolve({ ok: false });
@@ -8735,8 +8649,9 @@
             return (async function () {
                 let gasNetworkFailed = false;
                 let gasErrorMessage = '';
+                let gasResponse = null;
                 try {
-                    await postForestGasSheetFetch(sheetPayload);
+                    gasResponse = await postForestGasSheetFetch(sheetPayload);
                 } catch (gasErr) {
                     gasNetworkFailed = true;
                     gasErrorMessage = gasErr && gasErr.message ? String(gasErr.message) : '';
@@ -8747,6 +8662,34 @@
                     }
                     try {
                         MS.backupGasSheetPayload(sheetPayload);
+                    } catch (_) {
+                        /* ignore */
+                    }
+                }
+                const drivePdfUrl =
+                    !gasNetworkFailed && gasResponse && typeof gasResponse === 'object'
+                        ? extractGasDrivePdfUrl_(gasResponse)
+                        : '';
+                const ridSnap = String(sheetPayload.requestId || '').trim();
+                if (drivePdfUrl) {
+                    try {
+                        inst.lastDrivePdfUrl = drivePdfUrl;
+                    } catch (_) {
+                        /* ignore */
+                    }
+                    try {
+                        if (ridSnap && typeof localStorage !== 'undefined') {
+                            const sk = LS_FOREST_REPORT_PREFIX + ridSnap;
+                            const ex = localStorage.getItem(sk);
+                            if (ex) {
+                                const snap = JSON.parse(ex);
+                                snap.sheetPayload = snap.sheetPayload && typeof snap.sheetPayload === 'object' ? snap.sheetPayload : {};
+                                snap.sheetPayload.reportUrl = drivePdfUrl;
+                                snap.sheetPayload.report_url = drivePdfUrl;
+                                snap.drivePdfUrl = drivePdfUrl;
+                                localStorage.setItem(sk, JSON.stringify(snap));
+                            }
+                        }
                     } catch (_) {
                         /* ignore */
                     }
@@ -8764,7 +8707,13 @@
                 } catch (_) {
                     /* ignore */
                 }
-                return { ok: true, gasFailed: gasNetworkFailed, gasErrorMessage: gasErrorMessage };
+                return {
+                    ok: true,
+                    gasFailed: gasNetworkFailed,
+                    gasErrorMessage: gasErrorMessage,
+                    drivePdfUrl: drivePdfUrl,
+                    gasResponse: gasResponse
+                };
             })()
                 .catch(function (err) {
                     const msg = err && err.message ? String(err.message) : '네트워크 오류';

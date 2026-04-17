@@ -2,6 +2,7 @@
  * JTT 숲 시트 웹앱 — doPost(append) + doGet(requestId → 보고서 JSON)
  * appendForest2026Row_: 정확히 41요소 A~AO — E=reportUrl, F~AC=Q1~12, AD~AG=4축, AN=requestId, AO=JSON
  * Apps Script: 이 파일 전체를 한 번에 붙여 넣으면 됩니다(별도 common 파일 불필요).
+ * 드라이브 PDF를 시트 E열에 넣으려면 scripts/gas-forest-dopost-e-layout-paste.gs 배포본을 사용하세요(드라이브 먼저 → pdfUrl → appendRow).
  *
  * 시트 탭 이름(doPost와 동일해야 append·조회가 같은 곳을 봄):
  *   - 유아: '2026'

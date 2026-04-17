@@ -1,6 +1,6 @@
 /**
  * JTT 숲 → 구글 시트 — appendForest2026Row_ = 정확히 41열 (A~AO)
- * A입력시간 B기관유형 C기관명 D사전·사후 EreportUrl F~AC Q1~12 AD~AG 4축 AH~AO 부가
+ * A입력시간 B기관유형 C기관명 D사전·사후 E리포트링크(드라이브 PDF URL 우선, 없으면 웹 보고서 URL) F~AC Q1~12 AD~AG 4축 AH~AO 부가
  * doGet 보고서 조회: ForestReports 없어도 탭 '2026'·'2026초등' 메인 시트에서 E(URL)·AN(requestId)로 검색
  *
  * ■ Drive 자동 저장(선택): 프로젝트 속성에 FOREST_DRIVE_REPORT_FOLDER_ID 를 넣으면,
@@ -36,7 +36,21 @@ function doPost(e) {
     if (!raw) {
       return jsonOut_({ success: false, error: 'no body' });
     }
-    var data = ensureForestPayloadReportUrl_(JSON.parse(raw));
+    var data = JSON.parse(raw);
+    /** 1) 드라이브 Doc+PDF 생성 후 pdfUrl 확보 — 2) E열(리포트 링크)에 pdfUrl 우선 기록(관리자가 시트에서 바로 PDF 열람) */
+    var driveResult = { skipped: true };
+    try {
+      driveResult = tryCreateForestDriveArchive_(data);
+    } catch (driveErr) {
+      driveResult = { skipped: false, error: String(driveErr) };
+    }
+    if (driveResult && driveResult.pdfUrl && String(driveResult.pdfUrl).trim() !== '') {
+      var pdfU = String(driveResult.pdfUrl).trim();
+      data.report_url = pdfU;
+      data.reportUrl = pdfU;
+    } else {
+      data = ensureForestPayloadReportUrl_(data);
+    }
     var isEl = forestIsElementary_(data);
     var sheetName = isEl ? '2026초등' : '2026';
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -46,12 +60,6 @@ function doPost(e) {
     }
     sheet.appendRow(appendForest2026Row_(data));
     appendForestReportsIndex_(ss, data);
-    var driveResult = { skipped: true };
-    try {
-      driveResult = tryCreateForestDriveArchive_(data);
-    } catch (driveErr) {
-      driveResult = { skipped: false, error: String(driveErr) };
-    }
     return jsonOut_({
       success: true,
       sheet: sheetName,
@@ -246,6 +254,7 @@ function appendForest2026Row_(data) {
   row[idx++] = phaseDisp;
   row[idx++] = reportUrl;
 
+  /** F~AC: Q1~12 — q iy/in 순(△·□). 클라이언트 answers["1"]..["12"]·rawInputs.qN_triangle 와 동일 소스(normalizePayload_) */
   var i;
   for (i = 1; i <= 12; i++) {
     if (isEl) {
