@@ -2841,29 +2841,15 @@
                 </section>`;
         },
 
-        /** 결과 보고서: 전문가 종합 소견 (D1 연동 — 마운트 후 MS.initForestExpertCommentaryAfterRender) */
-        /** 결과 보고서 마지막: 기관장 직인 날인 공간(인쇄 전용) */
+        /** 결과 보고서: 기관장 직인 날인 공간(인쇄 전용) — 전문가 소견 블록 제거 후 여백·페이지 나눔 유지 */
         buildReportInstitutionSealPlaceholderHtml() {
-            return `<div class="ms-report-print-seal-area" aria-hidden="true">
+            return `<div class="ms-report-a4-sheet ms-report-a4-sheet--finale ms-report-print-seal-area mt-8 md:mt-10 text-left" aria-hidden="true">
                 <div class="ms-report-print-seal-inner">
                     <p class="ms-report-print-seal-label">기관장 직인</p>
                     <p class="ms-report-print-seal-hint">날인·직인 이미지를 붙이거나 스캔한 인장을 배치할 수 있는 공간입니다.</p>
                     <div class="ms-report-print-seal-box"></div>
                 </div>
             </div>`;
-        },
-
-        buildReportExpertCommentarySectionHtml() {
-            return `<section id="ms-report-expert-commentary-root" class="ms-report-expert-finale ms-report-a4-sheet--finale ms-print-avoid-break mt-10 text-left rounded-[2rem] border-2 border-[#D4A373]/45 bg-gradient-to-br from-[#fffefb] via-[#FDFBF7] to-[rgba(212,163,115,0.08)] p-7 md:p-9 shadow-[0_16px_48px_rgba(45,74,62,0.1)] ring-1 ring-[rgba(45,74,62,0.06)]" role="region" aria-label="전문가 종합 소견">
-                <div class="flex flex-col items-center text-center mb-6 pb-5 border-b border-[rgba(45,74,62,0.1)]">
-                    <p class="text-[13px] font-black text-[#D4A373] tracking-[0.35em] mb-2">FINALE · EXPERT NOTE</p>
-                    <h3 class="text-xl md:text-2xl font-black text-[#2D4A3E] mb-2 leading-tight">선생님 · 원장님 종합 소견</h3>
-                    <p class="text-[13px] md:text-xs text-ms-muted max-w-md leading-relaxed">리포트의 마지막은 사람의 언어로 마무리됩니다. 데이터 해석을 바탕으로 가정·현장에서의 돌봄 방향을 한마디로 정리해 주세요. <span class="text-[#2D4A3E]/90 font-semibold">편집·저장은 관리자 계정만 가능합니다.</span></p>
-                </div>
-                <div id="ms-report-expert-commentary-mount" class="min-h-[3rem] text-left">
-                    <p class="text-sm text-ms-muted py-1">불러오는 중...</p>
-                </div>
-            </section>`;
         },
 
         /** 결과 보고서 하단: JSON 가져오기·내보내기 (홈에서 이전됨) */
@@ -4879,7 +4865,6 @@
                             canPrePost: canOpenPrePostFromResult,
                             canGroup: canOpenGroupReport
                         })}
-                        ${this.buildReportExpertCommentarySectionHtml()}
                         ${this.buildReportInstitutionSealPlaceholderHtml()}
                         ${this.buildReportDataManagementSectionHtml()}
                     </div>
@@ -4912,9 +4897,6 @@
             requestAnimationFrame(() => {
                 if (typeof MS !== 'undefined' && MS.setupResultScrollTopFab) {
                     MS.setupResultScrollTopFab();
-                }
-                if (typeof MS !== 'undefined' && MS.initForestExpertCommentaryAfterRender) {
-                    MS.initForestExpertCommentaryAfterRender();
                 }
             });
         },
@@ -8337,32 +8319,6 @@
                         pdfBtn.textContent = btnPrev || '💾 PDF 보고서 저장';
                     }
                 });
-        },
-
-        /** 전문가 소견: 온라인 저장 없음 — PDF·Word 보고서만 사용 */
-        initForestExpertCommentaryAfterRender() {
-            const mount = document.getElementById('ms-report-expert-commentary-mount');
-            const root = document.getElementById('ms-report-expert-commentary-root');
-            if (!mount || !root) return;
-            const inst = STATE.selected();
-            const rid = inst && String(inst.lastReportRequestId || '').trim();
-            if (!rid) {
-                root.classList.add('hidden');
-                return;
-            }
-            root.classList.remove('hidden');
-            mount.innerHTML =
-                '<p class="text-sm text-ms-muted leading-relaxed">전문가 소견 온라인 등록 기능은 사용하지 않습니다. 아래 PDF·Word로 보고서를 저장해 활용해 주세요.</p>';
-        },
-
-        saveForestExpertCommentary() {
-            try {
-                if (typeof MS.showForestToast === 'function') {
-                    MS.showForestToast('이 화면에서는 소견을 온라인으로 저장하지 않습니다.', 2600);
-                }
-            } catch (_) {
-                /* ignore */
-            }
         },
 
         /** 메인 검사 설정 화면(setup)으로 — 금고 기록은 유지 */
