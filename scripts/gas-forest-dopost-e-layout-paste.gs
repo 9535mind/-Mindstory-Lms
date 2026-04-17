@@ -2,6 +2,12 @@
  * JTT 숲 → 구글 시트 — appendForest2026Row_ = 정확히 41열 (A~AO)
  * A입력시간 B기관유형 C기관명 D사전·사후 EreportUrl F~AC Q1~12 AD~AG 4축 AH~AO 부가
  * doGet 보고서 조회: ForestReports 없어도 탭 '2026'·'2026초등' 메인 시트에서 E(URL)·AN(requestId)로 검색
+ *
+ * ■ Drive 자동 저장(선택): 프로젝트 속성에 FOREST_DRIVE_REPORT_FOLDER_ID 를 넣으면,
+ *   POST 성공 시 같은 JSON으로 Google Doc + PDF 를 해당 폴더에 생성합니다.
+ *   웹앱 배포는 [실행 사용자: 나] 권장. Drive/문서 권한이 필요하면 appsscript.json oauthScopes 에
+ *   https://www.googleapis.com/auth/drive.file (또는 drive) 및 documents 추가 후 재인증.
+ *   비활성화: FOREST_DRIVE_ARCHIVE_DISABLED = 1
  */
 
 function doGet(e) {
@@ -40,7 +46,18 @@ function doPost(e) {
     }
     sheet.appendRow(appendForest2026Row_(data));
     appendForestReportsIndex_(ss, data);
-    return jsonOut_({ success: true, sheet: sheetName, requestId: String(data.requestId || '') });
+    var driveResult = { skipped: true };
+    try {
+      driveResult = tryCreateForestDriveArchive_(data);
+    } catch (driveErr) {
+      driveResult = { skipped: false, error: String(driveErr) };
+    }
+    return jsonOut_({
+      success: true,
+      sheet: sheetName,
+      requestId: String(data.requestId || ''),
+      drive: driveResult
+    });
   } catch (err) {
     return jsonOut_({ success: false, error: String(err) });
   }
@@ -340,4 +357,126 @@ function getReportSnapshotByRequestId_(id) {
     }
   }
   return findReportSnapshotInMainSheets_(ss, id);
+}
+
+/** 파일명에 쓸 수 없는 문자 제거 */
+function forestSanitizeFileName_(name) {
+  return String(name || '')
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * 시트 append 와 동일 payload 로 Google Doc + PDF 를 관리자 폴더에 저장.
+ * Script Properties: FOREST_DRIVE_REPORT_FOLDER_ID = Drive 폴더 ID (필수로 쓰려면 설정)
+ */
+function tryCreateForestDriveArchive_(data) {
+  var props = PropertiesService.getScriptProperties();
+  if (String(props.getProperty('FOREST_DRIVE_ARCHIVE_DISABLED') || '').trim() === '1') {
+    return { skipped: true, reason: 'FOREST_DRIVE_ARCHIVE_DISABLED' };
+  }
+  var folderId = String(props.getProperty('FOREST_DRIVE_REPORT_FOLDER_ID') || '').trim();
+  if (!folderId) {
+    return { skipped: true, reason: 'no FOREST_DRIVE_REPORT_FOLDER_ID' };
+  }
+  var folder;
+  try {
+    folder = DriveApp.getFolderById(folderId);
+  } catch (e0) {
+    return { skipped: true, reason: 'folder access: ' + String(e0) };
+  }
+
+  var d = ensureForestPayloadReportUrl_(data || {});
+  var norm = normalizePayload_(d);
+  var q = norm.questions;
+  var ax = axisScoresFromPayload_(d);
+  var isEl = forestIsElementary_(d);
+  var rid = String(d.requestId || '').trim();
+  var instName = String(d.institution_name || '').trim() || '기관';
+  var baseTitle = forestSanitizeFileName_('포레스트_기질결과_' + rid + '_' + instName);
+  if (baseTitle.length > 200) {
+    baseTitle = baseTitle.substring(0, 196) + '...';
+  }
+
+  var doc = DocumentApp.create(baseTitle);
+  var body = doc.getBody();
+  body.appendParagraph('포레스트 기질검사 결과 보고서').setHeading(DocumentApp.ParagraphHeading.TITLE);
+
+  body.appendParagraph('■ 기관·관찰 정보').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  body.appendParagraph('기관유형: ' + String(d.institution_type || ''));
+  body.appendParagraph('기관명: ' + instName);
+  body.appendParagraph('사전/사후: ' + forestPhaseDisplay_(d.phase));
+  body.appendParagraph('반 이름: ' + String(d.class_name || ''));
+  body.appendParagraph('연령: ' + String(d.age_group || ''));
+  body.appendParagraph('진행 장소: ' + String(d.location || ''));
+  body.appendParagraph('진행자: ' + String(d.facilitator || ''));
+  body.appendParagraph('참가 인원(Q1 기준): ' + String(d.participant_count || ''));
+  body.appendParagraph('제출 시각(ISO): ' + String(d.submitted_at_iso || ''));
+
+  body.appendParagraph('■ 온라인 보고서 링크').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  var reportUrl = resolveForestReportUrl_(d);
+  var pLink = body.appendParagraph('');
+  pLink.appendText('열기: ');
+  var tUrl = pLink.appendText(reportUrl);
+  tUrl.setLinkUrl(reportUrl);
+
+  body.appendParagraph('■ 문항별 △·□ 인원').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  var maxQ = isEl ? 12 : 8;
+  var tableRows = [['문항', '△ 인원', '□ 인원']];
+  var qi;
+  for (qi = 1; qi <= maxQ; qi++) {
+    tableRows.push([
+      'Q' + qi,
+      String(Number(q['q' + qi + 'y']) || 0),
+      String(Number(q['q' + qi + 'n']) || 0)
+    ]);
+  }
+  body.appendTable(tableRows);
+
+  body.appendParagraph('■ 네 축 원시 합').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  body.appendParagraph(
+    'SPRT(봄): ' +
+      ax.SPRT +
+      ' | SUMT(여름): ' +
+      ax.SUMT +
+      ' | AUTT(가을): ' +
+      ax.AUTT +
+      ' | WINT(겨울): ' +
+      ax.WINT
+  );
+
+  if (d.answers && typeof d.answers === 'object') {
+    body.appendParagraph('■ answers (문항별 값)').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+    body.appendParagraph(JSON.stringify(d.answers));
+  }
+
+  body.appendParagraph('■ 원본 JSON').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  var rawJson = JSON.stringify(d);
+  if (rawJson.length > 48000) {
+    rawJson = rawJson.substring(0, 48000) + '\n…(truncated)';
+  }
+  body.appendParagraph(rawJson);
+
+  var docFile = DriveApp.getFileById(doc.getId());
+  folder.addFile(docFile);
+  var parents = docFile.getParents();
+  while (parents.hasNext()) {
+    var par = parents.next();
+    if (par.getId() !== folder.getId()) {
+      par.removeFile(docFile);
+    }
+  }
+
+  var pdfBlob = docFile.getAs(MimeType.PDF);
+  var pdfFile = folder.createFile(pdfBlob);
+  pdfFile.setName(baseTitle + '.pdf');
+
+  return {
+    skipped: false,
+    docUrl: docFile.getUrl(),
+    pdfUrl: pdfFile.getUrl(),
+    docId: docFile.getId(),
+    pdfId: pdfFile.getId()
+  };
 }
