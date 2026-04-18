@@ -1011,8 +1011,10 @@
             } else if (!ag) {
                 p.age_group = '유아';
             }
-            /* rawInputs·scores·requestId 등 나머지 필드는 deep clone 그대로 유지 */
-            return p;
+            const uName = String(p.userName || '').trim();
+            delete p.userName;
+            /* rawInputs·scores·requestId 등 나머지 필드는 deep clone 그대로 — userName 은 JSON 최상단 */
+            return Object.assign({ userName: uName }, p);
         } catch (_) {
             return obj && typeof obj === 'object' ? obj : {};
         }
@@ -1167,9 +1169,17 @@
         p.answers = a;
     }
 
-    /** GAS 응답 drive.pdfUrl — 시트 E열과 동일(드라이브 PDF 뷰어) */
+    /** GAS 응답 — { success:true, url } 또는 drive.pdfUrl (드라이브 PDF) */
     function extractGasDrivePdfUrl_(parsed) {
         if (!parsed || typeof parsed !== 'object') return '';
+        if (parsed.success === true && parsed.url != null && String(parsed.url).trim() !== '') {
+            const u = String(parsed.url).trim();
+            if (/^https?:\/\//i.test(u)) return u;
+        }
+        if (parsed.success !== false && parsed.url != null && String(parsed.url).trim() !== '') {
+            const u2 = String(parsed.url).trim();
+            if (/^https?:\/\//i.test(u2)) return u2;
+        }
         const dr = parsed.drive;
         if (dr && typeof dr === 'object' && dr.pdfUrl != null && String(dr.pdfUrl).trim() !== '') {
             return String(dr.pdfUrl).trim();
@@ -4494,8 +4504,11 @@
             const qs = SCHEMA.questionsForGroup(tg);
             const ageLine =
                 tg === 'elementary' ? `초등부 · ${qs.length}문항` : `유아·유치부 · ${qs.length}문항`;
+            const userNameDone = String(inst.userName || '').trim().length > 0;
             const canComplete =
-                this.allInputQuestionsFilled(inst) && (typeof MS !== 'undefined' && MS.forestRespondentTotalsOk(inst));
+                this.allInputQuestionsFilled(inst) &&
+                (typeof MS !== 'undefined' && MS.forestRespondentTotalsOk(inst)) &&
+                userNameDone;
             const showSubmitArea = this.lastQuestionRowComplete(inst);
 
             el.innerHTML = `
@@ -4569,6 +4582,14 @@
                         `
                             )
                             .join('')}
+                    </div>
+                    <div class="print-hidden shrink-0 mb-3 px-1${showSubmitArea && qs.length > 0 ? '' : ' hidden'}" id="ms-forest-user-name-wrap" aria-hidden="${showSubmitArea && qs.length > 0 ? 'false' : 'true'}">
+                        <label for="ms-forest-user-name" class="block text-xs font-bold text-ms-muted mb-2 ml-1 tracking-widest">수검자 이름</label>
+                        <input id="ms-forest-user-name" type="text" name="userName" autocomplete="name" maxlength="80"
+                            placeholder="예: 홍길동 (필수)"
+                            class="w-full ms-input px-4 py-3 text-base font-bold text-center rounded-[2rem] border-2 border-[#2D4A3E]/22 bg-[#FDFBF7] shadow-sm placeholder:text-ms-muted/75 focus:border-[#2D4A3E]/50 focus:ring-2 focus:ring-[#2D4A3E]/15 outline-none transition-all"
+                            value="${this.esc(String(inst.userName || ''))}"
+                            oninput="MS.onForestUserNameInput(this)" />
                     </div>
                     <div id="ms-input-submit-wrap" class="shrink-0 mt-auto print-hidden outline-none${showSubmitArea && qs.length > 0 ? '' : ' hidden'}" aria-hidden="${showSubmitArea && qs.length > 0 ? 'false' : 'true'}" tabindex="-1">
                         <button type="button" id="ms-input-submit-btn"
@@ -5288,6 +5309,8 @@
         _forestGasSubmitInFlight: false,
         /** goResult 제출 UI(버튼·오버레이) 중복 방지 */
         _goResultSubmitUiActive: false,
+        /** showForestReportPdfSuccessModal → openForestReportPdfSuccessAndClose */
+        _forestPdfSuccessOpenUrl: '',
         /** 제출 버튼 로딩 전 원래 라벨 */
         _forestSubmitBtnPrevLabel: null,
         /** 드롭다운 키보드(↑↓) 하이라이트 인덱스 */
@@ -6066,6 +6089,51 @@
                 root.innerHTML = '';
             }
             document.body.style.overflow = '';
+            try {
+                MS._forestPdfSuccessOpenUrl = '';
+            } catch (_) {
+                /* ignore */
+            }
+        },
+        /**
+         * GAS 가 { success, url } 로 PDF 를 돌려줄 때 — 중앙 CTA(새 창).
+         */
+        showForestReportPdfSuccessModal(pdfUrl) {
+            const raw = String(pdfUrl || '').trim();
+            if (!/^https?:\/\//i.test(raw)) {
+                MS.showPostSubmitChoiceModal({ gasFailed: false, gasErrorMessage: '', submitHardFail: false, drivePdfUrl: '' });
+                return;
+            }
+            MS._forestPdfSuccessOpenUrl = raw;
+            const root = document.getElementById('ms-modal-root');
+            if (!root) return;
+            root.className =
+                'print-hidden fixed inset-0 z-[200] flex items-center justify-center p-4';
+            root.innerHTML = `
+                <div class="absolute inset-0 bg-black/50 cursor-pointer" onclick="MS.closeForestModal()" aria-hidden="true"></div>
+                <div class="relative w-full max-w-md rounded-[2rem] bg-[#FDFBF7] shadow-2xl border-2 border-[#2D4A3E]/18 p-6 md:p-9 text-center" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="ms-pdf-success-title">
+                    <div class="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 text-lg font-black ring-2 ring-emerald-300/50" aria-hidden="true">✓</div>
+                    <h2 id="ms-pdf-success-title" class="text-lg md:text-xl font-black text-[#2D4A3E] leading-snug mb-2">심층 보고서가 준비되었습니다</h2>
+                    <p class="text-sm text-ms-body leading-relaxed mb-6">JTT AI가 생성한 PDF를 새 창에서 확인할 수 있습니다.</p>
+                    <button type="button"
+                        class="ms-btn w-full rounded-2xl bg-[#2D4A3E] text-white font-black py-4 text-base shadow-lg hover:brightness-105 active:scale-[0.99] transition-all"
+                        onclick="MS.openForestReportPdfSuccessAndClose()">결과 보고서 확인하기</button>
+                    <button type="button" class="mt-3 text-sm font-bold text-ms-muted hover:text-[#2D4A3E] underline underline-offset-2" onclick="MS.closeForestModal()">닫기</button>
+                </div>
+            `;
+            document.body.style.overflow = 'hidden';
+        },
+        openForestReportPdfSuccessAndClose() {
+            const u = MS._forestPdfSuccessOpenUrl;
+            MS._forestPdfSuccessOpenUrl = '';
+            try {
+                if (u && /^https?:\/\//i.test(u)) {
+                    window.open(u, '_blank', 'noopener,noreferrer');
+                }
+            } catch (_) {
+                /* ignore */
+            }
+            MS.closeForestModal();
         },
         /**
          * 결과 보고서 PDF·Word 영역이 실제로 보이는지(0 크기·display:none·부모 숨김 제외).
@@ -6329,11 +6397,33 @@
             if (!r || !r.ok) return;
             requestAnimationFrame(function () {
                 requestAnimationFrame(function () {
+                    const pdf = String(r.drivePdfUrl || '').trim();
+                    const gasFailed = !!r.gasFailed;
+                    if (gasFailed) {
+                        const msg =
+                            String(r.gasErrorMessage || '').trim() || '구글 시트·보고서 전송에 실패했습니다.';
+                        try {
+                            alert(msg);
+                        } catch (_) {
+                            /* ignore */
+                        }
+                        MS.showPostSubmitChoiceModal({
+                            gasFailed: true,
+                            gasErrorMessage: msg,
+                            submitHardFail: false,
+                            drivePdfUrl: ''
+                        });
+                        return;
+                    }
+                    if (pdf) {
+                        MS.showForestReportPdfSuccessModal(pdf);
+                        return;
+                    }
                     MS.showPostSubmitChoiceModal({
-                        gasFailed: !!r.gasFailed,
-                        gasErrorMessage: String(r.gasErrorMessage || ''),
+                        gasFailed: false,
+                        gasErrorMessage: '',
                         submitHardFail: false,
-                        drivePdfUrl: String(r.drivePdfUrl || '').trim()
+                        drivePdfUrl: ''
                     });
                 });
             });
@@ -8502,6 +8592,11 @@
             if (!inst) return Promise.resolve({ ok: false });
             const iname = String(inst.name || '').trim();
             if (!iname) return Promise.resolve({ ok: false });
+            const userNameForSheet = String(inst.userName || '').trim();
+            if (!userNameForSheet) {
+                MS._forestGasSubmitInFlight = false;
+                return Promise.resolve({ ok: false });
+            }
             if (!MS.forestRespondentTotalsOk(inst)) {
                 MS.showForestRespondentMismatchModal();
                 return Promise.resolve({ ok: false });
@@ -8528,7 +8623,7 @@
                           : 'pre';
                 const group_name = String(inst.groupName || '').trim();
                 const examiner = String(MS.getExaminerName() || '').trim();
-                const location = inst.obsLocation === 'indoor' ? '실내' : '숲';
+                const obsLocationLabel = inst.obsLocation === 'indoor' ? '실내' : '숲';
                 /** GAS 시트 "2026" 열: 봄·여름·가을·겨울 = scores.SPRT … scores.WINT — sample.gs appendForest2026Row_ 와 동기 */
                 const age_group_label = tg === 'elementary' ? '초등' : '유아';
                 const typeForSheet = MS.normalizeForestSheetInstType(inst);
@@ -8539,7 +8634,11 @@
                 inst.pendingForestRequestId = requestId;
                 let reportUrl = '';
                 try {
-                    const u = new URL(location.href);
+                    const locHref =
+                        typeof window !== 'undefined' && window.location && window.location.href
+                            ? String(window.location.href)
+                            : 'https://mindstory.kr/forest.html';
+                    const u = new URL(locHref);
                     reportUrl = u.origin + u.pathname + '?view=report&id=' + encodeURIComponent(requestId);
                 } catch (_) {
                     reportUrl = '';
@@ -8550,6 +8649,7 @@
                 }
                 const isKinder = tg !== 'elementary';
                 sheetPayload = {
+                    userName: userNameForSheet,
                     /** GAS: 시트명 2026(유아) vs 2026초등 — scripts/gas-forest-2026-rowContents-sample.gs doPost 와 동기 */
                     isElementary: tg === 'elementary',
                     /** GAS getSheetByName — 유아/초등 탭 구분 */
@@ -8575,7 +8675,7 @@
                     rawInputs: rawInputs,
                     class_name: group_name,
                     age_group: age_group_label,
-                    location: location,
+                    location: obsLocationLabel,
                     facilitator: examiner,
                     /** 참가 인원: Q1의 △+□ 만 (시트·전송 규격) */
                     participant_count: participantCount,
@@ -9473,6 +9573,22 @@
             return sum > 0 ? sum : null;
         },
 
+        onForestUserNameInput(el) {
+            const inst = STATE.selected();
+            if (!inst) return;
+            inst.userName = String((el && el.value) || '').trim();
+            STATE.isPreviewSample = false;
+            STATE.touchSelected();
+            try {
+                STATE.persist();
+            } catch (_) {
+                /* ignore */
+            }
+            if (STATE.step === 'input') {
+                MS.refreshInputSubmitButton();
+            }
+        },
+
         onYesInput(qid, el) {
             clearTimeout(MS._advT['y' + qid]);
             MS.clearYaf2AdvanceTimers();
@@ -10343,7 +10459,12 @@
             }
             const btn = document.getElementById('ms-input-submit-btn');
             if (!btn) return;
-            const ok = UI.allInputQuestionsFilled(inst) && MS.forestRespondentTotalsOk(inst);
+            const unEl = document.getElementById('ms-forest-user-name');
+            const userNameOk =
+                unEl && String(unEl.value || '').trim().length > 0
+                    ? true
+                    : String(inst.userName || '').trim().length > 0;
+            const ok = UI.allInputQuestionsFilled(inst) && MS.forestRespondentTotalsOk(inst) && userNameOk;
             btn.disabled = !ok;
             btn.classList.toggle('opacity-45', !ok);
             btn.classList.toggle('cursor-not-allowed', !ok);
@@ -10386,7 +10507,7 @@
                 MS._forestSubmitBtnPrevLabel = btn.textContent;
                 btn.disabled = true;
                 btn.classList.add('opacity-90', 'cursor-wait');
-                btn.textContent = '결과를 저장하고 있습니다…';
+                btn.textContent = '보고서 생성 중…';
                 btn.setAttribute('aria-busy', 'true');
             }
             let ov = document.getElementById('ms-forest-submit-loading-overlay');
@@ -10397,12 +10518,16 @@
                 ov.setAttribute('aria-modal', 'true');
                 ov.setAttribute('aria-labelledby', 'ms-forest-submit-loading-title');
                 ov.className =
-                    'fixed inset-0 z-[300] flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]';
+                    'fixed inset-0 z-[300] flex items-center justify-center bg-[#0f2d24]/45 p-4 backdrop-blur-[3px]';
                 ov.innerHTML =
-                    '<div class="ms-card max-w-sm rounded-[1.75rem] border-2 border-[#2D4A3E]/20 bg-[#FDFBF7] px-8 py-8 shadow-2xl text-center">' +
-                    '<div class="mx-auto mb-4 h-12 w-12 rounded-full border-4 border-[#2D4A3E]/20 border-t-[#2D4A3E] animate-spin" aria-hidden="true"></div>' +
-                    '<p id="ms-forest-submit-loading-title" class="text-base font-black text-[#2D4A3E] mb-1">잠시만 기다려 주세요</p>' +
-                    '<p class="text-sm text-ms-muted leading-relaxed">구글 시트에 결과를 저장하고 있습니다.</p>' +
+                    '<div class="pointer-events-none max-w-[min(24rem,94vw)] rounded-[2rem] border border-white/25 bg-white/[0.97] px-7 py-10 shadow-[0_28px_90px_rgba(12,40,32,0.42)] text-center ring-1 ring-[#2D4A3E]/12">' +
+                    '<div class="mx-auto mb-6 relative h-[4.25rem] w-[4.25rem]" aria-hidden="true">' +
+                    '<div class="absolute inset-0 rounded-full border-[3px] border-[#2D4A3E]/18"></div>' +
+                    '<div class="absolute inset-0 rounded-full border-[3px] border-transparent border-t-[#2D4A3E] border-r-[#2D4A3E]/35 animate-spin" style="animation-duration:0.85s"></div>' +
+                    '<div class="absolute inset-[10px] rounded-full bg-gradient-to-br from-emerald-400/30 via-[#2D4A3E]/12 to-amber-200/25 animate-pulse"></div>' +
+                    '</div>' +
+                    '<p id="ms-forest-submit-loading-title" class="text-[15px] sm:text-base font-black text-[#2D4A3E] leading-snug tracking-tight mb-1 px-1">JTT AI가 기질역동 심층 보고서를 생성하고 있습니다. 잠시만 기다려주세요…</p>' +
+                    '<p class="text-xs text-ms-muted/95 leading-relaxed mt-2">약 5~10초 정도 걸릴 수 있습니다.</p>' +
                     '</div>';
                 document.body.appendChild(ov);
             } else {
@@ -10458,6 +10583,26 @@
                 alert('인원을 확인해 주세요.');
                 return;
             }
+            const unEl = document.getElementById('ms-forest-user-name');
+            const userName = unEl
+                ? String(unEl.value || '').trim()
+                : String(inst.userName || '').trim();
+            if (!userName) {
+                alert('수검자 이름을 입력해 주세요.');
+                try {
+                    unEl && unEl.focus();
+                } catch (_) {
+                    /* ignore */
+                }
+                return;
+            }
+            inst.userName = userName;
+            STATE.touchSelected();
+            try {
+                STATE.persist();
+            } catch (_) {
+                /* ignore */
+            }
             if (MS._goResultSubmitUiActive) {
                 return;
             }
@@ -10475,6 +10620,19 @@
                         } catch (_) {
                             /* ignore */
                         }
+                        try {
+                            MS.endForestSubmitLoadingUI();
+                        } catch (_) {
+                            /* ignore */
+                        }
+                        try {
+                            alert(
+                                '전송에 실패했습니다. ' +
+                                    (err && err.message ? String(err.message) : '네트워크 오류가 발생했습니다.')
+                            );
+                        } catch (_) {
+                            /* ignore */
+                        }
                         STATE.step = 'result';
                         STATE.persist();
                         try {
@@ -10486,18 +10644,19 @@
                             /* ignore */
                         }
                         UI.render();
-                        requestAnimationFrame(function () {
-                            requestAnimationFrame(function () {
-                                MS.showPostSubmitChoiceModal({
-                                    gasFailed: true,
-                                    gasErrorMessage: err && err.message ? String(err.message) : '네트워크 오류',
-                                    submitHardFail: true
-                                });
-                            });
-                        });
                         return;
                     }
                     if (!r || !r.ok) {
+                        try {
+                            MS.endForestSubmitLoadingUI();
+                        } catch (_) {
+                            /* ignore */
+                        }
+                        try {
+                            alert('결과를 전송하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+                        } catch (_) {
+                            /* ignore */
+                        }
                         try {
                             const sk = 'ms_forest_submitted:' + inst.id + ':' + String(inst.updatedAt || '');
                             if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(sk)) {
@@ -10529,13 +10688,13 @@
                         /* ignore */
                     }
                     UI.render();
-                    MS.afterForestSheetTransmitUi(r);
-                } finally {
                     try {
                         MS.endForestSubmitLoadingUI();
                     } catch (_) {
                         /* ignore */
                     }
+                    MS.afterForestSheetTransmitUi(r);
+                } finally {
                     MS._goResultSubmitUiActive = false;
                 }
             })();
