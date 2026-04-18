@@ -1,0 +1,4 @@
+# 짧은 주소 → 단일 소스 HTML (Cloudflare Pages 정적 리다이렉트)
+# https://developers.cloudflare.com/pages/configuration/redirects/
+/forest /forest.html 302
+/forest/ /forest.html 302

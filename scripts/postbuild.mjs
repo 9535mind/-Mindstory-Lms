@@ -34,16 +34,15 @@ if (!existsSync(dist)) {
   process.exit(1)
 }
 
-/** Netlify/Cloudflare 레거시 리다이렉트만 제거 — _routes.json 은 아래에서 생성 */
+/** Cloudflare Pages: public/_redirects → dist/_redirects (빌드 산출물 루트에 있어야 적용됨) */
 const redirectsPublic = join(publicDir, '_redirects')
 const redirectsDist = join(dist, '_redirects')
 if (existsSync(redirectsPublic)) {
-  rmSync(redirectsPublic, { force: true })
-  console.log('✅ public/_redirects 제거')
-}
-if (existsSync(redirectsDist)) {
+  copyFileSync(redirectsPublic, redirectsDist)
+  console.log('✅ copyFileSync: public/_redirects → dist/_redirects')
+} else if (existsSync(redirectsDist)) {
   rmSync(redirectsDist, { force: true })
-  console.log('✅ dist/_redirects 제거')
+  console.log('✅ dist/_redirects 제거 (소스 없음)')
 }
 
 const uploadsSrc = join(publicDir, 'uploads')
