@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GAS 웹훅 스모크 테스트 — /forest/index.html</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 42rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        line-height: 1.5;
+        color: #14532d;
+      }
+      code {
+        background: #f0fdf4;
+        padding: 0.15rem 0.35rem;
+        border-radius: 4px;
+      }
+      button {
+        margin-top: 0.75rem;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+      }
+      #out {
+        margin-top: 1rem;
+        white-space: pre-wrap;
+        font-size: 0.9rem;
+        background: #f8fafc;
+        padding: 1rem;
+        border-radius: 8px;
+      }
+      .note {
+        font-size: 0.875rem;
+        color: #334155;
+        margin-bottom: 1.25rem;
+        padding: 0.75rem 1rem;
+        background: #f1f5f9;
+        border-radius: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>forest — GAS 프록시 스모크</h1>
+    <p class="note">
+      <strong>/forest</strong> (끝에 슬래시 없음)는 Worker가 <code>forest.html</code> 본문을 내려주는
+      <strong>본 검사 화면</strong>입니다. 이 파일은 <strong>/forest/index.html</strong> 에서만 열리는
+      연동 테스트용입니다.
+    </p>
+    <p>
+      본진 API는 Hono <strong><code>POST /api/forest-gas-webhook</code></strong> 만 사용합니다. 서버
+      시크릿 <code>FOREST_GAS_WEBHOOK_URL</code> 이 없으면 코드에 정의된 GAS 폴백 URL로 전달됩니다.
+    </p>
+
+    <h2>JSON POST 테스트</h2>
+    <button type="button" id="btnPing">POST {"ping":true} → /api/forest-gas-webhook</button>
+    <div id="out" aria-live="polite"></div>
+
+    <script>
+      const out = document.getElementById("out");
+      document.getElementById("btnPing").addEventListener("click", async () => {
+        out.textContent = "요청 중…";
+        try {
+          const res = await fetch("/api/forest-gas-webhook", {
+            method: "POST",
+            headers: { "Content-Type": "application/json; charset=utf-8", Accept: "application/json" },
+            body: JSON.stringify({ ping: true }),
+          });
+          const text = await res.text();
+          out.textContent =
+            "HTTP " + res.status + "\n" + text.slice(0, 4000) + (text.length > 4000 ? "\n…" : "");
+        } catch (e) {
+          out.textContent = "네트워크 오류: " + (e && e.message ? e.message : String(e));
+        }
+      });
+    </script>
+  </body>
+</html>

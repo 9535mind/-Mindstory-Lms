@@ -18,7 +18,8 @@ const FOREST_GAS_WEBHOOK_URL_FALLBACK =
 const forestGasWebhook = new Hono<{ Bindings: Bindings }>()
 
 forestGasWebhook.post('/', async (c) => {
-  const fromEnv = (c.env.FOREST_GAS_WEBHOOK_URL || '').trim()
+  /** Dashboard → Workers & Pages → mslms → Settings → Variables: FOREST_GAS_WEBHOOK_URL (Secret 권장) */
+  const fromEnv = String(c.env.FOREST_GAS_WEBHOOK_URL ?? '').trim()
   const base = fromEnv || FOREST_GAS_WEBHOOK_URL_FALLBACK
   let gasUrl: URL
   try {

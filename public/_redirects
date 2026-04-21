@@ -1,3 +1,5 @@
-# /forest 는 _redirects 로 보내지 않음 — Worker(src/index.tsx)가 ASSETS 의 forest.html 과 동일 본문을 200 으로 내려줍니다.
-# (여기서 /forest → forest.html 302 를 두면 production 에서 /forest ↔ /forest.html 리다이렉트 루프가 납니다.)
-# https://developers.cloudflare.com/pages/configuration/redirects/
+# Cloudflare Pages — https://developers.cloudflare.com/pages/configuration/redirects/
+#
+# forest: /forest 로의 302 규칙을 두지 않습니다. (/forest ↔ /forest.html 무한 루프 방지)
+#   · GET /forest        → Worker (src/index.tsx) 가 ASSETS 의 forest.html 과 동일 본문 200
+#   · GET /forest.html   · GET /forest/index.html 등 → _routes.json exclude 로 정적 ASSETS

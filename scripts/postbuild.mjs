@@ -21,6 +21,7 @@ const ROUTES = {
     '/static/*',
     '/assets/*',
     '/forest.html',
+    '/forest/*',
     '/forest-question-banks.js',
     '/build.txt',
     '/google7186e759c88da5d4.html',
@@ -49,6 +50,14 @@ const uploadsSrc = join(publicDir, 'uploads')
 if (existsSync(uploadsSrc)) {
   cpSync(uploadsSrc, join(dist, 'uploads'), { recursive: true })
   console.log('✅ uploads → dist 복사')
+}
+
+/** /forest/* 정적(스모크 테스트 등) — GET /forest 단일 경로는 Worker(src/index.tsx) */
+const forestSubSrc = join(publicDir, 'forest')
+const forestSubDest = join(dist, 'forest')
+if (existsSync(forestSubSrc)) {
+  cpSync(forestSubSrc, forestSubDest, { recursive: true })
+  console.log('✅ cpSync: public/forest → dist/forest')
 }
 
 const forestHtmlSrc = join(publicDir, 'forest.html')
@@ -107,7 +116,7 @@ if (existsSync(assetsDir)) {
 }
 
 writeFileSync(join(dist, '_routes.json'), JSON.stringify(ROUTES, null, 2) + '\n', 'utf8')
-console.log('✅ dist/_routes.json 작성 (forest.html·forest-question-banks.js 정적 exclude; /forest 는 Worker)')
+console.log('✅ dist/_routes.json 작성 (forest.html·/forest/*·forest-question-banks.js 정적 exclude; GET /forest 는 Worker)')
 
 const now = new Date()
 const builtAtISO = now.toISOString()
