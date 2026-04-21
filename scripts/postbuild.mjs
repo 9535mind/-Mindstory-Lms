@@ -21,6 +21,8 @@ const ROUTES = {
     '/static/*',
     '/assets/*',
     '/forest.html',
+    '/forest',
+    '/forest/*',
     '/forest-question-banks.js',
     '/build.txt',
     '/google7186e759c88da5d4.html',
@@ -51,11 +53,12 @@ if (existsSync(uploadsSrc)) {
   console.log('✅ uploads → dist 복사')
 }
 
-/** 레거시 폴더명이 파일과 충돌하면 Windows에서 forest.html 생성이 실패할 수 있음 */
-const forestDirLegacy = join(dist, 'forest')
-if (existsSync(forestDirLegacy)) {
-  rmSync(forestDirLegacy, { recursive: true, force: true })
-  console.log('✅ dist/forest/ 제거 (forest.html 과 충돌 방지)')
+/** public/forest/index.html → /forest (dist/forest/ 는 forest.html 파일과 이름 충돌 없음) */
+const forestIndexDirSrc = join(publicDir, 'forest')
+const forestIndexDirDest = join(dist, 'forest')
+if (existsSync(forestIndexDirSrc)) {
+  cpSync(forestIndexDirSrc, forestIndexDirDest, { recursive: true })
+  console.log('✅ cpSync: public/forest → dist/forest')
 }
 
 const forestHtmlSrc = join(publicDir, 'forest.html')
