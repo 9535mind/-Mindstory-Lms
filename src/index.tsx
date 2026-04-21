@@ -9,6 +9,8 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { serveStatic } from 'hono/cloudflare-workers'
 import { Bindings } from './types/database'
+
+type AppEnv = { Bindings: Bindings }
 import { generalRateLimiter, strictRateLimiter, lenientRateLimiter, rateLimiter } from './middleware/rate-limiter'
 
 // 라우트 임포트
@@ -251,16 +253,19 @@ app.get('/forest_v9.html', (c) => c.redirect('/forest.html', 302))
 app.get('/forest_v9', (c) => c.redirect('/forest.html', 302))
 
 /**
- * /forest — 302 금지(대시보드 리다이렉트 규칙과 충돌 시 /forest.html ↔ /forest 루프 가능).
- * 정적 ASSETS 의 /forest.html 과 동일 바이트를 200으로 반환.
+ * /forest · /forest/ — 302 금지(리다이렉트 루프 방지).
+ * ASSETS 의 /forest.html 과 동일 바이트 200. 정적 폴백은 postbuild 의 /forest/index.html.
  */
-app.get('/forest', async (c) => {
+async function serveForestHtmlFromAssets(c: Context<AppEnv>) {
   const assets = c.env.ASSETS
   if (!assets) return c.text('Not Found', 404)
   const u = new URL(c.req.url)
   u.pathname = '/forest.html'
   return assets.fetch(new Request(u.toString(), { method: c.req.method, headers: c.req.raw.headers }))
-})
+}
+
+app.get('/forest', serveForestHtmlFromAssets)
+app.get('/forest/', serveForestHtmlFromAssets)
 
 // 페이지 라우트 (약관·개인정보·환불은 다른 / 라우터보다 먼저 등록)
 app.route('/', landing)  // 신규 랜딩 페이지 (Phase 3)

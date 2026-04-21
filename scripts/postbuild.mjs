@@ -1,7 +1,7 @@
 /**
  * Vite 빌드 후: dist 루트에 정적 파일 강제 복사 + Cloudflare Pages `_routes.json` (정적 우회).
  */
-import { copyFileSync, cpSync, existsSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -68,6 +68,9 @@ if (existsSync(forestSubSrc)) {
   console.log('✅ cpSync: public/forest → dist/forest')
 }
 
+/** /forest/index.html 정적 폴백(Worker 미경유·CDN만으로도 JTT 본문 제공) — forest.html 과 동일 바이트 */
+const forestIndexDest = join(dist, 'forest', 'index.html')
+
 const forestHtmlSrc = join(publicDir, 'forest.html')
 const forestHtmlDest = join(dist, 'forest.html')
 const forestQSrc = join(publicDir, 'forest-question-banks.js')
@@ -80,6 +83,12 @@ if (!existsSync(forestHtmlSrc)) {
 
 copyFileSync(forestHtmlSrc, forestHtmlDest)
 console.log('✅ copyFileSync: public/forest.html → dist/forest.html')
+
+if (!existsSync(join(dist, 'forest'))) {
+  mkdirSync(join(dist, 'forest'), { recursive: true })
+}
+copyFileSync(forestHtmlSrc, forestIndexDest)
+console.log('✅ copyFileSync: public/forest.html → dist/forest/index.html')
 
 if (!existsSync(forestQSrc)) {
   console.warn('⚠️  public/forest-question-banks.js 없음 — 건너뜀')

@@ -1,5 +1,12 @@
 # Cloudflare Pages — https://developers.cloudflare.com/pages/configuration/redirects/
 #
+# · 도메인 단위(www→apex) 규칙은 _redirects 에서 지원하지 않음(공식 문서 Domain-level redirects ❌).
+#   www.mindstory.kr 은 Worker 미들웨어(src/index.tsx)에서 apex 로 308 리다이렉트(API 경로 제외).
+#   요청이 Pages에 도달하지 않는 www(커스텀 도메인 미연결 등)는 대시보드에서 도메인·DNS를 연결해야 함.
+# · Bulk Redirects(Zone Rules)는 Pages 앞단에서 동작 — 대량·전역 리다이렉트 시 Dashboard 활용.
+# · Worker 가 처리하는 URL에는 _redirects 가 적용되지 않을 수 있음 — forest 는 코드·정적 병행.
+#
 # forest: /forest 로의 302 규칙을 두지 않습니다. (/forest ↔ /forest.html 무한 루프 방지)
-#   · GET /forest        → Worker (src/index.tsx) 가 ASSETS 의 forest.html 과 동일 본문 200
-#   · GET /forest.html   · GET /forest/index.html 등 → _routes.json exclude 로 정적 ASSETS
+#   · GET /forest · GET /forest/ → Worker 가 ASSETS 의 /forest.html 과 동일 본문 200
+#   · GET /forest/index.html · /forest.html → postbuild·정적 ASSETS(_routes.json exclude)
+#   · 스모크 테스트: /forest/gas-webhook-smoke.html
