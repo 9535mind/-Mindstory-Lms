@@ -1,0 +1,14 @@
+{
+  "name": "mindstory-forest-cloudflare",
+  "private": true,
+  "description": "Cloudflare Pages Functions for mindstory.kr/forest → GAS",
+  "scripts": {
+    "dev": "wrangler pages dev public --compatibility-date=2024-09-23",
+    "deploy": "wrangler pages deploy public"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "typescript": "^5.7.2",
+    "wrangler": "^3.99.0"
+  }
+}
