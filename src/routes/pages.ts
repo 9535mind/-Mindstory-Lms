@@ -23,6 +23,7 @@ import {
   siteHeaderNavCoursesGlassStyles,
 } from '../utils/site-header-courses-nav'
 import { SITE_POPUP_SCRIPT_TAG } from '../utils/site-popup-script'
+import { SITE_ICONS_HEAD_HTML } from '../utils/site-icons-head'
 
 const pages = new Hono<{ Bindings: Bindings; Variables: { user?: User } }>()
 pages.use('*', optionalAuth)
@@ -53,6 +54,7 @@ const getCommonHead = (title: string) => `
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=1.0, user-scalable=yes">
     <title>${title} - 마인드스토리 원격평생교육원</title>
+    ${SITE_ICONS_HEAD_HTML}
     <link rel="stylesheet" href="/static/css/app.css" />
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>

@@ -27,6 +27,14 @@ const ROUTES = {
     '/google7186e759c88da5d4.html',
     '/KakaoTalk_20240501_163910442.mp4',
     '/KakaoTalk_20240501_172743992.mp4',
+    '/favicon.ico',
+    '/favicon-16x16.png',
+    '/favicon-32x32.png',
+    '/apple-touch-icon.png',
+    '/android-chrome-192x192.png',
+    '/android-chrome-512x512.png',
+    '/site.webmanifest',
+    '/logo.png',
   ],
 }
 

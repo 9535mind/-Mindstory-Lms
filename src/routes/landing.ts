@@ -42,6 +42,7 @@ import {
   type SignatureCardContent,
   type SignatureCardId,
 } from '../utils/landing-signature-data'
+import { SITE_ICONS_HEAD_HTML } from '../utils/site-icons-head'
 
 function renderSignatureLineupSection(cards: Record<SignatureCardId, SignatureCardContent>): string {
   const cl = cards.classic
@@ -116,6 +117,7 @@ landing.get('/', async (c) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=1.0, user-scalable=yes">
         <title>마인드스토리 (MINDSTORY) - 나를 성장시키는 학습 플랫폼</title>
+        ${SITE_ICONS_HEAD_HTML}
         <meta name="description" content="마인드스토리는 다양한 지식과 경험을 나누는 온라인 학습 플랫폼입니다." />
         <link rel="canonical" href="https://mindstory.kr/" />
         <meta property="og:type" content="website" />
