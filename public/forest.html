@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/app.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
@@ -25,8 +25,8 @@
         }
 
         /**
-         * 모바일·카카오톡 등 인앱 WebView: Tailwind CDN이 늦거나 막히면 .hidden 이 없어져
-         * type=file 이 화면 중앙에 그대로 보이는 경우가 있음 → Tailwind 없이도 반드시 숨김.
+         * 모바일·카카오톡 등 인앱 WebView: CSS 로드 실패·지연 시 .hidden 이 없어져
+         * type=file 이 화면 중앙에 그대로 보이는 경우가 있음 → 유틸리티 없이도 반드시 숨김.
          */
         #ms-import-input {
             position: fixed !important;
@@ -251,7 +251,7 @@
             line-height: 1.28;
         }
 
-        /* 검사 입력: 숨김은 .hidden 토글로만 사용 (문항이 있으면 완료·이름 영역 항상 표시) */
+        /* 검사 입력: 숨김은 .hidden 토글로만 사용 (문항이 있으면 완료 버튼 영역 항상 표시) */
         #ms-input-submit-wrap.hidden {
             display: none !important;
             margin: 0 !important;
@@ -4504,11 +4504,9 @@
             const qs = SCHEMA.questionsForGroup(tg);
             const ageLine =
                 tg === 'elementary' ? `초등부 · ${qs.length}문항` : `유아·유치부 · ${qs.length}문항`;
-            const userNameDone = String(inst.userName || '').trim().length > 0;
             const canComplete =
                 this.allInputQuestionsFilled(inst) &&
-                (typeof MS !== 'undefined' && MS.forestRespondentTotalsOk(inst)) &&
-                userNameDone;
+                (typeof MS !== 'undefined' && MS.forestRespondentTotalsOk(inst));
             /** 마지막 문항만 기준으로 숨기면 스크롤·입력 순서에 따라 버튼이 안 보이거나 멈춘 것처럼 보일 수 있음 */
             const showSubmitArea = qs.length > 0;
 
@@ -4583,14 +4581,6 @@
                         `
                             )
                             .join('')}
-                    </div>
-                    <div class="print-hidden shrink-0 mb-3 px-1${showSubmitArea && qs.length > 0 ? '' : ' hidden'}" id="ms-forest-user-name-wrap" aria-hidden="${showSubmitArea && qs.length > 0 ? 'false' : 'true'}">
-                        <label for="ms-forest-user-name" class="block text-xs font-bold text-ms-muted mb-2 ml-1 tracking-widest">수검자 이름</label>
-                        <input id="ms-forest-user-name" type="text" name="userName" autocomplete="name" maxlength="80"
-                            placeholder="예: 홍길동 (필수)"
-                            class="w-full ms-input px-4 py-3 text-base font-bold text-center rounded-[2rem] border-2 border-[#2D4A3E]/22 bg-[#FDFBF7] shadow-sm placeholder:text-ms-muted/75 focus:border-[#2D4A3E]/50 focus:ring-2 focus:ring-[#2D4A3E]/15 outline-none transition-all"
-                            value="${this.esc(String(inst.userName || ''))}"
-                            oninput="MS.onForestUserNameInput(this)" />
                     </div>
                     <div id="ms-input-submit-wrap" class="shrink-0 mt-auto print-hidden outline-none${showSubmitArea && qs.length > 0 ? '' : ' hidden'}" aria-hidden="${showSubmitArea && qs.length > 0 ? 'false' : 'true'}" tabindex="-1">
                         <button type="button" id="ms-input-submit-btn"
@@ -5959,6 +5949,7 @@
                 const gn = gEl && gEl.value.trim() ? gEl.value.trim().slice(0, 120) : '';
                 inst.groupName = gn;
                 inst.obsLocation = STATE.obsLocation === 'indoor' ? 'indoor' : 'forest';
+                inst.userName = examiner;
                 const pcEl = document.getElementById('ms-unified-participant-count');
                 const pcRaw = pcEl ? String(pcEl.value || '').trim() : '';
                 if (pcRaw === '') {
@@ -8591,7 +8582,7 @@
             if (!inst) return Promise.resolve({ ok: false });
             const iname = String(inst.name || '').trim();
             if (!iname) return Promise.resolve({ ok: false });
-            const userNameForSheet = String(inst.userName || '').trim();
+            const userNameForSheet = String(inst.userName || MS.getExaminerName() || '').trim();
             if (!userNameForSheet) {
                 MS._forestGasSubmitInFlight = false;
                 return Promise.resolve({ ok: false });
@@ -9572,22 +9563,6 @@
             return sum > 0 ? sum : null;
         },
 
-        onForestUserNameInput(el) {
-            const inst = STATE.selected();
-            if (!inst) return;
-            inst.userName = String((el && el.value) || '').trim();
-            STATE.isPreviewSample = false;
-            STATE.touchSelected();
-            try {
-                STATE.persist();
-            } catch (_) {
-                /* ignore */
-            }
-            if (STATE.step === 'input') {
-                MS.refreshInputSubmitButton();
-            }
-        },
-
         onYesInput(qid, el) {
             clearTimeout(MS._advT['y' + qid]);
             MS.clearYaf2AdvanceTimers();
@@ -10389,6 +10364,7 @@
                 const pn = parseInt(pcRaw, 10);
                 inst.participantTargetCount = Number.isFinite(pn) && pn > 0 ? pn : null;
             }
+            inst.userName = String(MS.getExaminerName() || '').trim();
             STATE.setupObsPhase = phase;
             STATE.setupTypeOverride = null;
             STATE.step = 'input';
@@ -10402,7 +10378,11 @@
             STATE.step = 'input';
             STATE.isPreviewSample = false;
             const sel = STATE.selected();
-            if (sel) STATE.targetGroup = SCHEMA.getTargetGroup(sel);
+            if (sel) {
+                STATE.targetGroup = SCHEMA.getTargetGroup(sel);
+                const ex = String(MS.getExaminerName() || '').trim();
+                if (ex && !String(sel.userName || '').trim()) sel.userName = ex;
+            }
             STATE.persist();
             UI.render();
         },
@@ -10420,6 +10400,8 @@
             STATE.selectedId = pick.id;
             STATE.isPreviewSample = false;
             STATE.searchTerm = name;
+            const exHist = String(MS.getExaminerName() || '').trim();
+            if (exHist && !String(pick.userName || '').trim()) pick.userName = exHist;
             if (withData.length && UI.hasAnyCount(pick.counts)) {
                 if (!MS.forestRespondentTotalsOk(pick)) {
                     MS.showForestRespondentMismatchModal();
@@ -10455,21 +10437,11 @@
                 wrap.classList.remove('hidden');
                 wrap.setAttribute('aria-hidden', 'false');
             }
-            const nameWrap = document.getElementById('ms-forest-user-name-wrap');
-            if (nameWrap) {
-                nameWrap.classList.remove('hidden');
-                nameWrap.setAttribute('aria-hidden', 'false');
-            }
             const btn = document.getElementById('ms-input-submit-btn');
             if (!btn) return;
-            const unEl = document.getElementById('ms-forest-user-name');
-            const userNameOk =
-                unEl && String(unEl.value || '').trim().length > 0
-                    ? true
-                    : String(inst.userName || '').trim().length > 0;
             const allFilled = UI.allInputQuestionsFilled(inst);
             const totalsOk = MS.forestRespondentTotalsOk(inst);
-            const ok = allFilled && totalsOk && userNameOk;
+            const ok = allFilled && totalsOk;
             btn.disabled = !ok;
             btn.classList.toggle('opacity-45', !ok);
             btn.classList.toggle('cursor-not-allowed', !ok);
@@ -10484,8 +10456,6 @@
                 } else if (!totalsOk) {
                     btn.title =
                         '문항마다 △+□(또는 O+X) 합이 모두 같아야 합니다. 빨간 안내 문구가 있는 줄을 맞춰 주세요.';
-                } else if (!userNameOk) {
-                    btn.title = '수검자 이름을 입력해 주세요.';
                 }
             } else {
                 btn.removeAttribute('title');
@@ -10606,17 +10576,9 @@
                 alert('인원을 확인해 주세요.');
                 return;
             }
-            const unEl = document.getElementById('ms-forest-user-name');
-            const userName = unEl
-                ? String(unEl.value || '').trim()
-                : String(inst.userName || '').trim();
+            const userName = String(inst.userName || '').trim() || String(MS.getExaminerName() || '').trim();
             if (!userName) {
-                alert('수검자 이름을 입력해 주세요.');
-                try {
-                    unEl && unEl.focus();
-                } catch (_) {
-                    /* ignore */
-                }
+                alert('진행자(해설사) 성함이 없습니다. 대시보드에서 「새 검사 시작」으로 설정을 다시 진행해 주세요.');
                 return;
             }
             inst.userName = userName;
