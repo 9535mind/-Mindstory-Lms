@@ -278,6 +278,7 @@
     var p = (typeof location !== 'undefined' && location.pathname) || ''
     p = p.replace(/\/$/, '') || '/'
     if (p === '/' || p === '/app') return 'entry'
+    if (p === '/app/desk') return 'desk'
     if (p === '/app/hub' || p === '/app/home') return 'hub'
     if (p === '/app/meeting/new') return 'meeting_new'
     if (p === '/app/join') return 'join'
@@ -499,6 +500,33 @@
       encodeURIComponent(row.id) +
       '">이어서 열기</a>'
   }
+
+  function initDeskHome() {
+    var tEl = document.getElementById('ms12-dsk-time')
+    var dEl = document.getElementById('ms12-dsk-date')
+    function tick() {
+      var d = new Date()
+      if (tEl) {
+        tEl.textContent = d.toLocaleTimeString('ko-KR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
+      }
+      if (dEl) {
+        dEl.textContent = d.toLocaleDateString('ko-KR', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          weekday: 'long',
+        })
+      }
+    }
+    tick()
+    setInterval(tick, 20000)
+    initHomeRecent()
+  }
+
   function initHomeRecent() {
     var el = document.getElementById('ms12-home-recent')
     if (!el) return
@@ -2367,7 +2395,7 @@
         })
         .then(function (o) {
           if (o && o.j && o.j.success) {
-            var go = sanitizeAppNext() || '/app/meeting'
+            var go = sanitizeAppNext() || '/app/desk'
             try {
               if (o.j.data && o.j.data.user) {
                 localStorage.setItem('user', JSON.stringify(o.j.data.user))
@@ -2656,13 +2684,8 @@
 
   function initAuthedPage() {
     var route = getRoute()
-    if (route === 'entry') {
-      if (_lastIsAuthed) {
-        try {
-          window.location.replace('/app/meeting')
-        } catch (e) {}
-        return
-      }
+    if (route === 'desk') {
+      initDeskHome()
     }
     if (route === 'hub') {
       initHomeRecent()

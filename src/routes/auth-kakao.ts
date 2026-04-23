@@ -340,6 +340,7 @@ authKakao.get('/login', async (c) => {
     kakaoAuthUrl.searchParams.set('client_id', clientId)
     kakaoAuthUrl.searchParams.set('redirect_uri', redirectUri)
     kakaoAuthUrl.searchParams.set('response_type', 'code')
+    kakaoAuthUrl.searchParams.set('scope', 'profile_nickname profile_image account_email')
 
     const marketingParam = c.req.query('marketing')
     const marketing =

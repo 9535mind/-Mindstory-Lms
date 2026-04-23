@@ -25,7 +25,14 @@ export function sanitizeLmsPostLoginPath(p: string | null | undefined): string |
   const pathOnly = (t.split('?')[0] || '').replace(/\/+$/, '') || '/'
   const inAppShell = pathOnly === '/app' || pathOnly.startsWith('/app/')
   if (inAppShell) {
-    if (pathOnly === '/app' || pathOnly === '/app/home' || pathOnly === '/app/login' || pathOnly === '/app/meeting') {
+    if (
+      pathOnly === '/app' ||
+      pathOnly === '/app/home' ||
+      pathOnly === '/app/desk' ||
+      pathOnly === '/app/hub' ||
+      pathOnly === '/app/login' ||
+      pathOnly === '/app/meeting'
+    ) {
       return t
     }
     if (pathOnly === '/app/join' || pathOnly === '/app/records' || pathOnly === '/app/meeting/new') {
@@ -85,7 +92,7 @@ export function redirectAfterOAuthOrDefault(c: Context) {
     ok = false
   }
   if (!ok) {
-    targetUrl = `${origin}/app/meeting?oauth_sync=1`
+    targetUrl = `${origin}/app/desk?oauth_sync=1`
   }
 
   c.header('Cache-Control', 'no-store, must-revalidate, private')

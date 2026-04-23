@@ -1,3 +1,4 @@
+
 # Cloudflare Pages — https://developers.cloudflare.com/pages/configuration/redirects/
 #
 # · 도메인 단위(www→apex) 규칙은 _redirects 에서 지원하지 않음(공식 문서 Domain-level redirects ❌).
@@ -10,3 +11,5 @@
 #   · GET /forest · GET /forest/ → Worker 가 ASSETS 의 /forest.html 과 동일 본문 200
 #   · GET /forest/index.html · /forest.html → postbuild·정적 ASSETS(_routes.json exclude)
 #   · 스모크 테스트: /forest/gas-webhook-smoke.html
+
+/* /index.html 200

@@ -1,6 +1,6 @@
 /**
  * MS12 — 회의 플랫폼 (Hono on Cloudflare Pages)
- * mindstory·forest·LMS HTML 라우트는 제거됨. /app*, /api/auth*, /api/ms12* 만 유지.
+ * 라우트: /app*, /api/auth*, /api/ms12* 및 정적·OAuth 콜백.
  */
 import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
@@ -141,16 +141,24 @@ app.get('/api/health', (c) => {
   })
 })
 
-// GET / = 302 없이 /app 과 동일 HTML(배포 Worker 내부 subrequest)
+/** 북마크·오타로 흔함: /ms12 → 앱 진입 */
+app.get('/ms12', (c) => {
+  const u = new URL(c.req.url)
+  u.pathname = '/app'
+  return c.redirect(u.toString(), 308)
+})
+app.get('/ms12/', (c) => {
+  const u = new URL(c.req.url)
+  u.pathname = '/app'
+  return c.redirect(u.toString(), 308)
+})
+
+// 루트: 내부 app.fetch() 재진입은 일부 edge(Pages)에서 404·바인딩 누락이 나는 경우가 있어
+// — 브라우저가 /app(동일 콘텐트=엔트리)으로 따라가면 Worker 한 번만 탄다.
 app.route('/app', ms12Pages)
 app.get('/', (c) => {
   const u = new URL(c.req.url)
-  u.pathname = '/app'
-  return app.fetch(
-    new Request(u.toString(), c.req.raw),
-    c.env,
-    c.executionCtx as ExecutionContext
-  )
+  return c.redirect('/app' + (u.search || ''), 308)
 })
 
 app.onError((err, c) => {

@@ -1,5 +1,5 @@
 /**
- * MS12 회의 플랫폼 — 공식 도메인·OAuth 콜백 (mindstory·LMS 분리)
+ * MS12 회의 플랫폼 — 공식 도메인·OAuth 콜백
  */
 import { Context } from 'hono'
 
@@ -13,7 +13,7 @@ export const KAKAO_OAUTH_REDIRECT_URI = `${SITE_PUBLIC_ORIGIN}/auth/kakao/callba
 
 export const GOOGLE_OAUTH_REDIRECT_URI = `${SITE_PUBLIC_ORIGIN}/api/auth/google/callback`
 
-export const OAUTH_SUCCESS_LANDING_URL = `${SITE_PUBLIC_ORIGIN}/app?oauth_sync=1`
+export const OAUTH_SUCCESS_LANDING_URL = `${SITE_PUBLIC_ORIGIN}/app/desk?oauth_sync=1`
 
 /** 구 mslms Pages 북마크 — 필요 시 308(미들웨어) */
 export const LEGACY_PAGES_HOSTNAMES: readonly string[] = [
@@ -88,9 +88,9 @@ export function getSafeRequestOrigin(c: Context): string {
   return SITE_PUBLIC_ORIGIN.replace(/\/$/, '') || 'https://ms12.org'
 }
 
-/** OAuth 콜백 직후 — Zoom 스타일 시작화면 /app */
+/** OAuth 콜백 직후 — 로그인 성공 시 홈(데스크)으로 */
 export function oauthSuccessLandingUrl(c: Context): string {
-  return `${getSafeRequestOrigin(c)}/app?oauth_sync=1`
+  return `${getSafeRequestOrigin(c)}/app/desk?oauth_sync=1`
 }
 
 export function isLocalDevHostname(hostname: string): boolean {
