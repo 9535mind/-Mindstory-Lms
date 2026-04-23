@@ -205,6 +205,14 @@
       st.byId[meetingId].summaryBasic = st.byId[meetingId].summary
     }
     st.byId[meetingId].summary = combinedSummaryFromDom()
+    var sbAi = document.getElementById('ms12-ai-sug-basic')
+    var saAi = document.getElementById('ms12-ai-sug-action')
+    var srAi = document.getElementById('ms12-ai-sug-report')
+    if (sbAi) st.byId[meetingId].aiSugBasic = sbAi.value
+    if (saAi) st.byId[meetingId].aiSugAction = saAi.value
+    if (srAi) st.byId[meetingId].aiSugReport = srAi.value
+    var aDraft = document.getElementById('ms12-ai-action-draft')
+    if (aDraft) st.byId[meetingId].actionItemsDraft = aDraft.value
     var dout = document.getElementById('ms12-room-draft-out')
     if (dout && g_ms12DraftMeeting === meetingId) {
       st.byId[meetingId].draftByKind = st.byId[meetingId].draftByKind || {}
@@ -745,11 +753,12 @@
     return t
   }
 
-  function renderActionList(el, items, onToggle) {
+  function renderActionList(el, items, onToggle, options) {
     if (!el) return
+    var roomId = options && options.roomId ? String(options.roomId) : ''
     var rows = (items || []).filter(Boolean)
     if (!rows.length) {
-      el.innerHTML = '<span class="ms12-muted" style="font-size:0.88rem">아직 없습니다. 아래에 추가하세요.</span>'
+      el.innerHTML = '<span class="ms12-muted" style="font-size:0.88rem">아직 없습니다. 아래에 추가하거나 AI 초안을 반영하세요.</span>'
       return
     }
     el.innerHTML = rows
@@ -757,36 +766,63 @@
         var iid = String(it.id).replace(/"/g, '')
         var loc = it._local ? '1' : '0'
         var done = it.status === 'done'
+        if (done) {
+          return (
+            '<div class="ms12-action-row" style="margin:0.35rem 0;padding-bottom:0.35rem;border-bottom:1px solid rgb(241 245 249)">' +
+            '<span style="text-decoration:line-through;opacity:0.75">' +
+            escapeForHtml(it.title) +
+            '</span>' +
+            (it.taskDetail
+              ? ' <span class="ms12-muted" style="font-size:0.8rem">(' +
+                escapeForHtml(
+                  String(it.taskDetail).length > 48
+                    ? String(it.taskDetail).slice(0, 45) + '…'
+                    : String(it.taskDetail)
+                ) +
+                ')</span>'
+              : '') +
+            '</div>'
+          )
+        }
         return (
-          '<div class="ms12-action-row">' +
-          (done
-            ? '<span style="text-decoration:line-through;opacity:0.75">' +
-              escapeForHtml(it.title) +
-              '</span>'
-            : '<span style="font-weight:500">' +
-              escapeForHtml(it.title) +
-              '</span>') +
-          (it.taskDetail
-            ? ' <span class="ms12-muted" style="font-size:0.8rem">(' +
-              escapeForHtml(
-                String(it.taskDetail).length > 48
-                  ? String(it.taskDetail).slice(0, 45) + '…'
-                  : String(it.taskDetail)
-              ) +
-              ')</span>'
-            : '') +
-          (it.assignee ? ' <span class="ms12-muted">· ' + escapeForHtml(it.assignee) + '</span>' : '') +
-          (it.dueAt
-            ? ' <span class="ms12-muted" style="font-size:0.8rem">· ' + escapeForHtml(formatDue(it.dueAt)) + '</span>'
-            : '') +
-          (!done
-            ? ' <button type="button" class="ms12-btn ms12-btn--muted" style="font-size:0.78rem;padding:0.2rem 0.45rem;margin-left:auto" data-ms12-act="1" data-item-id="' +
-              iid +
-              '" data-local="' +
-              loc +
-              '">완료</button>'
-            : '') +
-          '</div>'
+          '<div class="ms12-action-row" style="margin:0.4rem 0;padding-bottom:0.4rem;border-bottom:1px solid rgb(241 245 249)" data-ms12-act-row="1" data-mid="' +
+          escapeAttr(roomId) +
+          '">' +
+          '<div style="display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;width:100%">' +
+          '<input type="text" class="ms12-input" data-ms12-act-field="title" data-ms12-act-id="' +
+          iid +
+          '" data-ms12-act-local="' +
+          loc +
+          '" value="' +
+          escapeAttr(it.title) +
+          '" style="min-width:10rem;flex:1 1 12rem" title="제목" />' +
+          '<input type="text" class="ms12-input" data-ms12-act-field="taskDetail" data-ms12-act-id="' +
+          iid +
+          '" data-ms12-act-local="' +
+          loc +
+          '" value="' +
+          escapeAttr(it.taskDetail) +
+          '" style="min-width:8rem;flex:1 1 7rem" placeholder="상세" />' +
+          '<input type="text" class="ms12-input" data-ms12-act-field="assignee" data-ms12-act-id="' +
+          iid +
+          '" data-ms12-act-local="' +
+          loc +
+          '" value="' +
+          escapeAttr(it.assignee) +
+          '" style="max-width:8rem" placeholder="담당" />' +
+          '<input type="date" class="ms12-input" data-ms12-act-field="dueAt" data-ms12-act-id="' +
+          iid +
+          '" data-ms12-act-local="' +
+          loc +
+          '" value="' +
+          escapeAttr(formatDueForInput(it.dueAt)) +
+          '" style="max-width:10.5rem" />' +
+          '<button type="button" class="ms12-btn ms12-btn--muted" style="font-size:0.78rem;padding:0.2rem 0.45rem" data-ms12-act="1" data-item-id="' +
+          iid +
+          '" data-local="' +
+          loc +
+          '">완료</button>' +
+          '</div></div>'
         )
       })
       .join('')
@@ -810,6 +846,34 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
+  }
+
+  function escapeAttr(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+  }
+
+  function formatDueForInput(d) {
+    if (!d) return ''
+    var t = String(d)
+    if (t.length >= 10) return t.slice(0, 10)
+    return t
+  }
+
+  /** AI 제안 칸 — div 또는 textarea */
+  function setSugText(el, text) {
+    if (!el) return
+    var t = text == null ? '' : String(text)
+    if (t === '') t = '—'
+    if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') el.value = t
+    else el.textContent = t
+  }
+  function getSugText(el) {
+    if (!el) return ''
+    if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') return String(el.value || '').trim()
+    return String(el.textContent || '').trim()
   }
 
   function initHomeDashboard() {
@@ -967,6 +1031,7 @@
     if (!id) return
     roomServerOk = false
     var lastMergedActions = []
+    var lastServerActionItems = []
     var titleEls = document.querySelectorAll('.js-ms12-room-title')
     var codeEls = document.querySelectorAll('.js-ms12-room-code')
     var localRow = (readStore().byId || {})[id] || null
@@ -1010,6 +1075,10 @@
         document.getElementById('ms12-room-summary-basic'),
         document.getElementById('ms12-room-summary-action'),
         document.getElementById('ms12-room-summary-report'),
+        document.getElementById('ms12-ai-sug-basic'),
+        document.getElementById('ms12-ai-sug-action'),
+        document.getElementById('ms12-ai-sug-report'),
+        document.getElementById('ms12-ai-action-draft'),
       ]
     }
     var debT = null
@@ -1050,6 +1119,10 @@
                 summaryAction: pack.summaryAction,
                 summaryReport: pack.summaryReport,
                 draftByKind: pack.draftByKind,
+                aiSugBasic: pack.aiSugBasic,
+                aiSugAction: pack.aiSugAction,
+                aiSugReport: pack.aiSugReport,
+                actionItemsDraft: pack.actionItemsDraft,
                 actionItems: lastMergedActions && lastMergedActions.length
                   ? lastMergedActions
                   : mergeActionLists([], getLocalActionItemsOnly(id)),
@@ -1223,13 +1296,19 @@
         })
         .then(function (j) {
           if (j && j.success && j.data) {
-            if (sugB) sugB.textContent = j.data.summaryBasic || '—'
-            if (sugA) sugA.textContent = j.data.summaryAction || '—'
-            if (sugR) sugR.textContent = j.data.summaryReport || '—'
+            setSugText(sugB, j.data.summaryBasic || '—')
+            setSugText(sugA, j.data.summaryAction || '—')
+            setSugText(sugR, j.data.summaryReport || '—')
             if (statEl) {
               statEl.textContent =
                 '갱신 ' + new Date().toLocaleTimeString() + (j.data.source ? ' · ' + j.data.source : '')
             }
+            try {
+              tryFillActionItemsDraft()
+            } catch (e) {}
+            try {
+              saveRoomDraft(id)
+            } catch (e2) {}
           } else {
             if (statEl) statEl.textContent = (j && j.error) || '실패'
           }
@@ -1237,6 +1316,71 @@
         .catch(function () {
           if (statEl) statEl.textContent = '요청 실패'
         })
+    }
+    function refillActionItemsDraft(isManual) {
+      if (!roomServerOk) {
+        if (isManual && statEl) statEl.textContent = '서버에 참가한 방에서만 사용할 수 있습니다. (코드로 입장)'
+        return
+      }
+      var n = document.getElementById('ms12-room-notes')
+      var tr = document.getElementById('ms12-room-transcript')
+      var sba = document.getElementById('ms12-room-summary-basic')
+      var sac = document.getElementById('ms12-room-summary-action')
+      var srp = document.getElementById('ms12-room-summary-report')
+      var draft = document.getElementById('ms12-ai-action-draft')
+      if (!draft) return
+      if (isManual && statEl) statEl.textContent = '실행 항목 AI 제안 중…'
+      var sb0 = sba ? sba.value : ''
+      var sa0 = sac ? sac.value : ''
+      var sr0 = srp ? srp.value : ''
+      var notes = n ? n.value : ''
+      var trans = tr ? tr.value : ''
+      if (String(notes + trans + sb0 + sa0 + sr0).trim().length < 15) {
+        if (isManual && statEl) statEl.textContent = '메모·전사·요약을 조금 더 입력하세요.'
+        return
+      }
+      fetch('/api/ms12/meetings/' + encodeURIComponent(id) + '/action-items/ai-suggest', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notes: notes,
+          transcript: trans,
+          summaryBasic: sb0,
+          summaryAction: sa0,
+          summaryReport: sr0,
+        }),
+      })
+        .then(function (r) {
+          return jsonFromResponse(r)
+        })
+        .then(function (j) {
+          if (j && j.success && j.data) {
+            var items = j.data.items || []
+            draft.value = items.length
+              ? JSON.stringify(items, null, 2)
+              : '[ ]  /* AI가 항목을 찾지 못했습니다. */'
+            try {
+              saveRoomDraft(id)
+            } catch (e) {}
+            if (isManual && statEl) {
+              statEl.textContent =
+                '실행 항목 초안 갱신 (' + items.length + '건) ' + new Date().toLocaleTimeString()
+            } else if (statEl && items.length) {
+              statEl.textContent = statEl.textContent + ' · 실행 항목 초안'
+            }
+          } else {
+            if (isManual && statEl) statEl.textContent = (j && j.error) || '실행 항목 제안 실패'
+          }
+        })
+        .catch(function () {
+          if (isManual && statEl) statEl.textContent = '요청 실패'
+        })
+    }
+    function tryFillActionItemsDraft() {
+      var syncEl = document.getElementById('ms12-ai-action-sync')
+      if (syncEl && !syncEl.checked) return
+      refillActionItemsDraft(false)
     }
     var summaryTabBusy = false
     function showSummaryTabUI(kind) {
@@ -1306,13 +1450,13 @@
           if (j && j.success && j.data) {
             var d = j.data
             if (d.summaryBasic && focus === 'basic') {
-              if (sugB) sugB.textContent = d.summaryBasic
+              setSugText(sugB, d.summaryBasic)
               if (sba) sba.value = d.summaryBasic
             } else if (d.summaryAction && focus === 'action') {
-              if (sugA) sugA.textContent = d.summaryAction
+              setSugText(sugA, d.summaryAction)
               if (sac) sac.value = d.summaryAction
             } else if (d.summaryReport && focus === 'report') {
-              if (sugR) sugR.textContent = d.summaryReport
+              setSugText(sugR, d.summaryReport)
               if (srp) srp.value = d.summaryReport
             }
             if (statEl) {
@@ -1372,9 +1516,12 @@
         var sba2 = document.getElementById('ms12-room-summary-basic')
         var sac2 = document.getElementById('ms12-room-summary-action')
         var srp2 = document.getElementById('ms12-room-summary-report')
-        if (sugB && sba2 && sugB.textContent && sugB.textContent !== '—') sba2.value = sugB.textContent
-        if (sugA && sac2 && sugA.textContent && sugA.textContent !== '—') sac2.value = sugA.textContent
-        if (sugR && srp2 && sugR.textContent && sugR.textContent !== '—') srp2.value = sugR.textContent
+        var tb = getSugText(sugB)
+        var ta = getSugText(sugA)
+        var trg = getSugText(sugR)
+        if (sugB && sba2 && tb && tb !== '—') sba2.value = tb
+        if (sugA && sac2 && ta && ta !== '—') sac2.value = ta
+        if (sugR && srp2 && trg && trg !== '—') srp2.value = trg
         try {
           saveRoomDraft(id)
         } catch (e) {}
@@ -1390,9 +1537,13 @@
     var aiErr = document.getElementById('ms12-ai-err')
 
     function paintActions(serverItems) {
-      var merged = mergeActionLists(serverItems, getLocalActionItemsOnly(id))
+      lastServerActionItems = serverItems && serverItems.length ? serverItems.slice() : []
+      var merged = mergeActionLists(lastServerActionItems, getLocalActionItemsOnly(id))
       lastMergedActions = merged
-      renderActionList(actListEl, merged, function (itemId, isLocal) {
+      renderActionList(
+        actListEl,
+        merged,
+        function (itemId, isLocal) {
         if (isLocal) {
           var locList = getLocalActionItemsOnly(id)
           var next = locList.map(function (x) {
@@ -1434,6 +1585,165 @@
             }
           })
           .catch(function () {})
+        },
+        { roomId: id }
+      )
+    }
+
+    var actFieldTimer = null
+    function saveActionItemField(itemId, isLocal, field, value) {
+      if (isLocal) {
+        var list = getLocalActionItemsOnly(id)
+        var next = list.map(function (x) {
+          if (!x || String(x.id) !== String(itemId)) return x
+          var o = Object.assign({}, x)
+          if (field === 'title') o.title = value
+          else if (field === 'taskDetail') o.taskDetail = value
+          else if (field === 'assignee') o.assignee = value
+          else if (field === 'dueAt') o.dueAt = value
+          return o
+        })
+        setLocalActionItemsOnly(id, next)
+        paintActions(lastServerActionItems)
+        return
+      }
+      var numId = parseInt(String(itemId), 10)
+      if (!numId) return
+      var payload = {}
+      if (field === 'title') payload.title = value
+      if (field === 'taskDetail') payload.taskDetail = value
+      if (field === 'assignee') payload.assignee = value ? value : null
+      if (field === 'dueAt') payload.dueAt = value ? value : null
+      if (field === 'title' && !String(value || '').trim()) return
+      fetch(
+        '/api/ms12/meetings/' + encodeURIComponent(id) + '/action-items/' + encodeURIComponent(numId),
+        {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      )
+        .then(function (r) {
+          return jsonFromResponse(r)
+        })
+        .then(function (j) {
+          if (j && j.success) loadActionItems()
+        })
+        .catch(function () {})
+    }
+    if (actListEl && !actListEl._ms12ActInp) {
+      actListEl._ms12ActInp = true
+      actListEl.addEventListener('input', function (ev) {
+        var t = ev.target
+        if (!t || !t.getAttribute('data-ms12-act-field')) return
+        var itemId = t.getAttribute('data-ms12-act-id')
+        var isLoc = t.getAttribute('data-ms12-act-local') === '1'
+        var field = t.getAttribute('data-ms12-act-field')
+        var val = t.value
+        clearTimeout(actFieldTimer)
+        actFieldTimer = setTimeout(function () {
+          saveActionItemField(itemId, isLoc, field, val)
+        }, 700)
+      })
+    }
+
+    function applyActionItemsFromDraft() {
+      var draft = document.getElementById('ms12-ai-action-draft')
+      var btnActAp = document.getElementById('ms12-ai-action-apply')
+      if (!draft || !String(draft.value).trim()) {
+        if (statEl) statEl.textContent = '실행 항목 초안이 비어 있습니다.'
+        return
+      }
+      var items
+      try {
+        var rawJ = String(draft.value)
+          .replace(/\/\/[^\n]*/g, '')
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+        items = JSON.parse(rawJ)
+      } catch (e) {
+        if (statEl) statEl.textContent = 'JSON 형식이 올바르지 않습니다.'
+        return
+      }
+      if (!Array.isArray(items)) {
+        if (statEl) statEl.textContent = '최상위는 [...] 배열이어야 합니다.'
+        return
+      }
+      var valid = items.filter(function (it) {
+        return it && String(it.title || '').trim()
+      })
+      if (!valid.length) {
+        if (statEl) statEl.textContent = 'title이 있는 항목이 없습니다.'
+        return
+      }
+      if (!roomServerOk) {
+        var st0 = getLocalActionItemsOnly(id)
+        for (var q = 0; q < valid.length; q++) {
+          var w = valid[q]
+          st0.push({
+            id: localActionId(),
+            title: String(w.title).trim(),
+            taskDetail: w.taskDetail ? String(w.taskDetail) : '',
+            assignee: w.assignee ? String(w.assignee) : '',
+            dueAt: w.dueAt ? String(w.dueAt).slice(0, 10) : '',
+            status: 'open',
+            priority: 'normal',
+            itemCategory: 'required',
+            _local: true,
+          })
+        }
+        setLocalActionItemsOnly(id, st0)
+        paintActions([])
+        if (statEl) statEl.textContent = '이 기기에만 실행 항목 ' + valid.length + '건 추가(서버 미연동)'
+        return
+      }
+      if (btnActAp) btnActAp.disabled = true
+      var n = 0
+      function runOne() {
+        if (n >= valid.length) {
+          if (btnActAp) btnActAp.disabled = false
+          loadActionItems()
+          if (statEl) statEl.textContent = '실행 항목 ' + valid.length + '건을 서버에 반영했습니다.'
+          return
+        }
+        var w = valid[n++]
+        var p = { title: String(w.title).trim() }
+        if (w.taskDetail) p.taskDetail = String(w.taskDetail)
+        if (w.assignee) p.assignee = String(w.assignee)
+        if (w.dueAt) p.dueAt = String(w.dueAt).slice(0, 10)
+        fetch('/api/ms12/meetings/' + encodeURIComponent(id) + '/action-items', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(p),
+        })
+          .then(function (r) {
+            return jsonFromResponse(r)
+          })
+          .then(function (j) {
+            if (j && j.success) runOne()
+            else {
+              if (btnActAp) btnActAp.disabled = false
+              if (statEl) statEl.textContent = (j && j.error) || '일부 항목 추가에 실패했습니다.'
+            }
+          })
+          .catch(function () {
+            if (btnActAp) btnActAp.disabled = false
+            if (statEl) statEl.textContent = '요청 실패'
+          })
+      }
+      runOne()
+    }
+    var btnActGen = document.getElementById('ms12-ai-action-gen')
+    var btnActApplyEl = document.getElementById('ms12-ai-action-apply')
+    if (btnActGen) {
+      btnActGen.addEventListener('click', function () {
+        refillActionItemsDraft(true)
+      })
+    }
+    if (btnActApplyEl) {
+      btnActApplyEl.addEventListener('click', function () {
+        applyActionItemsFromDraft()
       })
     }
 
@@ -1985,6 +2295,15 @@
       })
   }
 
+  function sanitizeAppNext() {
+    var sp = new URLSearchParams(typeof location !== 'undefined' && location.search ? location.search : '')
+    var nxt = sp.get('next')
+    if (!nxt || nxt.indexOf('..') >= 0) return null
+    nxt = nxt.split('#')[0] || ''
+    if (!nxt || nxt.charAt(0) !== '/') return null
+    return nxt
+  }
+
   function initLoginPage() {
     var kn = document.getElementById('ms12-login-known')
     var pe = document.getElementById('ms12-login-pending')
@@ -1996,6 +2315,77 @@
       if (kn) kn.style.display = 'none'
       if (pe) pe.style.display = 'block'
     }
+    var form = document.getElementById('ms12-login-email-form')
+    if (!form || form.getAttribute('data-ms12-email-wired') === '1') return
+    form.setAttribute('data-ms12-email-wired', '1')
+    var nextHint = document.getElementById('ms12-login-next-hint')
+    var sn = sanitizeAppNext()
+    if (nextHint && sn) {
+      nextHint.textContent = '로그인 후 «' + sn + '»(으)로 이동합니다.'
+      nextHint.style.display = 'block'
+    } else if (nextHint) {
+      nextHint.style.display = 'none'
+    }
+    form.addEventListener('submit', function (e) {
+      e.preventDefault()
+      if (_lastIsAuthed) return
+      var em = form.querySelector('input[name="email"]')
+      var pw = form.querySelector('input[name="password"]')
+      var msg = document.getElementById('ms12-login-email-msg')
+      var btn = document.getElementById('ms12-login-email-submit')
+      var emv = em && em.value ? String(em.value).trim() : ''
+      var pwv = pw && pw.value ? String(pw.value) : ''
+      if (!emv || !pwv) {
+        if (msg) {
+          msg.textContent = '이메일과 비밀번호를 입력하세요.'
+          msg.style.color = 'rgb(185 28 28)'
+        }
+        return
+      }
+      if (btn) btn.disabled = true
+      if (msg) {
+        msg.textContent = '로그인 중…'
+        msg.style.color = 'rgb(71 85 105)'
+      }
+      fetch('/api/auth/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emv, password: pwv }),
+      })
+        .then(function (r) {
+          return jsonFromResponse(r).then(function (j) {
+            return { ok: r.ok, j: j }
+          })
+        })
+        .then(function (o) {
+          if (o && o.j && o.j.success) {
+            var go = sanitizeAppNext() || '/app'
+            try {
+              if (o.j.data && o.j.data.user) {
+                localStorage.setItem('user', JSON.stringify(o.j.data.user))
+              }
+            } catch (e) {}
+            window.location.href = go
+            return
+          }
+          var er =
+            (o && o.j && (o.j.error || o.j.message)) || '이메일 또는 비밀번호를 확인하세요.'
+          if (msg) {
+            msg.textContent = String(er)
+            msg.style.color = 'rgb(185 28 28)'
+          }
+        })
+        .catch(function () {
+          if (msg) {
+            msg.textContent = '네트워크 오류로 로그인에 실패했습니다.'
+            msg.style.color = 'rgb(185 28 28)'
+          }
+        })
+        .then(function () {
+          if (btn) btn.disabled = false
+        })
+    })
   }
 
   function initAnnouncementsList() {

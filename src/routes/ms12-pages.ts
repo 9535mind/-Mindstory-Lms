@@ -6,7 +6,7 @@ import { getAuthMode } from '../utils/auth-mode'
 const p = new Hono<{ Bindings: Bindings }>()
 
 /** Pages 배포·소스 ?v= 일치(배포 후 페이지 소스에 이 주석이 보이면 새 Worker) */
-const MS12_BUILD = '20260422q'
+const MS12_BUILD = '20260422r'
 const MS12_APP_SCRIPT = `/static/js/ms12-app.js?v=${MS12_BUILD}`
 const waitBlock = '<p class="ms12-p" id="ms12-wait" style="color:rgb(100 116 139)">불러오는 중…</p>'
 
@@ -525,11 +525,11 @@ p.get('/meeting/:id', (c) => {
                </div>
                <div class="ms12-panel" style="margin:0.35rem 0 0.75rem 0;padding:0.6rem 0.75rem;background:rgb(248 250 252)">
                  <p class="ms12-muted" style="font-size:0.75rem;margin:0 0 0.3rem 0">AI·기본 (직접 수정 가능)</p>
-                 <textarea id="ms12-ai-sug-basic" class="ms12-input" rows="2" style="width:100%;min-height:2.4rem;max-width:100%;font-size:0.86rem;white-space:pre-wrap;resize:vertical" placeholder="—">—</textarea>
+                 <textarea id="ms12-ai-sug-basic" class="ms12-input" rows="2" style="width:100%;min-height:2.4rem;max-width:100%;font-size:0.86rem;white-space:pre-wrap;resize:vertical" placeholder="AI 기본 제안(직접 수정)"></textarea>
                  <p class="ms12-muted" style="font-size:0.75rem;margin:0.5rem 0 0.3rem 0">AI·실행 (직접 수정 가능)</p>
-                 <textarea id="ms12-ai-sug-action" class="ms12-input" rows="2" style="width:100%;min-height:2.4rem;max-width:100%;font-size:0.86rem;white-space:pre-wrap;resize:vertical" placeholder="—">—</textarea>
+                 <textarea id="ms12-ai-sug-action" class="ms12-input" rows="2" style="width:100%;min-height:2.4rem;max-width:100%;font-size:0.86rem;white-space:pre-wrap;resize:vertical" placeholder="AI 실행 제안(직접 수정)"></textarea>
                  <p class="ms12-muted" style="font-size:0.75rem;margin:0.5rem 0 0.3rem 0">AI·보고 (직접 수정 가능)</p>
-                 <textarea id="ms12-ai-sug-report" class="ms12-input" rows="2" style="width:100%;min-height:2.4rem;max-width:100%;font-size:0.86rem;white-space:pre-wrap;resize:vertical" placeholder="—">—</textarea>
+                 <textarea id="ms12-ai-sug-report" class="ms12-input" rows="2" style="width:100%;min-height:2.4rem;max-width:100%;font-size:0.86rem;white-space:pre-wrap;resize:vertical" placeholder="AI 보고 제안(직접 수정)"></textarea>
                </div>
                <p class="ms12-p" style="font-weight:600;margin:0.5rem 0 0.35rem 0">수정·저장용 요약 (3단)</p>
              <p class="ms12-muted" style="font-size:0.8rem;margin:0 0 0.4rem 0">탭을 누르면 해당 유형만 AI로 정리·아래에 반영됩니다. (자동 저장) 전체 3단은 위「지금 AI 요약 받기」에서 한꺼번에 갱신됩니다.</p>
@@ -753,7 +753,18 @@ p.get('/login', (c) => {
          <a class="ms12-btn ms12-btn--muted" href="/app/meeting" style="margin-left:0.5rem">회의 허브</a>
        </div>
        <div id="ms12-login-pending" style="margin-top:0.75rem">
-         <p class="ms12-p" style="font-weight:500">소셜 로그인</p>
+         <p class="ms12-p" style="font-weight:600;margin:0 0 0.35rem 0">이메일 로그인</p>
+         <p class="ms12-muted" style="font-size:0.86rem;margin:0 0 0.4rem 0">LMS와 동일한 계정(회원 DB)을 사용합니다.</p>
+         <form id="ms12-login-email-form" class="ms12-panel" style="max-width:22rem;padding:0.75rem;margin:0" autocomplete="on">
+           <label class="ms12-muted" style="font-size:0.8rem;display:block" for="ms12-login-email">이메일</label>
+           <input class="ms12-input" id="ms12-login-email" name="email" type="email" inputmode="email" autocomplete="username" required style="width:100%;max-width:100%;margin:0.2rem 0 0.5rem" />
+           <label class="ms12-muted" style="font-size:0.8rem;display:block" for="ms12-login-password">비밀번호</label>
+           <input class="ms12-input" id="ms12-login-password" name="password" type="password" autocomplete="current-password" required style="width:100%;max-width:100%;margin:0.2rem 0 0.5rem" />
+           <button type="submit" class="ms12-btn ms12-btn--teal" id="ms12-login-email-submit" style="margin:0.35rem 0 0 0">로그인</button>
+           <p id="ms12-login-email-msg" class="ms12-p" style="font-size:0.86rem;margin:0.5rem 0 0;min-height:1.1rem" aria-live="polite"></p>
+         </form>
+         <p class="ms12-muted" style="font-size:0.82rem;margin:0.6rem 0 0.25rem 0">계정이 없으면 <a href="/register" class="text-indigo-600" style="text-decoration:underline">회원가입</a>(LMS) 후 여기서 같은 이메일로 로그인할 수 있습니다.</p>
+         <p class="ms12-p" style="font-weight:600;margin:0.9rem 0 0.35rem 0">소셜 로그인</p>
          <p style="margin-top:0.5rem">
            <a class="ms12-btn" href="${kakao('/app/login')}">카카오</a>
            <a class="ms12-btn ms12-btn--muted" href="${google('/app/login')}" style="margin-left:0.5rem">Google</a>
