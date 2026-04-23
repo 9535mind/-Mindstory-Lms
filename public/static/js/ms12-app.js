@@ -1,5 +1,7 @@
 /**
- * MS12 /app* — /api/auth/me 단일 진실, 확인 중(authing)/로그인됨/비로그인 3단계
+ * MS12 /app* — /api/auth/me 단일 진실.
+ * OAuth 직후(oauth_sync=1) + 로그인 확인 시에만 /app/meeting 으로 이동(이미 회의 경로면 이동 없음).
+ * 그 외 자동 location 이동 없음(로그아웃은 사용자 클릭).
  */
 ;(function () {
   function authLog() {
@@ -13,23 +15,19 @@
     }
   }
 
-  /** data-ms12-route 없을 때(캐시·구 HTML) location.pathname으로 보강 — /app/login에서 반드시 login 으로 */
   function getRoute() {
     var b = document.body
     var attr = b && b.getAttribute('data-ms12-route')
     if (attr) return attr
     var p = (typeof location !== 'undefined' && location.pathname) || ''
     p = p.replace(/\/$/, '') || '/'
-    if (p === '/app/login') return 'login'
     if (p === '/app/meeting') return 'meeting'
     if (p === '/app' || p === '' || p === '/') return 'home'
     return 'home'
   }
 
-  /** /app, /app/login, /app/meeting → 로그용 */
-  function routePathForLog() {
+  function routePath() {
     var r = getRoute()
-    if (r === 'login') return '/app/login'
     if (r === 'meeting') return '/app/meeting'
     return '/app'
   }
@@ -76,7 +74,7 @@
         try {
           ctrl.abort()
         } catch (e) {}
-      }, 8000)
+      }, 10000)
       try {
         r = await fetch('/api/auth/me', { credentials: 'include', signal: ctrl.signal })
       } catch (e) {
@@ -94,22 +92,6 @@
     return { status: r.status, json: j }
   }
 
-  async function fetchMeWithRetry(attempts, delayMs) {
-    var last = null
-    for (var i = 0; i < attempts; i++) {
-      if (i > 0) {
-        await new Promise(function (r) {
-          setTimeout(r, delayMs)
-        })
-      }
-      last = await fetchMeOnce()
-      if (isAuthedFromMe(last.json)) {
-        return last
-      }
-    }
-    return last
-  }
-
   function stripOauthParam() {
     var p = new URLSearchParams(window.location.search || '')
     if (p.get('oauth_sync') !== '1') return
@@ -122,6 +104,7 @@
   }
 
   function setShellState(state, user) {
+    authLog('route=' + routePath(), 'state=' + state)
     var w = document.getElementById('ms12-wait')
     var g = document.getElementById('ms12-guest')
     var a = document.getElementById('ms12-authed')
@@ -148,10 +131,10 @@
               try {
                 localStorage.removeItem('user')
               } catch (e) {}
-              window.location.href = '/app/login'
+              window.location.href = '/app/meeting'
             })
             .catch(function () {
-              window.location.href = '/app/login'
+              window.location.href = '/app/meeting'
             })
         })
       })(btns[i])
@@ -159,14 +142,15 @@
   }
 
   async function run() {
-    var route = getRoute()
     var hadOauth = new URLSearchParams(window.location.search || '').get('oauth_sync') === '1'
 
     setShellState('loading', null)
-
-    var o = await fetchMeWithRetry(hadOauth ? 6 : 4, 150)
+    var o
     if (hadOauth) {
-      stripOauthParam()
+      o = await fetchMeOnce()
+      authLog('oauth_sync handled')
+    } else {
+      o = await fetchMeOnce()
     }
 
     var j = o && o.json
@@ -178,36 +162,41 @@
       } catch (e) {}
     }
 
-    var rpath = routePathForLog()
-    if (route === 'login' && authed) {
-      authLog('route=' + rpath, 'auth=authed', 'redirect=/app/meeting')
-      window.location.replace('/app/meeting')
-      return
+    if (hadOauth && authed) {
+      var normPath =
+        (typeof location !== 'undefined' &&
+          location.pathname &&
+          location.pathname.replace(/\/$/, '')) ||
+        ''
+      if (!normPath) normPath = '/'
+      if (normPath !== '/app/meeting') {
+        authLog('post-oauth authed', '→', '/app/meeting')
+        location.replace('/app/meeting')
+        return
+      }
     }
-
-    if (rpath === '/app') {
-      authLog('route=' + rpath, 'auth=' + (authed ? 'authed' : 'guest'))
-    } else if (rpath === '/app/login') {
-      authLog('route=' + rpath, 'auth=guest')
-    } else {
-      authLog('route=' + rpath, 'auth=' + (authed ? 'authed' : 'guest'))
+    if (hadOauth) {
+      stripOauthParam()
     }
 
     if (authed) {
       setShellState('authed', user)
       wireLogout()
     } else {
-      if (route === 'login') {
+      var r = getRoute()
+      if (r === 'meeting' || r === 'home') {
         applyNextToOAuthLinks()
       }
       setShellState('guest', null)
     }
+    authLog('no auto redirect')
   }
 
   function safeRun() {
     return run().catch(function (e) {
-      authLog('route=' + routePathForLog(), 'error=', String((e && e.message) || e))
+      authLog('route=' + routePath(), 'error=', String((e && e.message) || e))
       setShellState('guest', null)
+      authLog('no auto redirect')
     })
   }
 
