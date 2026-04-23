@@ -62,11 +62,18 @@
     }
   }
 
+  function sleep(ms) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, ms)
+    })
+  }
+
   async function fetchMeOnce() {
+    var fetchOpts = { credentials: 'include', cache: 'no-store' }
     var r
     if (typeof AbortController === 'undefined') {
       try {
-        r = await fetch('/api/auth/me', { credentials: 'include' })
+        r = await fetch('/api/auth/me', fetchOpts)
       } catch (e) {
         return { status: 0, json: null, _err: e }
       }
@@ -78,7 +85,7 @@
         } catch (e) {}
       }, 10000)
       try {
-        r = await fetch('/api/auth/me', { credentials: 'include', signal: ctrl.signal })
+        r = await fetch('/api/auth/me', Object.assign({}, fetchOpts, { signal: ctrl.signal }))
       } catch (e) {
         clearTimeout(t)
         return { status: 0, json: null, _err: e }
@@ -105,19 +112,59 @@
     } catch (e) {}
   }
 
-  function setShellState(state, user) {
-    authLog('route=' + getRoute(), 'state=' + state)
+  function getPageAuthMode() {
+    var b = document.body
+    var m = b && b.getAttribute('data-ms12-auth')
+    return m || 'optional'
+  }
+
+  function applyShell(phase, options) {
+    options = options || {}
     var w = document.getElementById('ms12-wait')
     var g = document.getElementById('ms12-guest')
     var a = document.getElementById('ms12-authed')
-    if (w) w.style.display = state === 'loading' ? 'block' : 'none'
-    if (g) g.style.display = state === 'guest' ? 'block' : 'none'
-    if (a) a.style.display = state === 'authed' ? 'block' : 'none'
-    if (state === 'authed' && user) {
-      var nodes = document.querySelectorAll('.js-ms12-user-name')
-      for (var n = 0; n < nodes.length; n++) {
-        nodes[n].textContent = user.name || user.email || '사용자'
+    var hint = document.getElementById('ms12-guest-hint')
+    authLog('route=' + getRoute(), 'shell=' + phase, options)
+    if (w) w.style.display = phase === 'loading' ? 'block' : 'none'
+    if (g) g.style.display = phase === 'login' ? 'block' : 'none'
+    if (a) a.style.display = phase === 'app' ? 'block' : 'none'
+    if (hint) {
+      hint.style.display = phase === 'app' && options.isGuest ? 'block' : 'none'
+    }
+    var nameText = '사용자'
+    if (options.user) {
+      nameText = options.user.name || options.user.email || '사용자'
+    } else if (options.isGuest) {
+      nameText = '게스트'
+    }
+    var nodes = document.querySelectorAll('.js-ms12-user-name')
+    for (var n = 0; n < nodes.length; n++) {
+      nodes[n].textContent = nameText
+    }
+    var sufs = document.querySelectorAll('.js-ms12-user-suffix')
+    for (var s = 0; s < sufs.length; s++) {
+      sufs[s].textContent = options.isGuest ? '으로 사용 중' : ' 님'
+    }
+    var badges = document.querySelectorAll('.js-ms12-badge')
+    for (var b = 0; b < badges.length; b++) {
+      if (options.user) {
+        badges[b].textContent = '로그인됨'
+        badges[b].setAttribute('style', 'background:rgb(220 252 231);color:rgb(22 101 52)')
+      } else if (options.isGuest) {
+        badges[b].textContent = '게스트'
+        badges[b].setAttribute('style', 'background:rgb(254 243 199);color:rgb(120 53 15)')
+      } else {
+        badges[b].textContent = '준비됨'
+        badges[b].setAttribute('style', 'background:rgb(220 252 231);color:rgb(22 101 52)')
       }
+    }
+    var lout = document.querySelectorAll('[data-ms12-logout]')
+    for (var lo = 0; lo < lout.length; lo++) {
+      lout[lo].style.display = options.user ? 'inline-block' : 'none'
+    }
+    var lnk = document.querySelectorAll('[data-ms12-login-lnk]')
+    for (var li = 0; li < lnk.length; li++) {
+      lnk[li].style.display = options.isGuest || !options.user ? 'inline-block' : 'none'
     }
   }
 
@@ -186,11 +233,14 @@
       var fd = new FormData(f)
       var title = (fd.get('title') || '').toString().trim()
       if (!title) return
+      var dn = (fd.get('displayName') || '').toString().trim()
+      var payload = { title: title }
+      if (dn) payload.displayName = dn
       fetch('/api/ms12/meetings', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title }),
+        body: JSON.stringify(payload),
       })
         .then(function (r) {
           return r.json()
@@ -222,11 +272,14 @@
       var fd = new FormData(f)
       var code = (fd.get('code') || '').toString()
       if (!code.trim()) return
+      var dn2 = (fd.get('displayName') || '').toString().trim()
+      var joinBody = { meetingCode: code }
+      if (dn2) joinBody.displayName = dn2
       fetch('/api/ms12/meetings/join', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ meetingCode: code }),
+        body: JSON.stringify(joinBody),
       })
         .then(function (r) {
           return r.json()
@@ -404,18 +457,37 @@
   async function run() {
     var hadOauth = new URLSearchParams(window.location.search || '').get('oauth_sync') === '1'
 
-    setShellState('loading', null)
-    var o
-    if (hadOauth) {
-      o = await fetchMeOnce()
-      authLog('oauth_sync handled')
-    } else {
-      o = await fetchMeOnce()
-    }
-
+    applyShell('loading', {})
+    var o = await fetchMeOnce()
     var j = o && o.json
+    pageMode = (j && j.authMode) || getPageAuthMode()
+
     var authed = isAuthedFromMe(j)
+    if (hadOauth && !authed) {
+      authLog('oauth_sync retry /api/auth/me')
+      var delays = [40, 100, 200, 400, 700]
+      for (var ri = 0; ri < delays.length; ri++) {
+        await sleep(delays[ri])
+        o = await fetchMeOnce()
+        j = o && o.json
+        authed = isAuthedFromMe(j)
+        if (authed) break
+        pageMode = (j && j.authMode) || pageMode
+      }
+    }
     var user = authed && j && j.data ? j.data : null
+    var isGuest =
+      (pageMode === 'optional' || pageMode === 'disabled') &&
+      j &&
+      j.success &&
+      j.actor &&
+      j.actor.type === 'guest' &&
+      !authed
+    if (j && j.actor && j.actor.type === 'guest') {
+      try {
+        localStorage.setItem('ms12_actor', JSON.stringify(j.actor))
+      } catch (e) {}
+    }
     if (authed) {
       try {
         localStorage.setItem('user', JSON.stringify(j.data))
@@ -431,7 +503,16 @@
       if (!normPath) normPath = '/'
       if (normPath === '/app/login' || normPath === '/app/meeting') {
         authLog('post-oauth legacy', '→', '/app')
-        location.replace('/app' + (window.location.search || ''))
+        try {
+          var origin2 = window.location && window.location.origin
+          if (origin2 && origin2.indexOf('http') === 0) {
+            location.replace(origin2 + '/app' + (window.location.search || ''))
+          } else {
+            location.replace('/app' + (window.location.search || ''))
+          }
+        } catch (e) {
+          location.replace('/app' + (window.location.search || ''))
+        }
         return
       }
     }
@@ -439,23 +520,21 @@
       stripOauthParam()
     }
 
-    if (authed) {
-      setShellState('authed', user)
+    var showApp = pageMode === 'optional' || pageMode === 'disabled' || authed
+    if (pageMode === 'required' && !authed) {
+      var r0 = getRoute()
+      if (r0 === 'meeting' || r0 === 'home' || r0 === 'meeting_new' || r0 === 'join' || r0 === 'records' || r0 === 'meeting_room') {
+        applyNextToOAuthLinks()
+      }
+      applyShell('login', {})
+      return
+    }
+    if (showApp) {
+      applyShell('app', { user: user, isGuest: !!isGuest })
       wireLogout()
       initAuthedPage()
     } else {
-      var r0 = getRoute()
-      if (
-        r0 === 'meeting' ||
-        r0 === 'home' ||
-        r0 === 'meeting_new' ||
-        r0 === 'join' ||
-        r0 === 'records' ||
-        r0 === 'meeting_room'
-      ) {
-        applyNextToOAuthLinks()
-      }
-      setShellState('guest', null)
+      applyShell('login', {})
     }
     authLog('no other auto redirect', routePath())
   }
@@ -463,7 +542,11 @@
   function safeRun() {
     return run().catch(function (e) {
       authLog('route=' + routePath(), 'error=', String((e && e.message) || e))
-      setShellState('guest', null)
+      if (getPageAuthMode() === 'required') {
+        applyShell('login', {})
+      } else {
+        applyShell('app', { user: null, isGuest: true })
+      }
     })
   }
 

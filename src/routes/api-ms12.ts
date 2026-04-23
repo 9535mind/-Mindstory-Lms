@@ -1,23 +1,20 @@
 /**
- * /api/ms12/* — MS12 회의방(라이브) API (ms12_rooms, ms12_room_participants)
+ * /api/ms12/* — MS12 회의방 (ms12_rooms, ms12_room_participants)
+ * AUTH_MODE=optional 일 때 guest actor + ms12_guest 쿠키, required 일 때만 로그인 강제
  */
-import { Hono } from 'hono'
+import { Context, Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { Bindings } from '../types/database'
-import { requireAuth } from '../middleware/auth'
+import { ms12Access } from '../middleware/ms12-access'
 import { FOOTER_HTML_REVISION } from '../utils/site-footer-legal'
-import { successResponse, errorResponse } from '../utils/helpers'
+import { successResponse, errorResponse, getCurrentUser } from '../utils/helpers'
+import type { AppActor } from '../utils/actor'
+import { participantKey } from '../utils/actor'
+import { getAuthMode } from '../utils/auth-mode'
 
-const api = new Hono<{ Bindings: Bindings }>()
+type Ctx = Context<{ Bindings: Bindings; Variables: { actor: AppActor } }>
 
-api.get('/health', (c) =>
-  c.json({
-    ok: true,
-    product: 'ms12',
-    buildRef: FOOTER_HTML_REVISION,
-    ts: new Date().toISOString(),
-  })
-)
+const api = new Hono<{ Bindings: Bindings; Variables: { actor: AppActor } }>()
 
 const CODE_ALPH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
@@ -49,37 +46,56 @@ function userDisplayNameRow(u: { name?: string | null; email?: string | null }):
   return '사용자'
 }
 
-type AuthUser = { id: number; name?: string | null; email?: string | null }
+async function displayNameFor(actor: AppActor, body: { displayName?: string }, c: Ctx): Promise<string> {
+  if (actor.type === 'user') {
+    const u = await getCurrentUser(c)
+    return u ? userDisplayNameRow(u) : '사용자'
+  }
+  return String(body.displayName || '').trim() || '게스트'
+}
 
 async function requireRoomParticipant(
   c: { env: { DB: D1Database } },
   meetingId: string,
-  userId: number
+  actor: AppActor
 ): Promise<void> {
+  const k = participantKey(actor)
   const row = await c.env.DB.prepare(
-    `SELECT 1 AS ok FROM ms12_room_participants WHERE meeting_id = ? AND user_id = ? AND left_at IS NULL`
+    `SELECT 1 AS ok FROM ms12_room_participants
+     WHERE meeting_id = ? AND participant_key = ? AND left_at IS NULL`
   )
-    .bind(meetingId, userId)
+    .bind(meetingId, k)
     .first()
   if (row) return
   throw new HTTPException(403, { message: '이 회의에 입장한 참석자만 볼 수 있습니다.' })
 }
 
-/** 목록(내 회의) — :id보다 먼저 등록 */
-api.get('/meetings/my', requireAuth, async (c) => {
-  const u = c.get('user') as AuthUser
+api.get('/health', (c) =>
+  c.json({
+    ok: true,
+    product: 'ms12',
+    authMode: getAuthMode(c),
+    buildRef: FOOTER_HTML_REVISION,
+    ts: new Date().toISOString(),
+  })
+)
+
+api.get('/meetings/my', ms12Access, async (c) => {
+  const actor = c.get('actor')
+  const k = participantKey(actor)
   const limit = Math.min(50, Math.max(1, parseInt(c.req.query('limit') || '20', 10) || 20))
   const rows = await c.env.DB.prepare(
     `SELECT
-      r.id, r.title, r.host_user_id, r.meeting_code, r.status, r.created_at, r.updated_at,
+      r.id, r.title, r.host_user_id, r.host_guest_id, r.host_actor_type,
+      r.meeting_code, r.status, r.created_at, r.updated_at,
       p.role AS my_role, p.joined_at AS my_joined_at
     FROM ms12_rooms r
     INNER JOIN ms12_room_participants p ON p.meeting_id = r.id
-    WHERE p.user_id = ?
+    WHERE p.participant_key = ?
     ORDER BY r.updated_at DESC
     LIMIT ?`
   )
-    .bind(u.id, limit)
+    .bind(k, limit)
     .all()
   return c.json(
     successResponse(
@@ -87,6 +103,8 @@ api.get('/meetings/my', requireAuth, async (c) => {
         id: String(row.id),
         title: row.title,
         hostUserId: row.host_user_id,
+        hostGuestId: row.host_guest_id,
+        hostActorType: row.host_actor_type,
         meetingCode: row.meeting_code,
         status: row.status,
         createdAt: row.created_at,
@@ -98,13 +116,13 @@ api.get('/meetings/my', requireAuth, async (c) => {
   )
 })
 
-api.get('/meetings/:id/participants', requireAuth, async (c) => {
-  const u = c.get('user') as AuthUser
+api.get('/meetings/:id/participants', ms12Access, async (c) => {
+  const actor = c.get('actor')
   const meetingId = c.req.param('id')
-  await requireRoomParticipant(c, meetingId, u.id)
+  await requireRoomParticipant(c, meetingId, actor)
   const rows = await c.env.DB.prepare(
     `SELECT
-      p.user_id, p.display_name, p.role, p.joined_at, p.left_at, p.attendance_status
+      p.user_id, p.guest_id, p.display_name, p.role, p.joined_at, p.left_at, p.attendance_status, p.participant_key
      FROM ms12_room_participants p
      WHERE p.meeting_id = ?
      ORDER BY
@@ -115,6 +133,7 @@ api.get('/meetings/:id/participants', requireAuth, async (c) => {
     .all()
   const list = (rows.results || []).map((row: Record<string, unknown>) => ({
     userId: row.user_id,
+    guestId: row.guest_id,
     displayName: row.display_name,
     role: row.role,
     joinedAt: row.joined_at,
@@ -122,15 +141,18 @@ api.get('/meetings/:id/participants', requireAuth, async (c) => {
     attendanceStatus: row.attendance_status,
     isPresent: row.left_at == null,
   }))
-  return c.json(successResponse({ meetingId, participants: list, count: list.filter((p) => p.isPresent).length }))
+  return c.json(
+    successResponse({ meetingId, participants: list, count: list.filter((p) => p.isPresent).length })
+  )
 })
 
-api.get('/meetings/:id', requireAuth, async (c) => {
-  const u = c.get('user') as AuthUser
+api.get('/meetings/:id', ms12Access, async (c) => {
+  const actor = c.get('actor')
   const meetingId = c.req.param('id')
-  await requireRoomParticipant(c, meetingId, u.id)
+  await requireRoomParticipant(c, meetingId, actor)
   const r = await c.env.DB.prepare(
-    `SELECT id, host_user_id, title, meeting_code, status, created_at, updated_at FROM ms12_rooms WHERE id = ?`
+    `SELECT id, host_actor_type, host_user_id, host_guest_id, title, meeting_code, status, created_at, updated_at
+     FROM ms12_rooms WHERE id = ?`
   )
     .bind(meetingId)
     .first<Record<string, unknown>>()
@@ -140,7 +162,9 @@ api.get('/meetings/:id', requireAuth, async (c) => {
   return c.json(
     successResponse({
       id: String(r.id),
+      hostActorType: r.host_actor_type,
       hostUserId: r.host_user_id,
+      hostGuestId: r.host_guest_id,
       title: r.title,
       meetingCode: r.meeting_code,
       status: r.status,
@@ -150,11 +174,11 @@ api.get('/meetings/:id', requireAuth, async (c) => {
   )
 })
 
-api.post('/meetings', requireAuth, async (c) => {
-  const u = c.get('user') as AuthUser
-  let body: { title?: string } = {}
+api.post('/meetings', ms12Access, async (c) => {
+  const actor = c.get('actor')
+  let body: { title?: string; displayName?: string } = {}
   try {
-    body = (await c.req.json()) as { title?: string }
+    body = (await c.req.json()) as { title?: string; displayName?: string }
   } catch {
     return c.json(errorResponse('JSON 본문이 필요합니다.'), 400)
   }
@@ -162,23 +186,39 @@ api.post('/meetings', requireAuth, async (c) => {
   if (!title) {
     return c.json(errorResponse('회의 제목을 입력하세요.'), 400)
   }
-  const dname = userDisplayNameRow(u)
+  const dname = await displayNameFor(actor, body, c)
   const t = nowIso()
   for (let attempt = 0; attempt < 12; attempt++) {
     const id = randomId()
     const code = randomMeetingCode(8)
     try {
-      await c.env.DB.batch([
-        c.env.DB.prepare(
-          `INSERT INTO ms12_rooms (id, host_user_id, title, meeting_code, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 'open', ?, ?)`
-        ).bind(id, u.id, title, code, t, t),
-        c.env.DB.prepare(
-          `INSERT INTO ms12_room_participants
-           (meeting_id, user_id, display_name, role, joined_at, left_at, attendance_status)
-           VALUES (?, ?, ?, 'host', ?, NULL, 'in')`
-        ).bind(id, u.id, dname, t),
-      ])
+      if (actor.type === 'user') {
+        const uid = parseInt(actor.id, 10)
+        await c.env.DB.batch([
+          c.env.DB.prepare(
+            `INSERT INTO ms12_rooms (id, host_actor_type, host_user_id, host_guest_id, title, meeting_code, status, created_at, updated_at)
+             VALUES (?, 'user', ?, NULL, ?, ?, 'open', ?, ?)`
+          ).bind(id, uid, title, code, t, t),
+          c.env.DB.prepare(
+            `INSERT INTO ms12_room_participants
+             (meeting_id, participant_key, actor_type, user_id, guest_id, display_name, role, joined_at, left_at, attendance_status)
+             VALUES (?, ?, 'user', ?, NULL, ?, 'host', ?, NULL, 'in')`
+          ).bind(id, `u:${uid}`, uid, dname, t),
+        ])
+      } else {
+        const gid = actor.id
+        await c.env.DB.batch([
+          c.env.DB.prepare(
+            `INSERT INTO ms12_rooms (id, host_actor_type, host_user_id, host_guest_id, title, meeting_code, status, created_at, updated_at)
+             VALUES (?, 'guest', NULL, ?, ?, ?, 'open', ?, ?)`
+          ).bind(id, gid, title, code, t, t),
+          c.env.DB.prepare(
+            `INSERT INTO ms12_room_participants
+             (meeting_id, participant_key, actor_type, user_id, guest_id, display_name, role, joined_at, left_at, attendance_status)
+             VALUES (?, ?, 'guest', NULL, ?, ?, 'host', ?, NULL, 'in')`
+          ).bind(id, `g:${gid}`, `g:${gid}`, gid, dname, t),
+        ])
+      }
       return c.json(
         successResponse({
           id,
@@ -199,11 +239,11 @@ api.post('/meetings', requireAuth, async (c) => {
   return c.json(errorResponse('회의 코드 충돌 — 잠시 후 다시 시도하세요.'), 500)
 })
 
-api.post('/meetings/join', requireAuth, async (c) => {
-  const u = c.get('user') as AuthUser
-  let body: { meetingCode?: string } = {}
+api.post('/meetings/join', ms12Access, async (c) => {
+  const actor = c.get('actor')
+  let body: { meetingCode?: string; displayName?: string } = {}
   try {
-    body = (await c.req.json()) as { meetingCode?: string }
+    body = (await c.req.json()) as { meetingCode?: string; displayName?: string }
   } catch {
     return c.json(errorResponse('JSON 본문이 필요합니다.'), 400)
   }
@@ -212,7 +252,7 @@ api.post('/meetings/join', requireAuth, async (c) => {
     return c.json(errorResponse('회의 코드를 입력하세요.'), 400)
   }
   const room = await c.env.DB.prepare(
-    `SELECT id, title, host_user_id, meeting_code, status FROM ms12_rooms
+    `SELECT id, title, host_actor_type, host_user_id, host_guest_id, meeting_code, status FROM ms12_rooms
      WHERE UPPER(meeting_code) = UPPER(?)`
   )
     .bind(raw)
@@ -222,26 +262,57 @@ api.post('/meetings/join', requireAuth, async (c) => {
   }
   const id = String(room.id)
   const t = nowIso()
-  const dname = userDisplayNameRow(u)
-  const hostId = room.host_user_id as number
-  const role: 'host' | 'participant' = u.id === hostId ? 'host' : 'participant'
-  try {
-    await c.env.DB.prepare(
-      `INSERT INTO ms12_room_participants
-       (meeting_id, user_id, display_name, role, joined_at, left_at, attendance_status)
-       VALUES (?, ?, ?, ?, ?, NULL, 'in')
-       ON CONFLICT(meeting_id, user_id) DO UPDATE SET
-         display_name = excluded.display_name,
-         role = excluded.role,
-         joined_at = excluded.joined_at,
-         left_at = NULL,
-         attendance_status = 'in'`
-    )
-      .bind(id, u.id, dname, role, t)
-      .run()
-  } catch (e) {
-    console.error('[ms12] join', e)
-    return c.json(errorResponse('입장에 실패했습니다.'), 500)
+  const dname = await displayNameFor(actor, body, c)
+  const hostType = room.host_actor_type as string
+  const hostUserId = room.host_user_id as number | null
+  const hostGuestId = room.host_guest_id as string | null
+  let role: 'host' | 'participant' = 'participant'
+  if (hostType === 'user' && actor.type === 'user' && String(hostUserId) === actor.id) {
+    role = 'host'
+  } else if (hostType === 'guest' && actor.type === 'guest' && hostGuestId === actor.id) {
+    role = 'host'
+  }
+  const pk = participantKey(actor)
+  if (actor.type === 'user') {
+    const uid = parseInt(actor.id, 10)
+    try {
+      await c.env.DB.prepare(
+        `INSERT INTO ms12_room_participants
+         (meeting_id, participant_key, actor_type, user_id, guest_id, display_name, role, joined_at, left_at, attendance_status)
+         VALUES (?, ?, 'user', ?, NULL, ?, ?, ?, NULL, 'in')
+         ON CONFLICT(meeting_id, participant_key) DO UPDATE SET
+           display_name = excluded.display_name,
+           role = excluded.role,
+           joined_at = excluded.joined_at,
+           left_at = NULL,
+           attendance_status = 'in'`
+      )
+        .bind(id, pk, uid, dname, role, t)
+        .run()
+    } catch (e) {
+      console.error('[ms12] join', e)
+      return c.json(errorResponse('입장에 실패했습니다.'), 500)
+    }
+  } else {
+    const gid = actor.id
+    try {
+      await c.env.DB.prepare(
+        `INSERT INTO ms12_room_participants
+         (meeting_id, participant_key, actor_type, user_id, guest_id, display_name, role, joined_at, left_at, attendance_status)
+         VALUES (?, ?, 'guest', NULL, ?, ?, ?, ?, NULL, 'in')
+         ON CONFLICT(meeting_id, participant_key) DO UPDATE SET
+           display_name = excluded.display_name,
+           role = excluded.role,
+           joined_at = excluded.joined_at,
+           left_at = NULL,
+           attendance_status = 'in'`
+      )
+        .bind(id, pk, gid, dname, role, t)
+        .run()
+    } catch (e) {
+      console.error('[ms12] join', e)
+      return c.json(errorResponse('입장에 실패했습니다.'), 500)
+    }
   }
   await c.env.DB.prepare(`UPDATE ms12_rooms SET updated_at = ? WHERE id = ?`).bind(t, id).run()
   return c.json(

@@ -1,12 +1,13 @@
 /**
- * MS12 /app* — 온보딩(Zoom 스타일) + 회의방 (비로그인 /app/meeting = 로그인)
+ * MS12 /app* — 온보딩(Zoom 스타일) + 회의방 — AUTH_MODE=optional 시 게스트 전역 사용
  */
 import { Hono } from 'hono'
 import { Bindings } from '../types/database'
+import { getAuthMode } from '../utils/auth-mode'
 
 const p = new Hono<{ Bindings: Bindings }>()
 
-const MS12_APP_SCRIPT = '/static/js/ms12-app.js?v=20260424a'
+const MS12_APP_SCRIPT = '/static/js/ms12-app.js?v=20260425c'
 const waitBlock =
   '<p class="ms12-p" id="ms12-wait" style="color:rgb(100 116 139)">로그인 상태 확인 중…</p>'
 
@@ -52,7 +53,8 @@ function layout(
   route: Ms12Route,
   extraBody: string,
   guest: string,
-  authed: string
+  authed: string,
+  authMode: string
 ) {
   return `<!DOCTYPE html>
 <html lang="ko">
@@ -66,7 +68,7 @@ function layout(
     ${commonStyles}
   </style>
 </head>
-<body class="bg-slate-50 min-h-screen" data-ms12-route="${route}" ${extraBody}>
+<body class="bg-slate-50 min-h-screen" data-ms12-route="${route}" data-ms12-auth="${authMode}" ${extraBody}>
   <div class="ms12-wrap">
     <noscript>
       <p class="ms12-p">JavaScript 를 켜 주세요. <a href="/app">MS12</a></p>
@@ -91,15 +93,16 @@ p.get('/', (c) =>
       'home',
       '',
       `<h1 class="ms12-h1">MS12</h1>
-       <p class="ms12-p">회의·기록·문서를 한곳에서 다루는 모임 공간입니다. 아래로 로그인하세요.</p>
+       <p class="ms12-p">로그인이 필요합니다. (AUTH_MODE=required)</p>
        <a class="ms12-btn" href="${kakao('/app')}">카카오로 계속</a>
        <p class="ms12-p" style="margin-top:0.75rem;font-size:0.875rem;">Google: <a href="${google('/app')}" class="text-indigo-600 underline">Google로 계속</a></p>
        <p class="ms12-p" style="margin-top:0.5rem;font-size:0.875rem;"><a href="/app/meeting" class="text-slate-500">회의 화면에서 로그인하기</a></p>`,
-      `<div class="ms12-header-row">
+      `<div class="ms12-guest-hint" id="ms12-guest-hint" style="display:none;margin-bottom:0.75rem;padding:0.6rem 0.9rem;border-radius:0.5rem;background:rgb(254 252 232);border:1px solid rgb(253 230 138);color:rgb(120 53 15);font-size:0.9rem">지금은 <strong>게스트</strong>로 쓰는 중입니다. 쿠키·브라우저를 바꾸면 이 기기에서의 기록이 이어지지 않을 수 있습니다. <a href="${kakao('/app')}" class="text-indigo-700 underline" style="font-weight:500">로그인(선택)</a></div>
+       <div class="ms12-header-row">
          <h1 class="ms12-h1" style="margin:0">MS12</h1>
-         <div><span class="ms12-badge">로그인됨</span></div>
+         <div><span class="ms12-badge js-ms12-badge" style="background:rgb(220 252 231);color:rgb(22 101 52)">준비됨</span></div>
        </div>
-       <p class="ms12-p" style="margin-top:0.5rem">안녕하세요, <span class="js-ms12-user-name" style="font-weight:600">—</span> 님</p>
+       <p class="ms12-p" style="margin-top:0.5rem">안녕하세요, <span class="js-ms12-user-name" style="font-weight:600">—</span> <span class="js-ms12-user-suffix" style="font-weight:400">님</span></p>
        <p class="ms12-p ms12-muted" style="margin-top:0.25rem">회의를 열고, 입장하거나, 기록을 열어보세요.</p>
        <div class="ms12-card-grid ms12-card-grid--3" style="margin-top:1rem">
          <a class="ms12-big-btn" href="/app/meeting/new" style="text-decoration:none">
@@ -116,9 +119,11 @@ p.get('/', (c) =>
          <p class="ms12-subtitle">최근 흐름</p>
          <div id="ms12-home-recent" class="ms12-muted" style="min-height:2.5rem">불러오는 중…</div>
        </div>
-       <p style="margin-top:1.5rem">
+       <p style="margin-top:1.5rem" class="js-ms12-account-actions">
          <button type="button" class="ms12-btn ms12-btn--muted" data-ms12-logout>로그아웃</button>
+         <a class="ms12-btn" href="${kakao('/app')}" style="margin-left:0.4rem" data-ms12-login-lnk>계정 연결</a>
        </p>`,
+      getAuthMode(c),
     ),
   ),
 )
@@ -141,9 +146,12 @@ p.get('/meeting/new', (c) =>
        <form id="ms12-form-new" style="margin-top:1rem">
          <label class="ms12-p" style="display:block;font-weight:500">회의 제목</label>
          <input class="ms12-input" name="title" type="text" required maxlength="200" placeholder="예: 4월 운영 모임" />
+         <label class="ms12-p" style="display:block;margin-top:0.75rem;font-weight:500">호스트로 표시할 이름(선택·게스트)</label>
+         <input class="ms12-input" name="displayName" type="text" maxlength="40" placeholder="없으면 '게스트'" />
          <p style="margin-top:1rem"><button type="submit" class="ms12-btn ms12-btn--teal">회의 열기</button></p>
        </form>
        <p style="margin-top:0.5rem"><button type="button" class="ms12-btn ms12-btn--muted" data-ms12-logout>로그아웃</button></p>`,
+      getAuthMode(c),
     ),
   ),
 )
@@ -164,10 +172,13 @@ p.get('/join', (c) =>
        <form id="ms12-form-join" style="margin-top:1rem">
          <label class="ms12-p" style="display:block;font-weight:500">회의 코드</label>
          <input class="ms12-input" name="code" type="text" required autocomplete="off" placeholder="8자리 코드" />
+         <label class="ms12-p" style="display:block;margin-top:0.75rem;font-weight:500">목록에 쓸 이름(선택)</label>
+         <input class="ms12-input" name="displayName" type="text" maxlength="40" placeholder="없으면 '게스트'" />
          <p style="margin-top:1rem"><button type="submit" class="ms12-btn">입장</button></p>
        </form>
        <p id="ms12-join-err" class="ms12-p" style="color:rgb(185 28 28);display:none"></p>
        <p style="margin-top:0.5rem"><button type="button" class="ms12-btn ms12-btn--muted" data-ms12-logout>로그아웃</button></p>`,
+      getAuthMode(c),
     ),
   ),
 )
@@ -187,6 +198,7 @@ p.get('/records', (c) =>
        <p class="ms12-p">참여한 회의·저장·요약(연동 예정)을 한곳에 모읍니다. 아래는 참여·개설한 모임 기준입니다.</p>
        <div id="ms12-records-list" class="ms12-p" style="margin-top:1rem">불러오는 중…</div>
        <p style="margin-top:0.5rem"><button type="button" class="ms12-btn ms12-btn--muted" data-ms12-logout>로그아웃</button></p>`,
+      getAuthMode(c),
     ),
   ),
 )
@@ -212,6 +224,7 @@ p.get('/meeting', (c) =>
        </p>
        <p style="margin-top:1rem"><a href="/app" class="ms12-p">← 시작화면</a></p>
        <p style="margin-top:0.5rem"><button type="button" class="ms12-btn ms12-btn--muted" data-ms12-logout>로그아웃</button></p>`,
+      getAuthMode(c),
     ),
   ),
 )
@@ -254,6 +267,7 @@ p.get('/meeting/:id', (c) => {
        </div>
        <p style="margin-top:0.5rem"><button type="button" class="ms12-btn ms12-btn--muted" data-ms12-logout>로그아웃</button></p>
        <p id="ms12-room-err" class="ms12-p" style="color:rgb(185 28 28);display:none"></p>`,
+      getAuthMode(c),
     ),
   )
 })

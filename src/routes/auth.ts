@@ -22,6 +22,8 @@ import {
 } from '../utils/helpers'
 import { requireAuth } from '../middleware/auth'
 import { ensureListedAdminRole, isListedAdminEmail } from '../utils/admin-emails'
+import { getAuthMode } from '../utils/auth-mode'
+import { ensureActorForMeEndpoint, type AppActor } from '../utils/actor'
 
 const auth = new Hono<{ Bindings: Bindings }>()
 
@@ -295,14 +297,33 @@ const ME_NO_STORE = { 'Cache-Control': 'private, no-store, must-revalidate' as c
 
 auth.get('/me', async (c) => {
   try {
+    const mode = getAuthMode(c)
     const user = await getCurrentUser(c)
+    let actor: AppActor | null = null
+    if (mode === 'optional' || mode === 'disabled') {
+      actor = await ensureActorForMeEndpoint(c)
+    } else {
+      if (user) {
+        actor = { type: 'user', id: String((user as User).id) }
+      }
+    }
     if (!user) {
-      return c.json(successResponse(null), 200, ME_NO_STORE)
+      return c.json(
+        { success: true, data: null, authMode: mode, actor, message: undefined },
+        200,
+        ME_NO_STORE
+      )
     }
     const u = user as Record<string, unknown>
     const { password_hash: _h, password: _p, ...userWithoutPassword } = u
-
-    return c.json(successResponse(userWithoutPassword), 200, ME_NO_STORE)
+    if (actor == null) {
+      actor = { type: 'user', id: String(u.id) }
+    }
+    return c.json(
+      { success: true, data: userWithoutPassword, authMode: mode, actor, message: undefined },
+      200,
+      ME_NO_STORE
+    )
   } catch (error) {
     console.error('Get user error:', error)
     return c.json(errorResponse('서버 오류가 발생했습니다.'), 500)

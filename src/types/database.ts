@@ -45,6 +45,14 @@ export type Bindings = {
   /** 공개 사이트 URL(참고용·디버그; OAuth 콜백은 코드 상수 사용) */
   NEXT_PUBLIC_SITE_URL?: string;
 
+  /**
+   * MS12 인증 강도 — optional(게스트+로그인) | required(로그인 필수, API 미인증 401) | disabled(선택, 현재 optional 과 동일 처리)
+   * @see src/utils/auth-mode.ts
+   */
+  AUTH_MODE?: string
+  /** AUTH_MODE 별칭 */
+  MS12_AUTH_MODE?: string
+
   /** JTT 숲 시트 GAS 웹앱 /exec URL — GET 보고서(/api/forest-gas-report)·POST 시트(/api/forest-gas-webhook) 프록시에 사용 */
   FOREST_GAS_WEBHOOK_URL?: string;
   
