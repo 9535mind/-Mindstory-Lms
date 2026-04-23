@@ -1,32 +1,46 @@
 /**
  * MS12 /app* — /api/auth/me + optional/demo 모드.
- * OAuth 직후(oauth_sync=1)만 레거시 경로 → /app 정리. 로그인 강제 리다이렉트 없음( mode=required 제외).
+ * OAuth 직후(oauth_sync=1)만 레거시 경로 → /app 정리. 셸은 AUTH_MODE와 무관하게 항상 앱(게스트/로그인) — required 는 API 쓰기에서만 제한.
  * 데모/optional: actor 없어도 앱 셸 유지, 로컬( ms12_demo_v1 )에 회의·메모·전사·요약 백업.
  */
 ;(function () {
-  var pageMode = 'optional'
+  var pageMode = 'demo'
 
   function isOpenAuthMode(m) {
-    return m === 'optional' || m === 'disabled' || m === 'demo'
+    return m === 'optional' || m === 'disabled' || m === 'demo' || m === 'required'
   }
 
-  var LS = 'ms12_demo_v1'
+  var activeStoreKey = 'ms12_demo_v1'
+  function actorKeyFromMe(j) {
+    if (j && j.data && j.data.id != null) return 'u:' + String(j.data.id)
+    if (j && j.actor && j.actor.type === 'user' && j.actor.id) return 'u:' + j.actor.id
+    if (j && j.actor && j.actor.id) return 'g:' + j.actor.id
+    return 'g:' + ensureLocalOnlyActorId()
+  }
+  function migrateLegacyStore() {
+    try {
+      var leg = localStorage.getItem('ms12_demo_v1')
+      if (!leg) return
+      if (localStorage.getItem(activeStoreKey)) return
+      localStorage.setItem(activeStoreKey, leg)
+    } catch (e) {}
+  }
   function readStore() {
     try {
-      var s = localStorage.getItem(LS)
-      if (!s) return { meetings: [], byId: {} }
+      var s = localStorage.getItem(activeStoreKey)
+      if (!s) return { meetings: [], byId: {}, lastWorkId: null, lastWorkAt: null }
       var o = JSON.parse(s)
-      if (!o || typeof o !== 'object') return { meetings: [], byId: {} }
+      if (!o || typeof o !== 'object') return { meetings: [], byId: {}, lastWorkId: null, lastWorkAt: null }
       if (!o.byId) o.byId = {}
       if (!o.meetings) o.meetings = []
       return o
     } catch (e) {
-      return { meetings: [], byId: {} }
+      return { meetings: [], byId: {}, lastWorkId: null, lastWorkAt: null }
     }
   }
   function writeStore(st) {
     try {
-      localStorage.setItem(LS, JSON.stringify(st))
+      localStorage.setItem(activeStoreKey, JSON.stringify(st))
     } catch (e) {}
   }
   function recordMeetingLocal(d) {
@@ -34,16 +48,19 @@
     try {
       var st = readStore()
       var prev = st.byId[d.id] || {}
+      var now = new Date().toISOString()
       st.byId[d.id] = {
         id: d.id,
         title: d.title != null ? d.title : prev.title,
         meetingCode: d.meetingCode != null ? d.meetingCode : prev.meetingCode,
         myRole: d.myRole != null ? d.myRole : prev.myRole,
-        updatedAt: new Date().toISOString(),
+        updatedAt: now,
         notes: prev.notes,
         transcript: prev.transcript,
         summary: prev.summary
       }
+      st.lastWorkId = d.id
+      st.lastWorkAt = now
       var ix = st.meetings.indexOf(d.id)
       if (ix >= 0) st.meetings.splice(ix, 1)
       st.meetings.unshift(d.id)
@@ -105,7 +122,11 @@
     st.byId[meetingId].notes = n ? n.value : (st.byId[meetingId].notes || '')
     st.byId[meetingId].transcript = tr ? tr.value : (st.byId[meetingId].transcript || '')
     st.byId[meetingId].summary = su ? su.value : (st.byId[meetingId].summary || '')
-    st.byId[meetingId].roomUpdatedAt = new Date().toISOString()
+    var t = new Date().toISOString()
+    st.byId[meetingId].roomUpdatedAt = t
+    st.byId[meetingId].updatedAt = t
+    st.lastWorkId = meetingId
+    st.lastWorkAt = t
     writeStore(st)
   }
   function loadRoomDraftToDom(meetingId) {
@@ -136,7 +157,7 @@
     if (attr) return attr
     var p = (typeof location !== 'undefined' && location.pathname) || ''
     p = p.replace(/\/$/, '') || '/'
-    if (p === '/app' || p === '/app/home') return 'home'
+    if (p === '/' || p === '/app' || p === '/app/home') return 'home'
     if (p === '/app/meeting/new') return 'meeting_new'
     if (p === '/app/join') return 'join'
     if (p === '/app/records') return 'records'
@@ -230,7 +251,7 @@
   function getPageAuthMode() {
     var b = document.body
     var m = b && b.getAttribute('data-ms12-auth')
-    return m || 'optional'
+    return m || 'demo'
   }
 
   function applyShell(phase, options) {
@@ -244,14 +265,14 @@
     if (g) g.style.display = phase === 'login' ? 'block' : 'none'
     if (a) a.style.display = phase === 'app' ? 'block' : 'none'
     if (hint) {
-      hint.style.display = phase === 'app' && options.isGuest ? 'block' : 'none'
+      hint.style.display = phase === 'app' ? 'block' : 'none'
     }
     var demoMode = !!options.demoMode
     var nameText = '사용자'
     if (options.user) {
       nameText = options.user.name || options.user.email || '사용자'
     } else if (options.isGuest) {
-      nameText = demoMode ? '체험 사용자' : '이용자'
+      nameText = demoMode ? '이용자' : '이용자'
     }
     var nodes = document.querySelectorAll('.js-ms12-user-name')
     for (var n = 0; n < nodes.length; n++) {
@@ -259,7 +280,7 @@
     }
     var sufs = document.querySelectorAll('.js-ms12-user-suffix')
     for (var s = 0; s < sufs.length; s++) {
-      sufs[s].textContent = options.isGuest ? (demoMode ? ' (데모 · 임시 저장)' : '으로 사용 중') : ' 님'
+      sufs[s].textContent = options.isGuest ? (demoMode ? ' (이 브라우저 저장)' : '으로 사용 중') : ' 님'
     }
     var badges = document.querySelectorAll('.js-ms12-badge')
     for (var b = 0; b < badges.length; b++) {
@@ -268,10 +289,10 @@
         badges[b].setAttribute('style', 'background:rgb(220 252 231);color:rgb(22 101 52)')
       } else if (options.isGuest) {
         if (demoMode) {
-          badges[b].textContent = '체험 모드'
+          badges[b].textContent = '누구나 이용'
           badges[b].setAttribute('style', 'background:rgb(224 231 255);color:rgb(55 48 163)')
         } else {
-          badges[b].textContent = '로그인 생략'
+          badges[b].textContent = '바로 이용'
           badges[b].setAttribute('style', 'background:rgb(254 243 199);color:rgb(120 53 15)')
         }
       } else {
@@ -279,13 +300,22 @@
         badges[b].setAttribute('style', 'background:rgb(220 252 231);color:rgb(22 101 52)')
       }
     }
+    var dets = document.querySelectorAll('.ms12-login-aside details')
+    var lix = 0
+    for (lix = 0; lix < dets.length; lix++) {
+      dets[lix].style.display = options.user ? 'none' : 'block'
+    }
+    var ll = document.querySelectorAll('.ms12-js-logout-line')
+    for (var lj = 0; lj < ll.length; lj++) {
+      ll[lj].style.display = options.user ? 'block' : 'none'
+    }
     var lout = document.querySelectorAll('[data-ms12-logout]')
     for (var lo = 0; lo < lout.length; lo++) {
       lout[lo].style.display = options.user ? 'inline-block' : 'none'
     }
     var lnk = document.querySelectorAll('[data-ms12-login-lnk]')
     for (var li = 0; li < lnk.length; li++) {
-      lnk[li].style.display = options.isGuest || !options.user ? 'inline-block' : 'none'
+      lnk[li].style.display = options.isGuest || !options.user ? 'inline' : 'none'
     }
   }
 
@@ -325,9 +355,31 @@
       })
       .join('')
   }
+  function initResumeBlock() {
+    var el = document.getElementById('ms12-resume')
+    if (!el) return
+    var st = readStore()
+    var id = st.lastWorkId
+    var row = id && st.byId && st.byId[id] ? st.byId[id] : null
+    if (!row || !row.id) {
+      el.style.display = 'none'
+      el.innerHTML = ''
+      return
+    }
+    el.style.display = 'block'
+    el.innerHTML =
+      '<span style="font-size:0.88rem">최근 작업</span><br/><strong>' +
+      (row.title || '회의') +
+      '</strong> · 코드 ' +
+      (row.meetingCode || '—') +
+      ' · <a class="text-indigo-600 underline font-medium" href="/app/meeting/' +
+      encodeURIComponent(row.id) +
+      '">이어서 열기</a>'
+  }
   function initHomeRecent() {
     var el = document.getElementById('ms12-home-recent')
     if (!el) return
+    initResumeBlock()
     fetch('/api/ms12/meetings/my?limit=5', { credentials: 'include' })
       .then(function (r) {
         return r.json()
@@ -338,9 +390,11 @@
           var loc = mergeMeetingRows([])
           if (loc.length) {
             el.innerHTML = renderRowLinksHtml(loc.slice(0, 5))
+            initResumeBlock()
             return
           }
           el.textContent = '서버 목록을 불러오지 못했습니다. 이 브라우저에만 저장한 회의가 있으면 아래에 나타납니다.'
+          initResumeBlock()
           return
         }
         for (var i = 0; i < apiRows.length; i++) {
@@ -351,9 +405,11 @@
         var rows = mergeMeetingRows(apiRows).slice(0, 5)
         if (!rows.length) {
           el.textContent = '최근 참여·개설한 회의가 아직 없습니다. 회의를 시작하거나 입장해 보세요.'
+          initResumeBlock()
           return
         }
         el.innerHTML = renderRowLinksHtml(rows)
+        initResumeBlock()
       })
       .catch(function () {
         var loc2 = mergeMeetingRows([])
@@ -362,6 +418,7 @@
         } else {
           el.textContent = '서버에 연결할 수 없을 때는 이 기기에 저장한 목록이 여기에 표시됩니다. 아직 로컬 기록이 없습니다.'
         }
+        initResumeBlock()
       })
   }
 
@@ -761,6 +818,10 @@
       authed = false
       authLog('me failed or offline; continue as local demo_guest', lid)
     }
+    if (openMode && !authed && j && j.success && j.data == null && (!j.actor || j.actor == null)) {
+      var lid3 = ensureLocalOnlyActorId()
+      j = Object.assign({}, j, { actor: { type: 'guest', id: lid3, source: 'local' } })
+    }
     var user = authed && j && j.data ? j.data : null
     var isGuest = openMode && !authed
     var demoMode = pageMode === 'demo'
@@ -775,28 +836,6 @@
       } catch (e) {}
     }
 
-    if (hadOauth && authed) {
-      var normPath =
-        (typeof location !== 'undefined' &&
-          location.pathname &&
-          location.pathname.replace(/\/$/, '')) ||
-        ''
-      if (!normPath) normPath = '/'
-      if (normPath === '/app/login' || normPath === '/app/meeting') {
-        authLog('post-oauth legacy', '→', '/app')
-        try {
-          var origin2 = window.location && window.location.origin
-          if (origin2 && origin2.indexOf('http') === 0) {
-            location.replace(origin2 + '/app' + (window.location.search || ''))
-          } else {
-            location.replace('/app' + (window.location.search || ''))
-          }
-        } catch (e) {
-          location.replace('/app' + (window.location.search || ''))
-        }
-        return
-      }
-    }
     if (hadOauth) {
       stripOauthParam()
     }
