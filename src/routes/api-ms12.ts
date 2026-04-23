@@ -216,7 +216,7 @@ api.post('/meetings', ms12Access, async (c) => {
             `INSERT INTO ms12_room_participants
              (meeting_id, participant_key, actor_type, user_id, guest_id, display_name, role, joined_at, left_at, attendance_status)
              VALUES (?, ?, 'guest', NULL, ?, ?, 'host', ?, NULL, 'in')`
-          ).bind(id, `g:${gid}`, `g:${gid}`, gid, dname, t),
+          ).bind(id, `g:${gid}`, gid, dname, t),
         ])
       }
       return c.json(
