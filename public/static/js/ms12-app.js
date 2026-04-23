@@ -277,7 +277,8 @@
     if (attr) return attr
     var p = (typeof location !== 'undefined' && location.pathname) || ''
     p = p.replace(/\/$/, '') || '/'
-    if (p === '/' || p === '/app' || p === '/app/home') return 'home'
+    if (p === '/' || p === '/app') return 'entry'
+    if (p === '/app/hub' || p === '/app/home') return 'hub'
     if (p === '/app/meeting/new') return 'meeting_new'
     if (p === '/app/join') return 'join'
     if (p === '/app/records') return 'records'
@@ -288,7 +289,7 @@
     if (p.indexOf('/app/meeting-record/') === 0) return 'meeting_record'
     if (p === '/app/meeting') return 'meeting'
     if (p.indexOf('/app/meeting/') === 0) return 'meeting_room'
-    return 'home'
+    return 'hub'
   }
 
   function routePath() {
@@ -313,13 +314,19 @@
     var next = new URLSearchParams(window.location.search || '').get('next')
     if (!next) return
     if (next.indexOf('..') >= 0 || !next.startsWith('/')) return
-    var q = 'next=' + encodeURIComponent(next)
     var list = document.querySelectorAll('a[href^="/api/auth/kakao/login"],a[href^="/api/auth/google/login"]')
     for (var i = 0; i < list.length; i++) {
       var el = list[i]
       var h = el.getAttribute('href') || ''
-      if (h.indexOf('next=') >= 0) continue
-      el.setAttribute('href', h + (h.indexOf('?') >= 0 ? '&' : '?') + q)
+      try {
+        var u = new URL(h, typeof location !== 'undefined' ? location.origin : 'https://localhost')
+        u.searchParams.set('next', next)
+        el.setAttribute('href', u.pathname + u.search)
+      } catch (e) {
+        if (h.indexOf('next=') < 0) {
+          el.setAttribute('href', h + (h.indexOf('?') >= 0 ? '&' : '?') + 'next=' + encodeURIComponent(next))
+        }
+      }
     }
   }
 
@@ -2360,7 +2367,7 @@
         })
         .then(function (o) {
           if (o && o.j && o.j.success) {
-            var go = sanitizeAppNext() || '/app'
+            var go = sanitizeAppNext() || '/app/meeting'
             try {
               if (o.j.data && o.j.data.user) {
                 localStorage.setItem('user', JSON.stringify(o.j.data.user))
@@ -2649,7 +2656,15 @@
 
   function initAuthedPage() {
     var route = getRoute()
-    if (route === 'home') {
+    if (route === 'entry') {
+      if (_lastIsAuthed) {
+        try {
+          window.location.replace('/app/meeting')
+        } catch (e) {}
+        return
+      }
+    }
+    if (route === 'hub') {
       initHomeRecent()
       initHomeDashboard()
     }

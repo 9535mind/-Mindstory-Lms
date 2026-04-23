@@ -85,7 +85,7 @@ export function redirectAfterOAuthOrDefault(c: Context) {
     ok = false
   }
   if (!ok) {
-    targetUrl = `${origin}/app?oauth_sync=1`
+    targetUrl = `${origin}/app/meeting?oauth_sync=1`
   }
 
   c.header('Cache-Control', 'no-store, must-revalidate, private')
