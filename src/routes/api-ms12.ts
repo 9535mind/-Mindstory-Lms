@@ -11,6 +11,7 @@ import { successResponse, errorResponse, getCurrentUser } from '../utils/helpers
 import type { AppActor } from '../utils/actor'
 import { participantKey } from '../utils/actor'
 import { getAuthMode } from '../utils/auth-mode'
+import { generateTextGeminiOrOpenAI } from '../utils/ai-text-generation'
 
 type Ctx = Context<{ Bindings: Bindings; Variables: { actor: AppActor } }>
 
@@ -86,6 +87,49 @@ async function requireRoomParticipant(
   if (row) return
   throw new HTTPException(403, { message: '이 회의에 입장한 참석자만 볼 수 있습니다.' })
 }
+
+/** 내가 참가한 회의의 미완료(open) 실행 항목 — 시작 화면 대시보드용 */
+api.get('/my/open-action-items', ms12Access, async (c) => {
+  const actor = c.get('actor')
+  const k = participantKey(actor)
+  const limit = Math.min(40, Math.max(1, parseInt(c.req.query('limit') || '20', 10) || 20))
+  try {
+    const res = await c.env.DB.prepare(
+      `SELECT ai.id, ai.meeting_id, ai.title, ai.assignee, ai.due_at, ai.status,
+              r.title AS room_title, r.meeting_code AS room_code
+       FROM ms12_action_items ai
+       INNER JOIN ms12_room_participants p
+         ON p.meeting_id = ai.meeting_id AND p.participant_key = ? AND p.left_at IS NULL
+       INNER JOIN ms12_rooms r ON r.id = ai.meeting_id
+       WHERE ai.status = 'open'
+       ORDER BY (ai.due_at IS NULL), ai.due_at ASC, ai.id DESC
+       LIMIT ?`
+    )
+      .bind(k, limit)
+      .all()
+    const items = (res.results || []).map((row: Record<string, unknown>) => ({
+      id: row.id,
+      meetingId: String(row.meeting_id),
+      title: row.title,
+      assignee: row.assignee,
+      dueAt: row.due_at,
+      status: row.status,
+      roomTitle: row.room_title,
+      roomCode: row.room_code,
+    }))
+    return c.json(successResponse({ items }))
+  } catch (e) {
+    const m = e instanceof Error ? e.message : String(e)
+    if (/no such table|no such column/i.test(m)) {
+      return c.json(
+        errorResponse('실행 항목 테이블이 없습니다. D1 마이그레이션(0076 등)을 확인하세요.'),
+        503,
+      )
+    }
+    console.error('[ms12] my/open-action-items', m.slice(0, 200))
+    return c.json(errorResponse('목록을 불러올 수 없습니다.'), 500)
+  }
+})
 
 api.get('/health', (c) =>
   c.json({
@@ -172,8 +216,11 @@ api.get('/meetings/:id', ms12Access, async (c) => {
   const meetingId = c.req.param('id')
   await requireRoomParticipant(c, meetingId, actor)
   const r = await c.env.DB.prepare(
-    `SELECT id, host_actor_type, host_user_id, host_guest_id, title, meeting_code, status, created_at, updated_at
-     FROM ms12_rooms WHERE id = ?`
+    `SELECT r.id, r.host_actor_type, r.host_user_id, r.host_guest_id, r.title, r.meeting_code, r.status, r.created_at, r.updated_at,
+            r.linked_announcement_id, a.title AS ann_title, a.source_url AS ann_source_url, a.organization AS ann_organization
+     FROM ms12_rooms r
+     LEFT JOIN ms12_announcements a ON a.id = r.linked_announcement_id
+     WHERE r.id = ?`
   )
     .bind(meetingId)
     .first<Record<string, unknown>>()
@@ -191,21 +238,44 @@ api.get('/meetings/:id', ms12Access, async (c) => {
       status: r.status,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
+      linkedAnnouncementId: r.linked_announcement_id || null,
+      linkedAnnouncement:
+        r.linked_announcement_id != null
+          ? {
+              id: String(r.linked_announcement_id),
+              title: r.ann_title,
+              organization: r.ann_organization,
+              sourceUrl: r.ann_source_url,
+            }
+          : null,
     })
   )
 })
 
 api.post('/meetings', ms12Access, async (c) => {
   const actor = c.get('actor')
-  let body: { title?: string; displayName?: string } = {}
+  let body: { title?: string; displayName?: string; announcementId?: string } = {}
   try {
-    body = (await c.req.json()) as { title?: string; displayName?: string }
+    body = (await c.req.json()) as { title?: string; displayName?: string; announcementId?: string }
   } catch {
     return c.json(errorResponse('JSON 본문이 필요합니다.'), 400)
   }
   const title = String(body.title || '').trim()
   if (!title) {
     return c.json(errorResponse('회의 제목을 입력하세요.'), 400)
+  }
+  let annLink: string | null = null
+  if (body.announcementId) {
+    const raw = String(body.announcementId).trim()
+    if (raw) {
+      const ar = await c.env.DB.prepare(`SELECT 1 AS o FROM ms12_announcements WHERE id = ?`)
+        .bind(raw)
+        .first()
+      if (!ar) {
+        return c.json(errorResponse('연결한 공고를 찾을 수 없습니다.'), 400)
+      }
+      annLink = raw
+    }
   }
   const dname = await displayNameFor(actor, body, c)
   const t = nowIso()
@@ -217,9 +287,9 @@ api.post('/meetings', ms12Access, async (c) => {
         const uid = parseInt(actor.id, 10)
         await c.env.DB.batch([
           c.env.DB.prepare(
-            `INSERT INTO ms12_rooms (id, host_actor_type, host_user_id, host_guest_id, title, meeting_code, status, created_at, updated_at)
-             VALUES (?, 'user', ?, NULL, ?, ?, 'open', ?, ?)`
-          ).bind(id, uid, title, code, t, t),
+            `INSERT INTO ms12_rooms (id, host_actor_type, host_user_id, host_guest_id, title, meeting_code, status, created_at, updated_at, linked_announcement_id)
+             VALUES (?, 'user', ?, NULL, ?, ?, 'open', ?, ?, ?)`
+          ).bind(id, uid, title, code, t, t, annLink),
           c.env.DB.prepare(
             `INSERT INTO ms12_room_participants
              (meeting_id, participant_key, actor_type, user_id, guest_id, display_name, role, joined_at, left_at, attendance_status)
@@ -230,9 +300,9 @@ api.post('/meetings', ms12Access, async (c) => {
         const gid = actor.id
         await c.env.DB.batch([
           c.env.DB.prepare(
-            `INSERT INTO ms12_rooms (id, host_actor_type, host_user_id, host_guest_id, title, meeting_code, status, created_at, updated_at)
-             VALUES (?, 'guest', NULL, ?, ?, ?, 'open', ?, ?)`
-          ).bind(id, gid, title, code, t, t),
+            `INSERT INTO ms12_rooms (id, host_actor_type, host_user_id, host_guest_id, title, meeting_code, status, created_at, updated_at, linked_announcement_id)
+             VALUES (?, 'guest', NULL, ?, ?, ?, 'open', ?, ?, ?)`
+          ).bind(id, gid, title, code, t, t, annLink),
           c.env.DB.prepare(
             `INSERT INTO ms12_room_participants
              (meeting_id, participant_key, actor_type, user_id, guest_id, display_name, role, joined_at, left_at, attendance_status)
@@ -248,6 +318,7 @@ api.post('/meetings', ms12Access, async (c) => {
           status: 'open',
           createdAt: t,
           role: 'host',
+          linkedAnnouncementId: annLink,
         })
       )
     } catch (e) {
@@ -350,6 +421,453 @@ api.post('/meetings/join', ms12Access, async (c) => {
       role,
     })
   )
+})
+
+const CONTEXT_MAX = 14_000
+
+function clipContext(s: string): string {
+  const t = (s || '').trim()
+  if (t.length <= CONTEXT_MAX) return t
+  return t.slice(0, CONTEXT_MAX) + '\n…(이하 잘림)'
+}
+
+api.get('/meetings/:id/action-items', ms12Access, async (c) => {
+  const actor = c.get('actor')
+  const meetingId = c.req.param('id')
+  await requireRoomParticipant(c, meetingId, actor)
+  let rows: Array<Record<string, unknown>> = []
+  try {
+    const res = await c.env.DB.prepare(
+      `SELECT id, meeting_id, title, task_detail, assignee, due_at, status, result_note, priority, item_category, created_at, updated_at
+       FROM ms12_action_items
+       WHERE meeting_id = ?
+       ORDER BY
+         CASE WHEN status = 'open' THEN 0 ELSE 1 END,
+         id DESC`
+    )
+      .bind(meetingId)
+      .all()
+    rows = (res.results || []) as Array<Record<string, unknown>>
+  } catch (e) {
+    const m = e instanceof Error ? e.message : String(e)
+    if (/no such table|no such column/i.test(m)) {
+      return c.json(
+        errorResponse('실행 항목 테이블이 없습니다. D1에 마이그레이션 0076을 적용해 주세요.'),
+        503,
+      )
+    }
+    console.error('[ms12] action-items list', m.slice(0, 200))
+    return c.json(errorResponse('실행 항목을 불러올 수 없습니다.'), 500)
+  }
+  const list = rows.map((row) => ({
+    id: row.id,
+    meetingId: String(row.meeting_id),
+    title: row.title,
+    taskDetail: row.task_detail,
+    assignee: row.assignee,
+    dueAt: row.due_at,
+    status: row.status,
+    resultNote: row.result_note,
+    priority: row.priority,
+    itemCategory: row.item_category,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }))
+  return c.json(successResponse({ meetingId, items: list }))
+})
+
+api.post('/meetings/:id/action-items', ms12Access, async (c) => {
+  const actor = c.get('actor')
+  const meetingId = c.req.param('id')
+  await requireRoomParticipant(c, meetingId, actor)
+  let body: {
+    title?: string
+    taskDetail?: string
+    assignee?: string
+    dueAt?: string
+    priority?: string
+    itemCategory?: string
+  } = {}
+  try {
+    body = (await c.req.json()) as typeof body
+  } catch {
+    return c.json(errorResponse('JSON 본문이 필요합니다.'), 400)
+  }
+  const title = String(body.title || '').trim()
+  if (!title) {
+    return c.json(errorResponse('제목을 입력하세요.'), 400)
+  }
+  const taskDetail = String(body.taskDetail || '').trim() || null
+  const assignee = String(body.assignee || '').trim() || null
+  const dueAt = String(body.dueAt || '').trim() || null
+  const pr = (String(body.priority || 'normal').trim() || 'normal').slice(0, 20)
+  const ic = (String(body.itemCategory || 'required').trim() || 'required').slice(0, 20)
+  const t = nowIso()
+  const byKey = participantKey(actor)
+  try {
+    const r = await c.env.DB.prepare(
+      `INSERT INTO ms12_action_items (meeting_id, title, task_detail, assignee, due_at, status, priority, item_category, created_by_key, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?) RETURNING id`
+    )
+      .bind(meetingId, title, taskDetail, assignee, dueAt, pr, ic, byKey, t, t)
+      .first<{ id: number }>()
+    if (!r?.id) {
+      return c.json(errorResponse('저장에 실패했습니다.'), 500)
+    }
+    await c.env.DB.prepare(`UPDATE ms12_rooms SET updated_at = ? WHERE id = ?`).bind(t, meetingId).run()
+    return c.json(
+      successResponse({
+        id: r.id,
+        meetingId,
+        title,
+        taskDetail: taskDetail || '',
+        assignee: assignee || '',
+        dueAt: dueAt || '',
+        status: 'open',
+        priority: pr,
+        itemCategory: ic,
+        createdAt: t,
+        updatedAt: t,
+      }),
+    )
+  } catch (e) {
+    const m = e instanceof Error ? e.message : String(e)
+    if (/no such table|no such column/i.test(m)) {
+      return c.json(
+        errorResponse(
+          '실행 항목 스키마를 확인하세요. D1에 0076·0080 마이그레이션을 적용해 주세요.',
+        ),
+        503,
+      )
+    }
+    console.error('[ms12] action-items create', e)
+    return c.json(errorResponse('저장에 실패했습니다.'), 500)
+  }
+})
+
+api.patch('/meetings/:id/action-items/:itemId', ms12Access, async (c) => {
+  const actor = c.get('actor')
+  const meetingId = c.req.param('id')
+  const itemId = parseInt(c.req.param('itemId'), 10)
+  if (!itemId) {
+    return c.json(errorResponse('항목 id가 올바르지 않습니다.'), 400)
+  }
+  await requireRoomParticipant(c, meetingId, actor)
+  let body: {
+    status?: string
+    resultNote?: string | null
+    taskDetail?: string | null
+    priority?: string
+    itemCategory?: string
+  } = {}
+  try {
+    body = (await c.req.json()) as typeof body
+  } catch {
+    return c.json(errorResponse('JSON 본문이 필요합니다.'), 400)
+  }
+  const hasStatus = body.status != null && String(body.status).trim() !== ''
+  const hasResult = 'resultNote' in body
+  const hasTask = 'taskDetail' in body
+  const hasPr = body.priority != null && String(body.priority).trim() !== ''
+  const hasIc = body.itemCategory != null && String(body.itemCategory).trim() !== ''
+  if (!hasStatus && !hasResult && !hasTask && !hasPr && !hasIc) {
+    return c.json(errorResponse('갱신할 필드를 지정하세요.'), 400)
+  }
+  if (hasStatus) {
+    const st = String(body.status || '').trim()
+    if (st !== 'open' && st !== 'done') {
+      return c.json(errorResponse('status는 open 또는 done이어야 합니다.'), 400)
+    }
+  }
+  const t = nowIso()
+  try {
+    const setParts: string[] = []
+    const bindVals: (string | number | null)[] = []
+    if (hasStatus) {
+      setParts.push('status = ?')
+      bindVals.push(String(body.status).trim())
+    }
+    if (hasResult) {
+      setParts.push('result_note = ?')
+      const rn = body.resultNote
+      bindVals.push(rn === null || rn === undefined ? null : String(rn).slice(0, 5000))
+    }
+    if (hasTask) {
+      setParts.push('task_detail = ?')
+      const td = body.taskDetail
+      bindVals.push(td === null || td === undefined ? null : String(td).slice(0, 8000))
+    }
+    if (hasPr) {
+      setParts.push('priority = ?')
+      bindVals.push(String(body.priority).trim().slice(0, 20))
+    }
+    if (hasIc) {
+      setParts.push('item_category = ?')
+      bindVals.push(String(body.itemCategory).trim().slice(0, 20))
+    }
+    setParts.push('updated_at = ?')
+    bindVals.push(t, itemId, meetingId)
+    const r = await c.env.DB.prepare(
+      `UPDATE ms12_action_items SET ${setParts.join(', ')} WHERE id = ? AND meeting_id = ?`
+    )
+      .bind(...bindVals)
+      .run()
+    if (r.meta.changes === 0) {
+      return c.json(errorResponse('해당 항목을 찾을 수 없습니다.'), 404)
+    }
+    await c.env.DB.prepare(`UPDATE ms12_rooms SET updated_at = ? WHERE id = ?`).bind(t, meetingId).run()
+    return c.json(
+      successResponse({
+        id: itemId,
+        meetingId,
+        status: hasStatus ? String(body.status).trim() : undefined,
+        resultNote: hasResult ? body.resultNote : undefined,
+        updatedAt: t,
+      }),
+    )
+  } catch (e) {
+    const m = e instanceof Error ? e.message : String(e)
+    if (/no such table|no such column/i.test(m)) {
+      return c.json(
+        errorResponse('실행 항목 테이블이 없습니다. D1에 마이그레이션 0076을 적용해 주세요.'),
+        503,
+      )
+    }
+    console.error('[ms12] action-items patch', e)
+    return c.json(errorResponse('갱신에 실패했습니다.'), 500)
+  }
+})
+
+api.post('/meetings/:id/ai-qa', ms12Access, async (c) => {
+  const actor = c.get('actor')
+  const meetingId = c.req.param('id')
+  await requireRoomParticipant(c, meetingId, actor)
+  let body: { question?: string; notes?: string; transcript?: string; summary?: string } = {}
+  try {
+    body = (await c.req.json()) as {
+      question?: string
+      notes?: string
+      transcript?: string
+      summary?: string
+    }
+  } catch {
+    return c.json(errorResponse('JSON 본문이 필요합니다.'), 400)
+  }
+  const question = String(body.question || '').trim()
+  if (!question) {
+    return c.json(errorResponse('질문을 입력하세요.'), 400)
+  }
+  if (question.length > 2000) {
+    return c.json(errorResponse('질문이 너무 깁니다. (2000자 이하)'), 400)
+  }
+  const notes = clipContext(String(body.notes || ''))
+  const transcript = clipContext(String(body.transcript || ''))
+  const summary = clipContext(String(body.summary || ''))
+  const contextBlock = [
+    notes && `## 회의 메모\n${notes}`,
+    transcript && `## 전사\n${transcript}`,
+    summary && `## 요약\n${summary}`,
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+  if (!contextBlock.trim()) {
+    return c.json(errorResponse('참고할 메모·전사·요약이 비어 있습니다. 먼저 내용을 입력하세요.'), 400)
+  }
+  const system = `당신은 회의 진행을 돕는 어시스턴트입니다. 아래는 한 회의의 메모·전사·요약입니다. 사용자의 질문에 한국어로 간결하고 사실에 충실하게 답하세요. 제공된 텍스트에 없는 내용은 추측하지 말고, 근거가 없다고 말하세요.`
+  const user = `${contextBlock}\n\n---\n## 질문\n${question}`
+  try {
+    const answer = await generateTextGeminiOrOpenAI(c.env, user, system)
+    return c.json(successResponse({ meetingId, answer: answer.trim() }))
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    if (msg === 'NO_AI_KEY') {
+      return c.json(
+        errorResponse(
+          'AI 키가 없습니다. Cloudflare에 GEMINI_API_KEY 또는 OPENAI_API_KEY를 설정해 주세요.',
+        ),
+        503,
+      )
+    }
+    console.error('[ms12] ai-qa', msg.slice(0, 200))
+    return c.json(errorResponse('AI 응답을 만들지 못했습니다.'), 502)
+  }
+})
+
+/** 메모·전사 진행에 맞춰 3단 요약(기본/실행/보고) 제안 */
+api.post('/meetings/:id/auto-summary', ms12Access, async (c) => {
+  const actor = c.get('actor')
+  const meetingId = c.req.param('id')
+  await requireRoomParticipant(c, meetingId, actor)
+  let body: {
+    notes?: string
+    transcript?: string
+    summaryBasic?: string
+    summaryAction?: string
+    summaryReport?: string
+  } = {}
+  try {
+    body = (await c.req.json()) as typeof body
+  } catch {
+    return c.json(errorResponse('JSON 본문이 필요합니다.'), 400)
+  }
+  const notes = clipContext(String(body.notes || ''))
+  const transcript = clipContext(String(body.transcript || ''))
+  if (![notes, transcript].some((x) => x.trim().length > 0)) {
+    return c.json(errorResponse('메모·전사 중 최소 하나는 보내 주세요.'), 400)
+  }
+  const prev = [body.summaryBasic, body.summaryAction, body.summaryReport]
+    .map((x) => String(x || '').trim())
+    .filter(Boolean)
+  const block = [
+    notes && `## 현재 메모\n${notes}`,
+    transcript && `## 현재 전사\n${transcript}`,
+    prev.length
+      ? `## 이전에 적어 둔 요약(참고·갱신)\n${prev.join('\n---\n')}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+  const system = `You are a Korean meeting assistant. Read the input and output ONLY a single JSON object with exactly these string keys, no markdown fences:
+{"summaryBasic":"(핵심 3~6문장, 전체 흐름)","summaryAction":"(할 일·책임·일정이 드러나면 불릿, 없으면 항목 1~3개 '검토 필요' 등)","summaryReport":"(기관·대외 보고 톤, 성과·과제 3~5문장)"}
+If information is missing, use short placeholders like [미정] in Korean. Be concise.`
+  try {
+    const raw = await generateTextGeminiOrOpenAI(c.env, block, system)
+    const t = raw.trim()
+    const m = t.match(/\{[\s\S]*\}/)
+    const j = m ? (JSON.parse(m[0]) as Record<string, unknown>) : null
+    if (j && typeof j.summaryBasic === 'string') {
+      return c.json(
+        successResponse({
+          meetingId,
+          summaryBasic: String(j.summaryBasic).trim(),
+          summaryAction: String(j.summaryAction != null ? j.summaryAction : '').trim(),
+          summaryReport: String(j.summaryReport != null ? j.summaryReport : '').trim(),
+          source: 'json',
+        }),
+      )
+    }
+    return c.json(
+      successResponse({
+        meetingId,
+        summaryBasic: t.slice(0, 2000),
+        summaryAction: '',
+        summaryReport: '',
+        source: 'fallback',
+      }),
+    )
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    if (msg === 'NO_AI_KEY') {
+      return c.json(
+        errorResponse(
+          'AI 키가 없습니다. Cloudflare에 GEMINI_API_KEY 또는 OPENAI_API_KEY를 설정하세요.',
+        ),
+        503,
+      )
+    }
+    console.error('[ms12] auto-summary', msg.slice(0, 200))
+    return c.json(errorResponse('자동 요약을 만들지 못했습니다.'), 502)
+  }
+})
+
+api.post('/meetings/:id/report-draft', ms12Access, async (c) => {
+  const actor = c.get('actor')
+  const meetingId = c.req.param('id')
+  await requireRoomParticipant(c, meetingId, actor)
+  let body: { notes?: string; transcript?: string; summary?: string; kind?: string } = {}
+  try {
+    body = (await c.req.json()) as typeof body
+  } catch {
+    return c.json(errorResponse('JSON 본문이 필요합니다.'), 400)
+  }
+  const notes = clipContext(String(body.notes || ''))
+  const transcript = clipContext(String(body.transcript || ''))
+  const summary = clipContext(String(body.summary || ''))
+  if (![notes, transcript, summary].some((x) => x.trim().length > 0)) {
+    return c.json(errorResponse('메모·전사·요약을 요청 본문에 넣으세요.'), 400)
+  }
+  const kindRaw = String(body.kind || 'internal').trim()
+  const kindLabel: Record<string, string> = {
+    internal: '내부 운영·실적 보고서',
+    external: '대외(상급기관·수요기관 제출용) 보고서',
+    action_plan: '실행계획서',
+    result_report: '결과보고서',
+    proposal: '사업·프로그램 제안서',
+  }
+  const kind = kindLabel[kindRaw] || kindLabel.internal
+  const user = [notes && `## 메모\n${notes}`, transcript && `## 전사\n${transcript}`, summary && `## 요약\n${summary}`]
+    .filter(Boolean)
+    .join('\n\n')
+  const system =
+    kindRaw === 'action_plan'
+      ? `당신은 기관의 실행계획서 초안을 작성합니다. 한국어 마크다운으로 목표·추진 일정·담당·예산(알 수 있을 때)·리스크를 정리하되, 제시된 회의 텍스트에 없는 수치는 [확인 필요]로 표시하세요.`
+      : kindRaw === 'result_report'
+        ? `당신은 기관의 결과보고서 초안을 작성합니다. 한국어 마크다운으로 추진 배경·실적·성과·지표·향후 과제를 서술하되, 근거 없는 수치·인용은 쓰지 말고 [확인 필요]로 표시하세요.`
+        : kindRaw === 'proposal'
+          ? `당신은 기관의 사업·프로그램 제안서 초안을 작성합니다. 한국어 마크다운으로 필요성·목표·추진 방안·기대 효과를 정리하되, 제시된 회의 내용만 근거로 삼으세요.`
+          : `당신은 기관의 ${kind} 초안을 작성합니다. 한국어 마크다운으로 표준 목차(배경, 추진현황, 성과, 향후계획 등)에 맞춰 서술하되, 제시된 회의 정보만 근거로 삼고 수치·실적·명칭이 없는 내용은 추정하지 말고 [확인 필요]로 표시하세요.`
+  try {
+    const draft = await generateTextGeminiOrOpenAI(c.env, user, system)
+    return c.json(successResponse({ meetingId, kind, draft: draft.trim() }))
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    if (msg === 'NO_AI_KEY') {
+      return c.json(
+        errorResponse('AI 키가 없습니다. Cloudflare에 GEMINI_API_KEY 또는 OPENAI_API_KEY를 설정해 주세요.'),
+        503,
+      )
+    }
+    console.error('[ms12] report-draft', msg.slice(0, 200))
+    return c.json(errorResponse('보고서 초안을 만들지 못했습니다.'), 502)
+  }
+})
+
+api.post('/meetings/:id/content-draft', ms12Access, async (c) => {
+  const actor = c.get('actor')
+  const meetingId = c.req.param('id')
+  await requireRoomParticipant(c, meetingId, actor)
+  let body: { notes?: string; transcript?: string; summary?: string; channel?: string } = {}
+  try {
+    body = (await c.req.json()) as typeof body
+  } catch {
+    return c.json(errorResponse('JSON 본문이 필요합니다.'), 400)
+  }
+  const notes = clipContext(String(body.notes || ''))
+  const transcript = clipContext(String(body.transcript || ''))
+  const summary = clipContext(String(body.summary || ''))
+  if (![notes, transcript, summary].some((x) => x.trim().length > 0)) {
+    return c.json(errorResponse('메모·전사·요약을 요청 본문에 넣으세요.'), 400)
+  }
+  const chRaw = String(body.channel || 'blog').trim()
+  const channelLabel: Record<string, string> = {
+    press: '보도자료',
+    blog: '블로그·뉴스형 홍보 글',
+    social: 'SNS·짧은 홍보 카드',
+  }
+  const channel = channelLabel[chRaw] || channelLabel.blog
+  const user = [notes && `## 메모\n${notes}`, transcript && `## 전사\n${transcript}`, summary && `## 요약\n${summary}`]
+    .filter(Boolean)
+    .join('\n\n')
+  const system =
+    chRaw === 'press'
+      ? `다음은 기관이 진행한 회의/사업과 관련된 정보입니다. 보도자료 톤으로 리드·핵심·문의 3~4문단, 800~1500자 내외 한국어 초안을 쓰세요.`
+      : chRaw === 'social'
+        ? `다음 정보를 바탕으로 SNS·짧은 홍보용 문구(해시태그는 선택) 한국어 초안을 400자 내외로 쓰세요.`
+        : `다음은 기관이 진행한 회의/사업과 관련된 정보입니다. ${channel} 톤으로 800~1500자 내외 한국어 초안을 쓰세요. 사실에 없는 수치·인용은 쓰지 말고, 전체를 긍정적이고 명확한 톤으로 정리하세요.`
+  try {
+    const draft = await generateTextGeminiOrOpenAI(c.env, user, system)
+    return c.json(successResponse({ meetingId, channel: chRaw, label: channel, draft: draft.trim() }))
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    if (msg === 'NO_AI_KEY') {
+      return c.json(
+        errorResponse('AI 키가 없습니다. Cloudflare에 GEMINI_API_KEY 또는 OPENAI_API_KEY를 설정해 주세요.'),
+        503,
+      )
+    }
+    console.error('[ms12] content-draft', msg.slice(0, 200))
+    return c.json(errorResponse('콘텐츠 초안을 만들지 못했습니다.'), 502)
+  }
 })
 
 export default api

@@ -14,6 +14,9 @@ import auth from './routes/auth'
 import authKakao from './routes/auth-kakao'
 import authGoogle from './routes/auth-google'
 import apiMs12 from './routes/api-ms12'
+import apiMs12Documents from './routes/api-ms12-documents'
+import apiMs12MeetingRecords from './routes/api-ms12-meeting-records'
+import apiMs12Announcements from './routes/api-ms12-announcements'
 import ms12Pages from './routes/ms12-pages'
 import { FOOTER_HTML_REVISION } from './utils/site-footer-legal'
 import {
@@ -116,7 +119,12 @@ app.route('/api/auth/kakao', authKakao)
 /** Kakao 콘솔·KOE006: `https://ms12.org/auth/kakao/callback` — /api 가 아닌 짧은 경로 */
 app.route('/auth/kakao', authKakao)
 app.route('/api/auth/google', authGoogle)
-app.route('/api/ms12', apiMs12)
+const apiMs12All = new Hono<{ Bindings: Bindings }>()
+apiMs12All.route('/', apiMs12)
+apiMs12All.route('/', apiMs12Documents)
+apiMs12All.route('/', apiMs12MeetingRecords)
+apiMs12All.route('/', apiMs12Announcements)
+app.route('/api/ms12', apiMs12All)
 
 // 공통 헬스(배포 확인) — HTML 라우트보다 먼저 등록, 엣지·브라우저 캐시로 HTML이 섞이지 않게
 app.get('/api/health', (c) => {
