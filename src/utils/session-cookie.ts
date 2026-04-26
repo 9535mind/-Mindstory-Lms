@@ -1,5 +1,6 @@
 /**
  * HttpOnly 세션 쿠키 — MS12 (ms12.org, ms12.pages.dev)
+ * OAuth(카카오 등) 302 top-level + 크로스 사이트 탐색에서도 저장되게 하려면 SameSite=None; Secure(HTTPS)일 때만.(로컬 http 는 Lax)
  */
 import { Context } from 'hono'
 import { deleteCookie, setCookie } from 'hono/cookie'
@@ -29,11 +30,13 @@ export function sessionCookieDomain(_c: Context): string | undefined {
 export function applySessionCookie(c: Context, token: string, maxAgeSeconds: number) {
   const domain = sessionCookieDomain(c)
   const secure = isSecureCookieRequest(c)
+  /** SameSite=None 은 Secure 필수 — 로컬 http 에서는 Lax */
+  const sameSite = secure ? ('None' as const) : ('Lax' as const)
   setCookie(c, 'session_token', token, {
     path: '/',
     httpOnly: true,
     secure,
-    sameSite: 'Lax',
+    sameSite,
     maxAge: Math.floor(maxAgeSeconds),
     ...(domain ? { domain } : {}),
   })
@@ -41,8 +44,11 @@ export function applySessionCookie(c: Context, token: string, maxAgeSeconds: num
 
 export function clearSessionCookie(c: Context) {
   const secure = isSecureCookieRequest(c)
-  const base = { path: '/', secure, sameSite: 'Lax' as const }
-  deleteCookie(c, 'session_token', base)
-  deleteCookie(c, 'session_token', { ...base, domain: 'ms12.org' })
-  deleteCookie(c, 'session_token', { ...base, domain: 'ms12.pages.dev' })
+  const sameSiteLax = { path: '/', secure, sameSite: 'Lax' as const }
+  const sameSiteNone = { path: '/', secure, sameSite: 'None' as const }
+  for (const base of [sameSiteLax, sameSiteNone]) {
+    deleteCookie(c, 'session_token', base)
+    deleteCookie(c, 'session_token', { ...base, domain: 'ms12.org' })
+    deleteCookie(c, 'session_token', { ...base, domain: 'ms12.pages.dev' })
+  }
 }
