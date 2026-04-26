@@ -1026,6 +1026,84 @@
         }
     }
 
+    /**
+     * 구글 시트 1행 헤더(SPRT(봄)…, 반이름, 요청ID, 본데이터 등)와 동일한 키로 값을 병기.
+     * GAS가 컬럼명·JSON 키 매핑하거나 본데이터 열을 파싱할 때 사용 — scores·class_name 등 기존 필드는 유지.
+     */
+    function applyForestKoreanSheetHeaderAliases_(p) {
+        if (!p || typeof p !== 'object') return;
+        const s = p.scores && typeof p.scores === 'object' ? p.scores : {};
+        const sp = Number(s.SPRT) || 0;
+        const su = Number(s.SUMT) || 0;
+        const au = Number(s.AUTT) || 0;
+        const wi = Number(s.WINT) || 0;
+        if (typeof SCHEMA !== 'undefined' && SCHEMA.temperamentRankLabel) {
+            const L = SCHEMA.temperamentRankLabel;
+            p[L.SPRT] = sp;
+            p[L.SUMT] = su;
+            p[L.AUTT] = au;
+            p[L.WINT] = wi;
+        }
+        p['SPRT(봄)'] = sp;
+        p['SUMT(여름)'] = su;
+        p['AUTT(가을)'] = au;
+        p['WINT(겨울)'] = wi;
+        p['SPRT(봄) 🌸'] = sp;
+        p['SUMT(여름) 🍃'] = su;
+        p['SUMT(여름) 🎋'] = su;
+        p['SUMT(여름) 🌵'] = su;
+        p['AUTT(가을) 🍂'] = au;
+        p['AUTT(가을) 🌼'] = au;
+        p['WINT(겨울) ❄️'] = wi;
+        p['반이름'] = String(p.class_name != null ? p.class_name : '').trim();
+        const fac = String(p.facilitator || '').trim();
+        const agl = String(p.age_group || '').trim();
+        const yj = [agl, fac].filter(function (x) {
+            return x;
+        }).join(' / ');
+        p['유아/원장자'] = yj;
+        p['교장/원장자'] = yj;
+        const loc = String(p.location != null ? p.location : '').trim();
+        p['해솔가원'] = loc;
+        p['해솔가인원'] = loc;
+        var pc = p.participant_count;
+        var partNum = pc !== undefined && pc !== null && String(pc) !== '' ? Number(pc) : NaN;
+        p['참가인원'] = !Number.isNaN(partNum) && partNum > 0 ? partNum : '';
+        p['(클라)'] = !Number.isNaN(partNum) && partNum > 0 ? String(partNum) : '미계산';
+        var tcl = String(p.submitted_at_iso || '').trim();
+        if (!tcl) {
+            try {
+                tcl = new Date().toISOString();
+            } catch (_) {
+                tcl = '';
+            }
+        }
+        p['시간(클라이언트)'] = tcl;
+        p['클라'] = p['(클라)'];
+        p['요청ID'] = String(p.requestId || '').trim();
+        try {
+            var snap = {
+                scores: s,
+                rawInputs: p.rawInputs,
+                requestId: p.requestId,
+                class_name: p.class_name,
+                institution_type: p.institution_type,
+                institution_name: p.institution_name,
+                phase: p.phase,
+                age_group: p.age_group,
+                location: p.location,
+                facilitator: p.facilitator,
+                participant_count: p.participant_count,
+                report_url: p.report_url,
+                answers: p.answers,
+                submitted_at_iso: p.submitted_at_iso
+            };
+            p['본데이터'] = JSON.stringify(snap);
+        } catch (e1) {
+            p['본데이터'] = JSON.stringify({ requestId: String(p.requestId || ''), err: 'snapshot' });
+        }
+    }
+
     /** 문항별 △/□ 인원 문자열·숫자 혼용 안전 파싱 (문자열 결합·NaN 방지) */
     function forestParseCountInt(v) {
         if (v === null || v === undefined) return 0;
@@ -8704,6 +8782,7 @@
                 sheetPayload.institutionName = sheetPayload.institution_name;
                 sheetPayload.testType = observation_stage === 'post' ? '사후' : '사전';
                 sheetPayload.answers = MS.buildForestSheetAnswersPayload(inst, tg);
+                applyForestKoreanSheetHeaderAliases_(sheetPayload);
                 MS.saveForestReportSnapshot(requestId, sheetPayload, inst, tg);
                 inst.lastReportRequestId = requestId;
                 STATE.persist();
