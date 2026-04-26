@@ -105,6 +105,27 @@ export function isCloudflarePagesPreviewHost(hostname: string): boolean {
   return !!x && x.endsWith('.pages.dev')
 }
 
+/** 유아숲(forest) 전용: mslms · mindstory.kr — ms12.org로 보내지 않음(Worker/루트 GET 분기) */
+export function isForestProductHost(hostname: string): boolean {
+  const h = normalizeOauthRequestHostname(hostname)
+  if (!h) return false
+  if (h === 'mindstory.kr' || h === 'www.mindstory.kr') return true
+  if (h === 'mslms.pages.dev' || h === 'www.mslms.pages.dev' || h === 'main.mslms.pages.dev') {
+    return true
+  }
+  if (h.endsWith('.mslms.pages.dev')) return true
+  return false
+}
+
+/** 평생교육원(LMS) — mindstory-lms Pages 전용(프리뷰 해시 포함) */
+export function isLifelongLmsProductHost(hostname: string): boolean {
+  const h = normalizeOauthRequestHostname(hostname)
+  if (!h) return false
+  if (h === 'mindstory-lms.pages.dev') return true
+  if (h.endsWith('.mindstory-lms.pages.dev')) return true
+  return false
+}
+
 export function isPrivateLanHostname(hostname: string): boolean {
   const h0 = (hostname || '').replace(/^\[|\]$/g, '')
   if (!h0) return false

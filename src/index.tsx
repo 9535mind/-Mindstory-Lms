@@ -18,20 +18,23 @@ import apiMs12 from './routes/api-ms12'
 import apiMs12Documents from './routes/api-ms12-documents'
 import apiMs12MeetingRecords from './routes/api-ms12-meeting-records'
 import apiMs12Announcements from './routes/api-ms12-announcements'
-import forestResults from './routes/forest-results'
-import forestGasReport from './routes/forest-gas-report'
-import forestGasReportPublic from './routes/forest-gas-report-public'
-import forestGasWebhook from './routes/forest-gas-webhook'
+import landing from './routes/landing'
 import ms12Pages, { renderEntryPage } from './routes/ms12-pages'
 import { FOOTER_HTML_REVISION } from './utils/site-footer-legal'
-import { isMs12Hostname, isCloudflarePagesPreviewHost } from './utils/oauth-public'
+import {
+  isCloudflarePagesPreviewHost,
+  isForestProductHost,
+  isLifelongLmsProductHost,
+  isMs12Hostname,
+  requestHostname,
+} from './utils/oauth-public'
 
 /** /app·/app/ 일치(메인이 strict true면 /app/ 만 404로 떨어질 수 있음) */
 const app = new Hono<{ Bindings: Bindings }>({ strict: false })
 
 app.use('*', logger())
 
-// www.ms12.org → apex(공식)만 308. mslms.pages.dev·mindstory 등은 ms12.org로 보내지 않음(forest QA 등).
+// www.ms12.org → apex(공식)만 308. mslms·mindstory.kr·mindstory-lms 는 ms12.org로 보내지 않음(도메인 정책).
 app.use('*', async (c, next) => {
   const raw = c.req.header('x-forwarded-host') || c.req.header('host') || ''
   const host = raw.split(',')[0].trim().split(':')[0]
@@ -128,7 +131,6 @@ apiMs12All.route('/', apiMs12Documents)
 apiMs12All.route('/', apiMs12MeetingRecords)
 apiMs12All.route('/', apiMs12Announcements)
 app.route('/api/ms12', apiMs12All)
-// JTT: forest * API 라우트는 번들에서 제외(재연결 시 ./routes/forest-* import + app.route)
 
 // 공통 헬스(배포 확인) — HTML 라우트보다 먼저 등록, 엣지·브라우저 캐시로 HTML이 섞이지 않게
 app.get('/api/health', (c) => {
@@ -150,7 +152,7 @@ app.get('/forest_v9.html', (c) => c.redirect('/forest.html', 302))
 app.get('/forest_v9', (c) => c.redirect('/forest.html', 302))
 app.get('/forest', (c) => c.redirect('/forest.html', 302))
 
-// 루트 → /app. 첫 화면은 `app.route('/app',…)`의 서브 `/`에만 의존하지 않고 get 으로 직접 등록(Worker/Pages 루트 매칭 누락 방지)
+// 루트: Host 별 (1) mindstory-lms → 평생교육원 (2) mslms / mindstory.kr → 유아숲 (3) ms12.org·ms12.pages.dev → MS12 /app
 app.get('/join/:code', (c) => {
   const raw = c.req.param('code') || ''
   const alnum = raw.replace(/[^A-Za-z0-9]/g, '')
@@ -159,7 +161,20 @@ app.get('/join/:code', (c) => {
   }
   return c.redirect('/app/join?code=' + encodeURIComponent(alnum.toUpperCase()), 302)
 })
-app.get('/', (c) => c.redirect('/app' + (new URL(c.req.url).search || ''), 302))
+app.get('/', (c) => {
+  const h = requestHostname(c)
+  const q = new URL(c.req.url).search || ''
+  if (isForestProductHost(h)) {
+    return c.redirect('/forest.html' + q, 302)
+  }
+  if (isLifelongLmsProductHost(h)) {
+    return c.redirect('/legacy/mindstory-landing' + q, 302)
+  }
+  return c.redirect('/app' + q, 302)
+})
+/** mindstory-lms(평생교육원) — /legacy/mindstory-landing (GET / 는 Host 로 위에서 분기) */
+app.route('/', landing)
+
 app.get('/app', (c) => renderEntryPage(c))
 app.get('/app/', (c) => renderEntryPage(c))
 app.route('/app', ms12Pages)

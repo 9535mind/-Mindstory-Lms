@@ -1,15 +1,16 @@
 ---
-description: 유아숲 행동관찰(forest) 배포·검증 URL — 평생교육원 랜딩과 구분
+description: MindStory Cloudflare Pages 도메인·forest·MS12 배포 구분
 globs:
 alwaysApply: true
 ---
 
-# Forest / 유아숲 행동관찰 배포
+# 도메인·프로젝트 고정 (저장소 단일 dist, 프로젝트별 Custom domain)
 
-- Cloudflare Pages `mslms` 배포 후 **검증·안내용 URL**은 사이트 **루트가 아니라** 반드시 **`/forest.html`** 경로를 사용한다.  
-  예: `https://<preview-hash>.mslms.pages.dev/forest.html`  
-  (과거 예: `https://cf84263e.mslms.pages.dev/forest.html`)
+| 역할 | 호스트(예) | 루트 `/` 동작(Worker) |
+|------|------------|------------------------|
+| 평생교육원 LMS | `mindstory-lms.pages.dev`, `*.mindstory-lms.pages.dev` | → `/legacy/mindstory-landing` |
+| 유아숲 forest | `mslms.pages.dev`, `*.mslms.pages.dev`, `mindstory.kr`, `www.mindstory.kr` | → `/forest.html` |
+| MS12 회의 | `ms12.org`, `www.ms12.org`→apex, `ms12.pages.dev`, `*.ms12.pages.dev` | → `/app` |
 
-- **루트** (`https://<hash>.mslms.pages.dev/` — 평생교육원 랜딩)는 forest 개발 변경 사항의 QA·“배포 완료” 확인용으로 쓰지 않는다.
-
-- `npm run build` / `wrangler pages deploy dist`는 저장소 전체 번들이므로 동일 프로젝트에 올라가지만, **사용자에게 보고할 때** forest 관련 작업은 **`/forest.html` 링크**로만 안내한다.
+- **mslms·mindstory.kr → ms12.org 강제 이동 금지** (과거 `LEGACY_PAGES_HOSTNAMES` 308 제거됨). Dashboard Redirect/Bulk rules 로도 `ms12.org`로 보내지 말 것.
+- **MS12만** `ms12.org` / `ms12.pages.dev` — forest QA·안내 URL은 `https://<hash>.mslms.pages.dev/forest.html` 등 **해당 프로젝트 호스트**로만 안내.
