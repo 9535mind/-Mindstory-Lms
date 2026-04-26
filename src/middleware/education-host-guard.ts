@@ -1,0 +1,104 @@
+/**
+ * forest · mindstory-lms 등 교육 계열 호스트에서 MS12(/app, 회의, OAuth) 경로 차단.
+ * — 리다이렉트 없음, ms12.org로 보내지 않음.
+ */
+import type { Context, Next } from 'hono'
+import { Bindings } from '../types/database'
+import {
+  isForestProductHost,
+  isLifelongLmsProductHost,
+  normalizeOauthRequestHostname,
+  requestHostname,
+} from '../utils/oauth-public'
+
+const MSG = '잘못된 경로'
+
+function hostFromContext(c: Context): string {
+  return normalizeOauthRequestHostname(requestHostname(c))
+}
+
+function deniedResponse(c: Context) {
+  const p = c.req.path
+  if (p.startsWith('/api/') || p === '/api') {
+    return c.json(
+      { success: false, error: MSG, message: MSG },
+      404
+    )
+  }
+  c.header('Cache-Control', 'private, no-store')
+  c.header('X-Content-Type-Options', 'nosniff')
+  return c.text(MSG, 404)
+}
+
+function normalizeForGuard(pathname: string): string {
+  if (pathname === '' || pathname === '/') return '/'
+  const t = pathname.replace(/\/+$/, '')
+  return t || '/'
+}
+
+/** MS12 회의·헬스·OAuth(구글·카카오)·/join 등 — forest/LMS 모두에서 차단 */
+function isMs12SurfacePath(p: string): boolean {
+  if (p === '/api' || p.startsWith('/api/')) {
+    if (p === '/api/health' || p.startsWith('/api/health/')) return true
+    if (p.startsWith('/api/ms12')) return true
+    if (p.startsWith('/api/auth/google')) return true
+    if (p.startsWith('/api/auth/kakao')) return true
+  }
+  if (p.startsWith('/auth/kakao')) return true
+  if (p === '/app' || p.startsWith('/app/')) return true
+  if (p === '/join' || p.startsWith('/join/')) return true
+  return false
+}
+
+function isLmsHostForestPath(p: string): boolean {
+  if (p === '/forest' || p.startsWith('/forest/')) return true
+  if (p === '/forest.html') return true
+  if (p === '/forest-question-banks.js') return true
+  if (p === '/forest_v9' || p === '/forest_v9.html') return true
+  if (p.startsWith('/api/forest')) return true
+  return false
+}
+
+function isForestPathAllowed(p: string): boolean {
+  const n = normalizeForGuard(p)
+  if (n === '/') return true
+  if (n === '/forest' || n === '/forest.html') return true
+  if (n === '/forest-question-banks.js') return true
+  if (n === '/forest_v9' || n === '/forest_v9.html') return true
+  if (n.startsWith('/assets/')) return true
+  if (n === '/static/js/jtt-metrics-calculator.js') return true
+  if (n.startsWith('/api/forest')) return true
+  return false
+}
+
+/**
+ * Hono: forest/LMS(교육) 손님 Host 에서 MS12(및 룸 불일치) 경로 early deny.
+ * ms12.org / ms12.pages.dev 는 `isEducationProductHost` 가 false 이어서 통과.
+ */
+export async function educationHostGuard(
+  c: Context<{ Bindings: Bindings }>,
+  next: Next
+) {
+  const h = hostFromContext(c)
+  if (!isForestProductHost(h) && !isLifelongLmsProductHost(h)) {
+    return next()
+  }
+
+  const p = c.req.path
+
+  if (isForestProductHost(h)) {
+    if (isMs12SurfacePath(p) || !isForestPathAllowed(p)) {
+      return deniedResponse(c)
+    }
+    return next()
+  }
+
+  if (isLifelongLmsProductHost(h)) {
+    if (isMs12SurfacePath(p) || isLmsHostForestPath(p)) {
+      return deniedResponse(c)
+    }
+    return next()
+  }
+
+  return next()
+}

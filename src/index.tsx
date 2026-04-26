@@ -10,6 +10,7 @@ import { logger } from 'hono/logger'
 import { serveStatic } from 'hono/cloudflare-workers'
 import { Bindings } from './types/database'
 import { strictRateLimiter, lenientRateLimiter } from './middleware/rate-limiter'
+import { educationHostGuard } from './middleware/education-host-guard'
 
 import auth from './routes/auth'
 import authKakao from './routes/auth-kakao'
@@ -33,7 +34,18 @@ import {
 /** /app·/app/ 일치(메인이 strict true면 /app/ 만 404로 떨어질 수 있음) */
 const app = new Hono<{ Bindings: Bindings }>({ strict: false })
 
+async function serveForestHtmlFromAssets(c: Context<{ Bindings: Bindings }>) {
+  const assets = c.env.ASSETS
+  if (!assets) return c.text('Not Found', 404)
+  const u = new URL(c.req.url)
+  u.pathname = '/forest.html'
+  return assets.fetch(
+    new Request(u.toString(), { method: c.req.method, headers: c.req.raw.headers })
+  )
+}
+
 app.use('*', logger())
+app.use('*', educationHostGuard)
 
 // www.ms12.org → apex(공식)만 308. mslms·mindstory·mindstory-lms 는 이 블록을 타지 않음(forest 등 절대 ms12.org로 보내지 않음).
 app.use('*', async (c, next) => {
@@ -152,10 +164,10 @@ app.get('/api/health', (c) => {
   })
 })
 
-// JTT 유아숲 — 별칭(북마크·구 URL)
-app.get('/forest_v9.html', (c) => c.redirect('/forest.html', 302))
-app.get('/forest_v9', (c) => c.redirect('/forest.html', 302))
-app.get('/forest', (c) => c.redirect('/forest.html', 302))
+// JTT 유아숲 — 별칭(북마크·구 URL). /forest ↔ /forest.html 302 루프(CF 308) 방지: redirect 없이 ASSETS 로 동일 HTML.
+app.get('/forest_v9.html', (c) => serveForestHtmlFromAssets(c))
+app.get('/forest_v9', (c) => serveForestHtmlFromAssets(c))
+app.get('/forest', (c) => serveForestHtmlFromAssets(c))
 
 // 루트: Host 별 (1) mindstory-lms → 평생교육원 (2) mslms / mindstory.kr → 유아숲 (3) ms12.org·ms12.pages.dev → MS12 /app
 app.get('/join/:code', (c) => {
