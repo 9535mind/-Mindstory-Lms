@@ -9,7 +9,7 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { serveStatic } from 'hono/cloudflare-workers'
 import { Bindings } from './types/database'
-import { strictRateLimiter, lenientRateLimiter, generalRateLimiter } from './middleware/rate-limiter'
+import { strictRateLimiter, lenientRateLimiter } from './middleware/rate-limiter'
 
 import auth from './routes/auth'
 import authKakao from './routes/auth-kakao'
@@ -123,10 +123,6 @@ app.use('/api/auth/reset-password', strictRateLimiter)
 app.use('/api/auth/me', lenientRateLimiter)
 app.use('/api/health', lenientRateLimiter)
 app.use('/api/ms12', lenientRateLimiter)
-app.use('/api/forest-results', generalRateLimiter)
-app.use('/api/forest-gas-report', generalRateLimiter)
-app.use('/api/forest-gas-report-public', generalRateLimiter)
-app.use('/api/forest-gas-webhook', generalRateLimiter)
 
 app.use('/static/*', serveStatic({ manifest: {} }))
 app.use('/uploads/*', serveStatic({ manifest: {} }))
@@ -143,10 +139,7 @@ apiMs12All.route('/', apiMs12Documents)
 apiMs12All.route('/', apiMs12MeetingRecords)
 apiMs12All.route('/', apiMs12Announcements)
 app.route('/api/ms12', apiMs12All)
-app.route('/api/forest-results', forestResults)
-app.route('/api/forest-gas-report', forestGasReport)
-app.route('/api/forest-gas-report-public', forestGasReportPublic)
-app.route('/api/forest-gas-webhook', forestGasWebhook)
+// JTT: forest * API 라우트는 번들에서 제외(재연결 시 ./routes/forest-* import + app.route)
 
 // 공통 헬스(배포 확인) — HTML 라우트보다 먼저 등록, 엣지·브라우저 캐시로 HTML이 섞이지 않게
 app.get('/api/health', (c) => {
