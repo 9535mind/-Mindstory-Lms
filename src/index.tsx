@@ -9,7 +9,7 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { serveStatic } from 'hono/cloudflare-workers'
 import { Bindings } from './types/database'
-import { strictRateLimiter, lenientRateLimiter } from './middleware/rate-limiter'
+import { strictRateLimiter, lenientRateLimiter, generalRateLimiter } from './middleware/rate-limiter'
 
 import auth from './routes/auth'
 import authKakao from './routes/auth-kakao'
@@ -18,6 +18,10 @@ import apiMs12 from './routes/api-ms12'
 import apiMs12Documents from './routes/api-ms12-documents'
 import apiMs12MeetingRecords from './routes/api-ms12-meeting-records'
 import apiMs12Announcements from './routes/api-ms12-announcements'
+import forestResults from './routes/forest-results'
+import forestGasReport from './routes/forest-gas-report'
+import forestGasReportPublic from './routes/forest-gas-report-public'
+import forestGasWebhook from './routes/forest-gas-webhook'
 import ms12Pages, { renderEntryPage } from './routes/ms12-pages'
 import { FOOTER_HTML_REVISION } from './utils/site-footer-legal'
 import {
@@ -119,6 +123,10 @@ app.use('/api/auth/reset-password', strictRateLimiter)
 app.use('/api/auth/me', lenientRateLimiter)
 app.use('/api/health', lenientRateLimiter)
 app.use('/api/ms12', lenientRateLimiter)
+app.use('/api/forest-results', generalRateLimiter)
+app.use('/api/forest-gas-report', generalRateLimiter)
+app.use('/api/forest-gas-report-public', generalRateLimiter)
+app.use('/api/forest-gas-webhook', generalRateLimiter)
 
 app.use('/static/*', serveStatic({ manifest: {} }))
 app.use('/uploads/*', serveStatic({ manifest: {} }))
@@ -135,6 +143,10 @@ apiMs12All.route('/', apiMs12Documents)
 apiMs12All.route('/', apiMs12MeetingRecords)
 apiMs12All.route('/', apiMs12Announcements)
 app.route('/api/ms12', apiMs12All)
+app.route('/api/forest-results', forestResults)
+app.route('/api/forest-gas-report', forestGasReport)
+app.route('/api/forest-gas-report-public', forestGasReportPublic)
+app.route('/api/forest-gas-webhook', forestGasWebhook)
 
 // 공통 헬스(배포 확인) — HTML 라우트보다 먼저 등록, 엣지·브라우저 캐시로 HTML이 섞이지 않게
 app.get('/api/health', (c) => {
@@ -150,6 +162,11 @@ app.get('/api/health', (c) => {
     d1Bound: !!c.env.DB,
   })
 })
+
+// JTT 유아숲 — 별칭(북마크·구 URL)
+app.get('/forest_v9.html', (c) => c.redirect('/forest.html', 302))
+app.get('/forest_v9', (c) => c.redirect('/forest.html', 302))
+app.get('/forest', (c) => c.redirect('/forest.html', 302))
 
 // 루트 → /app. 첫 화면은 `app.route('/app',…)`의 서브 `/`에만 의존하지 않고 get 으로 직접 등록(Worker/Pages 루트 매칭 누락 방지)
 app.get('/join/:code', (c) => {

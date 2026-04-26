@@ -1,6 +1,6 @@
 /**
  * Vite 빌드 후: dist 루트에 정적 복사(선택) + Cloudflare Pages `_routes.json`
- * MS12 — forest/forest.html 의존 제거(레거시 LMS)
+ * `public/forest.html`·`/forest-question-banks.js` 는 Worker `/*` 보다 먼저 정적으로 서빙되도록 exclude.
  */
 import { copyFileSync, cpSync, existsSync, writeFileSync, statSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -11,7 +11,12 @@ const root = join(__dirname, '..')
 const dist = join(root, 'dist')
 const publicDir = join(root, 'public')
 
-/** 정적 ASSETS만 우회. /api/* 는 exclude 에 넣지 말 것(Worker·JSON) */
+/**
+ * Pages: include = Worker가 받는 경로, exclude = 정적만(Worker 우회).
+ * /api/* 만 include 하면 /app 은 정적 → 404 가 나므로 금지.
+ * Wrangler 는 include 안에서 `/*` 와 `/app` 등이 겹치면 "Overlapping rules" 오류로 배포 실패하므로,
+ * 전역은 `/*` 한 줄만 쓴다(이것이 /app·/api 를 모두 Worker로 보냄).
+ */
 const ROUTES = {
   version: 1,
   include: ['/*'],
@@ -27,6 +32,11 @@ const ROUTES = {
     '/android-chrome-512x512.png',
     '/site.webmanifest',
     '/build.txt',
+    /** 루트 폴백 HTML(→/app 안내). Worker보다 정적 우선으로 두는 편이 안정적 */
+    '/index.html',
+    /** JTT-Kinder 유아숲 — `public/` 가 Vite dist 루트로 복사됨. exclude 없으면 Worker가 먼저 404 */
+    '/forest.html',
+    '/forest-question-banks.js',
   ],
 }
 
