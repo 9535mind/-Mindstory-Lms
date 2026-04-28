@@ -1,0 +1,15 @@
+---
+description: FOREST (JTT-Kinder) frozen zone—no refactor/merge with MS12; GAS URL protected
+globs: public/forest.html, public/forest-question-banks.js, public/static/js/jtt-metrics-calculator.js, src/middleware/education-host-guard.ts, src/routes/forest-*.ts, src/utils/forest-admin.ts, src/index.tsx, scripts/gas-forest-dopost-e-layout-paste.gs
+alwaysApply: true
+---
+
+# FOREST ZONE — 동결
+
+- **독립 서비스**로 취급. **MS12(` /app`, `/api/ms12`, OAuth)와 통합·라우트 공유·공통 API 합치기 금지.**
+- **FOREST ZONE 파일** (`docs/FOREST-FROZEN.md` 목록)은 **리팩터·대규모 정리** 없이, **버그·승인된 변경**만.
+- **`FOREST_GAS_WEBHOOK_URL`** (Cloudflare) 및 코드 **폴백 URL** — **승인 없이 변경·삭제하지 말 것.**
+- API 접두: **`/api/forest*`** — 위치·책임을 `/api/ms12*` 등으로 옮기지 말 것.
+- 배포/변경 시 검증: **① forest 제출 1회 ② 시트 ③ `_gasBuild`** (자세한 것은 `docs/FOREST-FROZEN.md`).
+
+`education-host-guard.ts` 의 forest **허용 경로**는 `forest.html`·정적·`/api/forest*` 와 **동기**; 일반 MS12 작업으로 이 블록을 “개선”하지 말 것.
