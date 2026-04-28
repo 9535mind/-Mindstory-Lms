@@ -18,7 +18,7 @@ const BASE = (process.env.AUTH_TEST_BASE_URL || 'http://127.0.0.1:3000').replace
 const E2E_CODE = (process.env.KAKAO_CALLBACK_E2E_CODE || '').trim()
 
 function d1Json(sql) {
-  const cmd = `npx wrangler d1 execute ms12-production --local --json --command ${JSON.stringify(
+  const cmd = `npx wrangler d1 execute ms12-production-v2 --local --json --command ${JSON.stringify(
     sql,
   )}`
   const out = execSync(cmd, { encoding: 'utf8', maxBuffer: 2_000_000, shell: true })

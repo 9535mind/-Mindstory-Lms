@@ -26,6 +26,8 @@
   /** 회의실 문서 초안 유형(탭) — saveRoomDraft에서 draftByKind에 반영 */
   var g_ms12DraftKind = 'report_int'
   var g_ms12DraftMeeting = ''
+  /** 회의실: 서버 isHost — 참석자 목록에서 공동 호스트 지정 버튼 표시 */
+  var g_ms12RoomIsHost = false
 
   var _nativeFetch = typeof fetch === 'function' ? fetch : null
   /** 동일 출처 API — 쿠키 포함·응답 캐시 방지(no-store) */
@@ -1262,6 +1264,14 @@
     }
   }
 
+  function ms12EscapeHtml(s) {
+    return String(s != null ? s : '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+  }
+
   function loadParticipants(id) {
     return ms12Fetch('/api/ms12/meetings/' + encodeURIComponent(id) + '/participants', {
       credentials: 'include',
@@ -1296,7 +1306,22 @@
         if (!p.isPresent) return ''
         var label = p.displayName || '참가자'
         if (p.role === 'host') label += ' (호스트)'
-        return '<li>' + label + '</li>'
+        else if (p.role === 'cohost') label += ' (공동 호스트)'
+        var escLabel = ms12EscapeHtml(label)
+        var btnHtml = ''
+        if (g_ms12RoomIsHost && p.participantKey && p.role !== 'host') {
+          var isC = p.role === 'cohost'
+          var pkEsc = ms12EscapeHtml(p.participantKey)
+          btnHtml =
+            ' <button type="button" class="ms12-btn ms12-btn--muted" data-ms12-cohort="1" data-ms12-cohort-key="' +
+            pkEsc +
+            '" data-ms12-cohort-action="' +
+            (isC ? 'demote' : 'promote') +
+            '" style="font-size:0.72rem;margin-left:0.35rem;padding:0.1rem 0.35rem;vertical-align:baseline">' +
+            (isC ? '공동 호스트 해제' : '공동 호스트 지정') +
+            '</button>'
+        }
+        return '<li>' + escLabel + btnHtml + '</li>'
       })
       .filter(Boolean)
       .join('')
@@ -1322,6 +1347,10 @@
     var id = b.getAttribute('data-ms12-meeting-id') || ''
     if (!id) return
     roomServerOk = false
+    g_ms12RoomIsHost = false
+    /** GET /meetings/:id — roomIsModerator: 호스트·공동 호스트(녹음 중 전사 붙여넣기 등) */
+    var roomIsHost = false
+    var roomIsModerator = false
     var lastMergedActions = []
     var lastServerActionItems = []
     var titleEls = document.querySelectorAll('.js-ms12-room-title')
@@ -1339,6 +1368,36 @@
     } catch (e) {}
     g_ms12DraftMeeting = id
     g_ms12DraftKind = 'report_int'
+    var partWrap = document.getElementById('ms12-part-wrap')
+    if (partWrap && !partWrap.getAttribute('data-ms12-cohort-bound')) {
+      partWrap.setAttribute('data-ms12-cohort-bound', '1')
+      partWrap.addEventListener('click', function (ev) {
+        var btn = ev.target && ev.target.closest && ev.target.closest('[data-ms12-cohort]')
+        if (!btn) return
+        ev.preventDefault()
+        var pk = btn.getAttribute('data-ms12-cohort-key')
+        var act = btn.getAttribute('data-ms12-cohort-action')
+        if (!pk || !act) return
+        var newRole = act === 'promote' ? 'cohost' : 'participant'
+        ms12Fetch('/api/ms12/meetings/' + encodeURIComponent(id) + '/participants/role', {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ participantKey: pk, role: newRole }),
+        })
+          .then(function (r) {
+            return jsonFromResponse(r)
+          })
+          .then(function (j) {
+            if (j && j.success) {
+              return loadParticipants(id).then(function (jj) {
+                renderParts(jj)
+              })
+            }
+          })
+          .catch(function () {})
+      })
+    }
     try {
       var st0 = readStore()
       var lr0 = st0.byId && st0.byId[id]
@@ -2578,6 +2637,54 @@
           }
         }
       }, 450)
+
+      trEl.addEventListener('paste', function (e) {
+        if (!sttOn) return
+        if (!roomIsModerator) {
+          e.preventDefault()
+          if (sttHint) {
+            var prevH = sttHint.textContent
+            sttHint.textContent =
+              '녹음·전사 중 붙여넣기는 회의 호스트·공동 호스트만 가능합니다.'
+            setTimeout(function () {
+              if (sttHint) sttHint.textContent = prevH
+            }, 3200)
+          }
+          return
+        }
+        e.preventDefault()
+        var pasted = ''
+        try {
+          pasted =
+            e.clipboardData && typeof e.clipboardData.getData === 'function'
+              ? e.clipboardData.getData('text/plain') || ''
+              : ''
+        } catch (err) {}
+        if (pasted === '') return
+        var val = trEl.value != null ? String(trEl.value) : ''
+        var start = typeof trEl.selectionStart === 'number' ? trEl.selectionStart : val.length
+        var end = typeof trEl.selectionEnd === 'number' ? trEl.selectionEnd : start
+        var newVal = val.slice(0, start) + pasted + val.slice(end)
+        trEl.value = newVal
+        var caret = start + pasted.length
+        try {
+          trEl.selectionStart = trEl.selectionEnd = caret
+        } catch (e2) {}
+        if (usingDg) {
+          dgBaseSnap = newVal
+          dgCommitted = ''
+          dgPartial = ''
+        } else {
+          sttUserBase = newVal
+          sttFinalAccum = ''
+        }
+        try {
+          ms12SyncLiveCaptionFromTranscript(trEl.value)
+        } catch (e0) {}
+        try {
+          saveRoomDraft(id)
+        } catch (e) {}
+      })
     }
 
     var saveTitleEl = document.getElementById('ms12-save-title')
@@ -2801,6 +2908,10 @@
           return { ok: false, j: null }
         }
         var d = o.j.data
+        roomIsHost = !!d.isHost
+        g_ms12RoomIsHost = roomIsHost
+        roomIsModerator =
+          typeof d.isModerator === 'boolean' ? d.isModerator : !!d.isHost
         roomServerOk = true
         try {
           recordMeetingLocal(d)

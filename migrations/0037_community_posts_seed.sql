@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS posts (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_posts_category_created ON posts(category, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_category_created ON posts(category, created_at);
 CREATE INDEX IF NOT EXISTS idx_posts_published ON posts(is_published);
 
 -- 공지 (필독이 목록 상단에 오도록 시험 일정을 먼저 삽입)

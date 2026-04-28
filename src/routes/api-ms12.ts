@@ -92,6 +92,19 @@ async function displayNameFor(_actor: AppActor, body: { displayName?: string }):
   return d || '방문 사용자'
 }
 
+/** ms12_rooms 행 기준 — 게스트 방 개설자(호스트) 여부 */
+function isRoomGuestHost(
+  room: { host_actor_type?: unknown; host_guest_id?: unknown },
+  actor: AppActor,
+): boolean {
+  return (
+    String(room.host_actor_type || '') === 'guest' &&
+    actor.type === 'public' &&
+    room.host_guest_id != null &&
+    String(room.host_guest_id) === actor.id
+  )
+}
+
 async function requireRoomParticipant(
   c: { env: { DB: D1Database } },
   meetingId: string,
@@ -202,12 +215,17 @@ api.get('/meetings/:id/participants', ms12Access, async (c) => {
      FROM ms12_room_participants p
      WHERE p.meeting_id = ?
      ORDER BY
-       CASE WHEN p.role = 'host' THEN 0 ELSE 1 END,
+       CASE
+         WHEN p.role = 'host' THEN 0
+         WHEN p.role = 'cohost' THEN 1
+         ELSE 2
+       END,
        p.joined_at ASC`
   )
     .bind(meetingId)
     .all()
   const list = (rows.results || []).map((row: Record<string, unknown>) => ({
+    participantKey: row.participant_key,
     userId: row.user_id,
     guestId: row.guest_id,
     displayName: row.display_name,
@@ -267,6 +285,20 @@ api.get('/meetings/:id', ms12Access, async (c) => {
   if (hType === 'guest' && actor.type === 'public' && hGid != null && String(hGid) === actor.id) {
     isHost = true
   }
+  const pkMeeting = participantKey(actor)
+  let participantRole = 'participant'
+  try {
+    const rowMe = await c.env.DB.prepare(
+      `SELECT role FROM ms12_room_participants WHERE meeting_id = ? AND participant_key = ? AND left_at IS NULL`,
+    )
+      .bind(meetingId, pkMeeting)
+      .first<{ role: unknown }>()
+    if (rowMe && rowMe.role != null) participantRole = String(rowMe.role)
+  } catch {
+    /* ignore */
+  }
+  const isCoHost = participantRole === 'cohost'
+  const isModerator = isHost || isCoHost
   return c.json(
     successResponse({
       id: String(r.id),
@@ -277,6 +309,9 @@ api.get('/meetings/:id', ms12Access, async (c) => {
       meetingCode: r.meeting_code,
       inviteCode: r.meeting_code,
       isHost,
+      participantRole,
+      isCoHost,
+      isModerator,
       status: statusOut,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
@@ -472,12 +507,28 @@ api.post('/meetings/join', ms12Access, async (c) => {
   const dname = await displayNameFor(actor, body)
   const hostType = room.host_actor_type as string
   const hostGuestId = room.host_guest_id as string | null
-  let role: 'host' | 'participant' = 'participant'
+  let computedRole: 'host' | 'participant' = 'participant'
   if (hostType === 'guest' && actor.type === 'public' && hostGuestId === actor.id) {
-    role = 'host'
+    computedRole = 'host'
   }
   const pk = participantKey(actor)
   const gid = actor.id
+  let role: 'cohost' | 'host' | 'participant' = computedRole
+  try {
+    const prevJoin = await c.env.DB
+      .prepare(`SELECT role FROM ms12_room_participants WHERE meeting_id = ? AND participant_key = ?`)
+      .bind(id, pk)
+      .first<{ role: unknown }>()
+    if (
+      computedRole === 'participant' &&
+      prevJoin &&
+      String(prevJoin.role || '') === 'cohost'
+    ) {
+      role = 'cohost'
+    }
+  } catch {
+    /* ignore */
+  }
   try {
     await c.env.DB.prepare(
       `INSERT INTO ms12_room_participants
@@ -505,6 +556,93 @@ api.post('/meetings/join', ms12Access, async (c) => {
       role,
     })
   )
+})
+
+/** 호스트가 참가자에게 공동 호스트 부여·해제 (participant ↔ cohost 만) */
+api.patch('/meetings/:id/participants/role', ms12Access, async (c) => {
+  const actor = c.get('actor')
+  const meetingId = c.req.param('id')
+  await requireRoomParticipant(c, meetingId, actor)
+  const roomBlockRole = await assertRoomOpenForMutations(c, meetingId)
+  if (roomBlockRole) return roomBlockRole
+
+  let body: { participantKey?: string; role?: string }
+  try {
+    body = (await c.req.json()) as { participantKey?: string; role?: string }
+  } catch {
+    return c.json(errorResponse('JSON 본문이 필요합니다.'), 400)
+  }
+  const targetPk = String(body.participantKey || '').trim()
+  const roleRaw = String(body.role || '').trim()
+  if (!targetPk) {
+    return c.json(errorResponse('participantKey가 필요합니다.'), 400)
+  }
+  const newRole = roleRaw === 'cohost' ? 'cohost' : roleRaw === 'participant' ? 'participant' : null
+  if (!newRole) {
+    return c.json(errorResponse('role은 cohost 또는 participant만 지정할 수 있습니다.'), 400)
+  }
+
+  let roomRow: { host_actor_type?: unknown; host_guest_id?: unknown } | null = null
+  try {
+    roomRow = await c.env.DB.prepare(`SELECT host_actor_type, host_guest_id FROM ms12_rooms WHERE id = ?`)
+      .bind(meetingId)
+      .first<{ host_actor_type?: unknown; host_guest_id?: unknown }>()
+  } catch (e) {
+    const m = e instanceof Error ? e.message : String(e)
+    console.error('[ms12] patch participant role load room', m.slice(0, 200))
+    return c.json(errorResponse('회의를 불러올 수 없습니다.'), 500)
+  }
+  if (!roomRow) {
+    return c.json(errorResponse('회의를 찾을 수 없습니다.'), 404)
+  }
+  if (!isRoomGuestHost(roomRow, actor)) {
+    return c.json(errorResponse('회의 호스트(개설자)만 공동 호스트를 지정하거나 해제할 수 있습니다.'), 403)
+  }
+
+  let target: { participant_key?: unknown; guest_id?: unknown; role?: unknown } | null = null
+  try {
+    target = await c.env.DB.prepare(
+      `SELECT participant_key, guest_id, role FROM ms12_room_participants WHERE meeting_id = ? AND participant_key = ? AND left_at IS NULL`,
+    )
+      .bind(meetingId, targetPk)
+      .first()
+  } catch (e) {
+    const m = e instanceof Error ? e.message : String(e)
+    console.error('[ms12] patch participant role load target', m.slice(0, 200))
+    return c.json(errorResponse('참가자를 불러올 수 없습니다.'), 500)
+  }
+  if (!target || target.participant_key == null) {
+    return c.json(errorResponse('해당 참가자를 찾을 수 없습니다.'), 404)
+  }
+
+  const cur = String(target.role || 'participant')
+  if (cur === 'host') {
+    return c.json(errorResponse('호스트 역할은 변경할 수 없습니다.'), 400)
+  }
+
+  const hg = roomRow.host_guest_id != null ? String(roomRow.host_guest_id) : ''
+  const tg = target.guest_id != null ? String(target.guest_id) : ''
+  if (hg && tg && hg === tg) {
+    return c.json(errorResponse('회의 호스트 본인에게는 공동 호스트를 적용하지 않습니다.'), 400)
+  }
+
+  if (newRole === cur) {
+    return c.json(successResponse({ meetingId, participantKey: targetPk, role: newRole }))
+  }
+
+  try {
+    await c.env.DB.prepare(
+      `UPDATE ms12_room_participants SET role = ? WHERE meeting_id = ? AND participant_key = ? AND left_at IS NULL`,
+    )
+      .bind(newRole, meetingId, targetPk)
+      .run()
+    await c.env.DB.prepare(`UPDATE ms12_rooms SET updated_at = ? WHERE id = ?`).bind(nowIso(), meetingId).run()
+  } catch (e) {
+    console.error('[ms12] patch participant role update', e)
+    return c.json(errorResponse('역할을 변경하지 못했습니다.'), 500)
+  }
+
+  return c.json(successResponse({ meetingId, participantKey: targetPk, role: newRole }))
 })
 
 const CONTEXT_MAX = 14_000

@@ -12,7 +12,7 @@ export async function assertIsRoomParticipant(
   actor: AppActor,
 ): Promise<void> {
   const k = participantKey(actor)
-  const guestId = actor.type === 'guest' ? actor.id : null
+  const guestId = actor.type === 'public' ? actor.id : null
   const row = await db
     .prepare(
       `SELECT 1 AS ok FROM ms12_room_participants

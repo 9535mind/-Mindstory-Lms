@@ -1,6 +1,6 @@
 /**
  * MS12 — 회의 플랫폼 (Hono on Cloudflare Pages)
- * 라우트: /app*, /api/auth*, /api/ms12* 및 정적·OAuth 콜백.
+ * 라우트: /app*, /api/auth/me, /api/ms12* 및 정적 자산.
  */
 // deploy trigger
 import { Hono, type Context } from 'hono'
@@ -13,8 +13,6 @@ import { strictRateLimiter, lenientRateLimiter } from './middleware/rate-limiter
 import { educationHostGuard } from './middleware/education-host-guard'
 
 import auth from './routes/auth'
-import authKakao from './routes/auth-kakao'
-import authGoogle from './routes/auth-google'
 import apiMs12 from './routes/api-ms12'
 import apiMs12Documents from './routes/api-ms12-documents'
 import apiMs12MeetingRecords from './routes/api-ms12-meeting-records'
@@ -25,7 +23,7 @@ import forestGasReport from './routes/forest-gas-report'
 import forestGasReportPublic from './routes/forest-gas-report-public'
 import forestResults from './routes/forest-results'
 import landing from './routes/landing'
-import ms12Pages, { renderEntryPage } from './routes/ms12-pages'
+import ms12Pages from './routes/ms12-pages'
 import { FOOTER_HTML_REVISION } from './utils/site-footer-legal'
 import {
   isForestProductHost,
@@ -67,7 +65,7 @@ app.use('*', async (c, next) => {
   await next()
 })
 
-// HTML: 캐시 금지(로그인·OAuth)
+// HTML: 캐시 금지(동적 페이지)
 app.use('*', async (c, next) => {
   await next()
   const ct = c.res.headers.get('Content-Type') || ''
@@ -117,7 +115,6 @@ app.use(
       'X-RateLimit-Limit',
       'X-RateLimit-Remaining',
       'X-RateLimit-Reset',
-      'X-MS12-OAuth-Start-Handler',
     ],
     maxAge: 600,
     credentials: true,
@@ -134,11 +131,7 @@ app.use('/api/ms12', lenientRateLimiter)
 app.use('/static/*', serveStatic({ manifest: {} }))
 app.use('/uploads/*', serveStatic({ manifest: {} }))
 
-// /api/auth 보다 구체적 경로를 먼저 등록(그렇지 않으면 /api/auth/* 가 /api/auth/google/start 를 가로채 404·잘못된 응답 가능)
-app.route('/api/auth/google', authGoogle)
-app.route('/api/auth/kakao', authKakao)
-/** Kakao 콘솔·KOE006: `https://ms12.org/auth/kakao/callback` — /api 가 아닌 짧은 경로 */
-app.route('/auth/kakao', authKakao)
+// /api/auth 보다 구체적 경로를 먼저 등록
 app.route('/api/auth', auth)
 const apiMs12All = new Hono<{ Bindings: Bindings }>()
 apiMs12All.route('/', apiMs12)
@@ -173,7 +166,7 @@ app.get('/forest_v9.html', (c) => serveForestHtmlFromAssets(c))
 app.get('/forest_v9', (c) => serveForestHtmlFromAssets(c))
 app.get('/forest', (c) => serveForestHtmlFromAssets(c))
 
-// 루트: Host 별 (1) mindstory-lms → 평생교육원 (2) mslms / mindstory.kr → 유아숲 (3) ms12.org·ms12.pages.dev → MS12 /app
+// 루트: Host 별 … (3) ms12… → MS12 회의 허브
 app.get('/join/:code', (c) => {
   const raw = c.req.param('code') || ''
   const alnum = raw.replace(/[^A-Za-z0-9]/g, '')
@@ -191,13 +184,19 @@ app.get('/', (c) => {
   if (isLifelongLmsProductHost(h)) {
     return c.redirect('/legacy/mindstory-landing' + q, 302)
   }
-  return c.redirect('/app' + q, 302)
+  return c.redirect('/app/meeting' + q, 302)
 })
 /** mindstory-lms(평생교육원) — /legacy/mindstory-landing (GET / 는 Host 로 위에서 분기) */
 app.route('/', landing)
 
-app.get('/app', (c) => renderEntryPage(c))
-app.get('/app/', (c) => renderEntryPage(c))
+app.get('/app', (c) => {
+  const q = new URL(c.req.url).search || ''
+  return c.redirect('/app/meeting' + q, 302)
+})
+app.get('/app/', (c) => {
+  const q = new URL(c.req.url).search || ''
+  return c.redirect('/app/meeting' + q, 302)
+})
 app.route('/app', ms12Pages)
 
 /**

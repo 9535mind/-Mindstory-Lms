@@ -31,7 +31,7 @@ CREATE INDEX IF NOT EXISTS idx_certificates_user_id ON certificates(user_id);
 CREATE INDEX IF NOT EXISTS idx_certificates_course_id ON certificates(course_id);
 CREATE INDEX IF NOT EXISTS idx_certificates_enrollment_id ON certificates(enrollment_id);
 CREATE INDEX IF NOT EXISTS idx_certificates_number ON certificates(certificate_number);
-CREATE INDEX IF NOT EXISTS idx_certificates_issue_date ON certificates(issue_date DESC);
+CREATE INDEX IF NOT EXISTS idx_certificates_issue_date ON certificates(issue_date);
 
 -- 샘플 데이터 (개발/테스트용)
 -- INSERT INTO certificates (user_id, course_id, enrollment_id, certificate_number, issue_date, completion_date, progress_rate)

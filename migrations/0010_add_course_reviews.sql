@@ -20,44 +20,14 @@ CREATE TABLE IF NOT EXISTS course_reviews (
 CREATE INDEX IF NOT EXISTS idx_course_reviews_course_id ON course_reviews(course_id);
 CREATE INDEX IF NOT EXISTS idx_course_reviews_user_id ON course_reviews(user_id);
 CREATE INDEX IF NOT EXISTS idx_course_reviews_rating ON course_reviews(rating);
-CREATE INDEX IF NOT EXISTS idx_course_reviews_created_at ON course_reviews(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_course_reviews_created_at ON course_reviews(created_at);
 
 -- 강좌 테이블에 별점 통계 컬럼 추가
 ALTER TABLE courses ADD COLUMN rating_average REAL DEFAULT 0.0;
 ALTER TABLE courses ADD COLUMN rating_count INTEGER DEFAULT 0;
 
--- 트리거: 리뷰 생성 시 강좌 통계 업데이트
-CREATE TRIGGER IF NOT EXISTS update_course_rating_on_insert
-AFTER INSERT ON course_reviews
-BEGIN
-  UPDATE courses 
-  SET 
-    rating_count = (SELECT COUNT(*) FROM course_reviews WHERE course_id = NEW.course_id),
-    rating_average = (SELECT AVG(CAST(rating AS REAL)) FROM course_reviews WHERE course_id = NEW.course_id)
-  WHERE id = NEW.course_id;
-END;
-
--- 트리거: 리뷰 수정 시 강좌 통계 업데이트
-CREATE TRIGGER IF NOT EXISTS update_course_rating_on_update
-AFTER UPDATE ON course_reviews
-BEGIN
-  UPDATE courses 
-  SET 
-    rating_count = (SELECT COUNT(*) FROM course_reviews WHERE course_id = NEW.course_id),
-    rating_average = (SELECT AVG(CAST(rating AS REAL)) FROM course_reviews WHERE course_id = NEW.course_id)
-  WHERE id = NEW.course_id;
-END;
-
--- 트리거: 리뷰 삭제 시 강좌 통계 업데이트
-CREATE TRIGGER IF NOT EXISTS update_course_rating_on_delete
-AFTER DELETE ON course_reviews
-BEGIN
-  UPDATE courses 
-  SET 
-    rating_count = (SELECT COUNT(*) FROM course_reviews WHERE course_id = OLD.course_id),
-    rating_average = (SELECT COALESCE(AVG(CAST(rating AS REAL)), 0.0) FROM course_reviews WHERE course_id = OLD.course_id)
-  WHERE id = OLD.course_id;
-END;
+-- D1 배치 실행 시 트리거 본문에서 incomplete input 오류가 나와,
+-- 통계 컬럼은 앱·배치로 갱신하도록 둠(로컬 SQLite 전용 트리거는 제거).
 
 -- 샘플 데이터 (개발/테스트용)
 -- INSERT INTO course_reviews (course_id, user_id, rating, comment) 

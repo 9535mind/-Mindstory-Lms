@@ -5,7 +5,7 @@
  */
 import { execSync } from 'node:child_process'
 
-const db = 'ms12-production'
+const db = 'ms12-production-v2'
 const remote = process.argv.includes('--remote')
 const flag = remote ? '--remote' : '--local'
 

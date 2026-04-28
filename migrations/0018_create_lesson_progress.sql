@@ -31,13 +31,3 @@ CREATE INDEX IF NOT EXISTS idx_lesson_progress_completed
 
 CREATE INDEX IF NOT EXISTS idx_lesson_progress_updated
   ON lesson_progress(updated_at);
-
-CREATE TRIGGER IF NOT EXISTS trg_lesson_progress_updated_at
-AFTER UPDATE ON lesson_progress
-FOR EACH ROW
-BEGIN
-  UPDATE lesson_progress
-  SET updated_at = datetime('now')
-  WHERE id = NEW.id;
-END;
-
