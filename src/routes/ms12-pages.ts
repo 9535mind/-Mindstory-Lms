@@ -8,13 +8,13 @@ import { SITE_PUBLIC_ORIGIN } from '../utils/oauth-public'
 const p = new Hono<{ Bindings: Bindings }>({ strict: false })
 
 /** Pages 배포·소스 ?v= 일치(배포 후 페이지 소스에 이 주석이 보이면 새 Worker) */
-const MS12_BUILD = '20260428cohostApi'
+const MS12_BUILD = '20260429routesV2b'
 const MS12_ACTIONS_SCRIPT = `/static/js/ms12-actions.js?v=${MS12_BUILD}`
 const MS12_APP_SCRIPT = `/static/js/ms12-app.js?v=${MS12_BUILD}`
 const waitBlock = '<p class="ms12-p" id="ms12-wait" style="color:rgb(100 116 139)">불러오는 중…</p>'
 /** /app(엔트리)로 가는 뒤로가기: 텍스트 «시작화면» 대신 홈 아이콘 */
 const MS12_HOME_LINK =
-  '<a href="/app/meeting" class="ms12-home-link" title="회의 허브" aria-label="회의 허브(홈)"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a>'
+  '<a href="/app" class="ms12-home-link" title="시작 화면" aria-label="시작 화면(홈)"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a>'
 
 const commonStyles = `
   .ms12-wrap{max-width:48rem;margin:0 auto;padding:2rem max(1.25rem, env(safe-area-inset-left)) 2rem max(1.25rem, env(safe-area-inset-right));padding-bottom:max(2rem, calc(0.75rem + env(safe-area-inset-bottom)))}
@@ -87,7 +87,7 @@ const commonStyles = `
   .ms12-input{width:100%;max-width:24rem;padding:0.5rem 0.65rem;border:1px solid rgb(203 213 225);border-radius:0.5rem;font-size:1rem;}
   .ms12-room-wrap{display:grid;gap:1rem;}
   @media (min-width: 768px) { .ms12-room-wrap{grid-template-columns:1fr 280px;} }
-  body[data-ms12-route=meeting_room] .ms12-wrap{padding-bottom:max(10rem,calc(8rem + env(safe-area-inset-bottom)))}
+  body[data-ms12-route=room] .ms12-wrap{padding-bottom:max(10rem,calc(8rem + env(safe-area-inset-bottom)))}
   .ms12-live-caption-wrap{position:fixed;left:0;right:0;bottom:0;z-index:9999;padding:0 max(0.65rem, env(safe-area-inset-left)) max(0.55rem, env(safe-area-inset-bottom)) max(0.65rem, env(safe-area-inset-right));pointer-events:none}
   .ms12-live-caption-inner{pointer-events:auto;max-width:min(1120px,100%);margin:0 auto;padding:0.55rem 0.75rem 0.65rem;border-radius:0.65rem 0.65rem 0 0;background:rgba(15,23,42,0.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 -8px 32px rgba(0,0,0,0.18);border:1px solid rgba(255,255,255,0.08);border-bottom:0}
   .ms12-live-caption-label{margin:0 0 0.3rem 0;font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.5)}
@@ -167,7 +167,7 @@ const commonStyles = `
 
 function guestNoJs(heading: string): string {
   return `<h1 class="ms12-h1">${heading}</h1>
-  <p class="ms12-p" style="font-size:0.9rem">JS 필요. <a href="/app/meeting" class="text-indigo-600">이동</a></p>`
+  <p class="ms12-p" style="font-size:0.9rem">JS 필요. <a href="/app" class="text-indigo-600">이동</a></p>`
 }
 
 function loginAside(
@@ -191,14 +191,14 @@ type Ms12Route =
   | 'entry'
   | 'hub'
   | 'desk'
-  | 'meeting'
+  | 'meeting_hub'
   | 'meeting_new'
   | 'join'
   | 'records'
-  | 'meeting_room'
+  | 'room'
   | 'library'
   | 'archive'
-  | 'meeting_record'
+  | 'record'
   | 'login'
 
 function layout(
@@ -319,6 +319,11 @@ function layoutEntry(authMode: string): string {
   .ms12-entry-chip{min-height:38px;padding:0.3rem 0.7rem;font-size:0.78rem;font-weight:600;border-radius:0.5rem;
     border:1px solid rgba(148,163,184,0.38);background:rgba(15,23,42,0.55);color:rgba(226,232,240,0.95);font-family:inherit;cursor:pointer}
   .ms12-entry-chip:hover{background:rgba(30,41,59,0.75)}
+  .ms12-entry-stack{display:flex;flex-direction:column;gap:0.65rem;width:100%;max-width:22rem;margin:0 auto}
+  a.ms12-entry-primary{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;padding:0.62rem 0.9rem;border-radius:0.55rem;font-weight:700;font-size:0.94rem;text-decoration:none;background:linear-gradient(180deg,rgb(15,150,130) 0%,rgb(13,110,100) 100%);color:#fff!important;border:none;font-family:inherit;box-shadow:0 2px 10px rgba(0,0,0,0.22)}
+  a.ms12-entry-primary:hover{filter:brightness(1.06)}
+  a.ms12-entry-secondary{display:flex;align-items:center;justify-content:center;width:100%;min-height:46px;padding:0.5rem 0.85rem;border-radius:0.55rem;font-weight:600;font-size:0.88rem;text-decoration:none;border:1px solid rgba(148,163,184,0.42);background:rgba(15,23,42,0.42);color:rgba(226,232,240,0.96)!important;font-family:inherit}
+  a.ms12-entry-secondary:hover{background:rgba(30,41,59,0.62)}
   .ms12-entry-status{min-height:1.2rem;font-size:0.74rem;text-align:center;color:rgba(203,213,225,0.9);margin:0.5rem 0 0 0;letter-spacing:0.02em}
   .ms12-entry-card{margin-top:1.4rem;max-width:20rem;width:100%;padding:1.05rem 1.15rem;border-radius:1rem;
     background:rgba(15,23,42,0.45);border:1px solid rgba(148,163,184,0.2);backdrop-filter:blur(12px) saturate(1.2);
@@ -406,17 +411,14 @@ function layoutEntry(authMode: string): string {
         <p class="ms12-entry-kicker" lang="en">MS Platform</p>
       </div>
       <div class="ms12-entry-card" id="ms12-entry-login">
-        <button type="button" class="ms12-entry-startbtn" data-ms12-entry-qs="start" aria-label="새 회의로 시작">회의 시작</button>
+        <nav class="ms12-entry-stack" aria-label="시작 메뉴">
+          <a class="ms12-entry-primary" href="/app/meeting/new">회의 시작</a>
+          <a class="ms12-entry-secondary" href="/app/join">회의 참여</a>
+          <a class="ms12-entry-secondary" href="/app/records">기록 보기</a>
+        </nav>
         <p id="ms12-entry-status" class="ms12-entry-status" role="status" aria-live="polite"></p>
-        <div class="ms12-entry-chips" aria-label="빠른 시작">
-          <button type="button" class="ms12-entry-chip" data-ms12-entry-qs="quick" data-ms12-type="team" data-ms12-title="팀 회의">팀</button>
-          <button type="button" class="ms12-entry-chip" data-ms12-entry-qs="quick" data-ms12-type="class" data-ms12-title="수업 회의">수업</button>
-          <button type="button" class="ms12-entry-chip" data-ms12-entry-qs="quick" data-ms12-type="counseling" data-ms12-title="상담 기록">상담</button>
-          <button type="button" class="ms12-entry-chip" data-ms12-entry-qs="quick" data-ms12-type="planning" data-ms12-title="기획 회의">기획</button>
-        </div>
         <p class="ms12-entry-policy-line js-ms12-policy" style="margin:0.7rem 0 0 0;font-size:0.7rem;line-height:1.45;color:rgba(186,198,220,0.88);text-align:center" aria-label="플랜 안내"></p>
       </div>
-      <p class="ms12-entry-breadcrumb"><a href="/app/meeting">회의 허브</a> · <a href="/app/hub">전체 메뉴</a></p>
     </div>
   </div>
   ${entryMarqueeFlow()}
@@ -426,10 +428,13 @@ function layoutEntry(authMode: string): string {
 
 type Ms12Context = Context<{ Bindings: Bindings }>
 
-/** 첫 화면 HTML. 루트 `/app`·`/app/` 는 `index` 에서 직접 `get` 으로 연결(서브 `route`만으로는 루트가 안 잡힌 Pages·엣지 케이스 대비) */
+/** 첫 화면 HTML — `app.route('/app', ms12Pages)` 시 하위 `''` 가 `/app` 과 일치 */
 function renderEntryPage(c: Ms12Context) {
   return c.html(layoutEntry(getAuthMode(c)))
 }
+
+/** `/app`·`/app/` — 시작 화면 (상위 `index` 에서 `/app` 리다이렉트 제거 시 필수) */
+p.get('/', renderEntryPage)
 
 const HUB_INNER = `<div class="ms12-header-row">
          <h1 class="ms12-h1" style="margin:0">MS12</h1>
@@ -458,7 +463,7 @@ const HUB_INNER = `<div class="ms12-header-row">
            <strong>공모사업 찾기</strong><span>구조화 공고·검색·회의·제안서 연결</span>
          </a>
        </div>
-       <p class="ms12-p" style="margin-top:0.75rem"><a href="/app/meeting" class="text-indigo-600" style="text-decoration:underline">회의 허브</a> · <a href="/app/library" class="text-indigo-600" style="text-decoration:underline">문서</a> · <a href="/app/archive" class="text-indigo-600" style="text-decoration:underline">보관</a></p>
+       <p class="ms12-p" style="margin-top:0.75rem"><a href="/app/archive" class="text-indigo-600" style="text-decoration:underline">보관함</a></p>
        <p class="ms12-subtitle" style="margin-top:1.5rem">대시보드</p>
        <div class="ms12-card-grid ms12-card-grid--2x2" style="margin-top:0.5rem">
          <div class="ms12-panel" style="margin:0;padding:0.85rem 1rem">
@@ -515,7 +520,6 @@ const DESK_INNER = `<div class="ms12-desk">
       <section class="ms12-dsk-today" aria-labelledby="ms12-dsk-recent-h">
         <h2 id="ms12-dsk-recent-h">최근 회의</h2>
         <div id="ms12-home-recent" class="ms12-dsk-today__body ms12-muted">불러오는 중…</div>
-        <a class="ms12-dsk-link" href="/app/meeting">회의·허브로 →</a>
       </section>
     </main>
     <aside class="ms12-dsk-aside" aria-label="빠른 안내">
@@ -534,7 +538,7 @@ const DESK_INNER = `<div class="ms12-desk">
   <div class="ms12-dsk-ticker" aria-hidden="true">
     <div class="ms12-dsk-ticker__in">MS Platform — 회의 · 기록 · 문서  ·  MS Platform — 회의 · 기록 · 문서  ·  MS Platform — 회의 · 기록 · 문서  ·  MS Platform — 회의 · 기록 · 문서  ·  MS Platform — 회의 · 기록 · 문서  ·  MS Platform — 회의 · 기록 · 문서  ·  </div>
   </div>
-  ${loginAside('/app/meeting', kakao, google)}
+  ${loginAside('/app/desk', kakao, google)}
 </div>`
 
 /** 예전 대시보드(카드·요약) — /app /app/hub */
@@ -671,6 +675,12 @@ p.get('/archive', (c) =>
 )
 
 p.get('/meeting-record/:rid', (c) => {
+  const rid = c.req.param('rid')
+  if (!/^[a-f0-9]+$/i.test(rid || '')) return c.text('Not Found', 404)
+  return c.redirect(`/app/record/${rid}`, 302)
+})
+
+p.get('/record/:rid', (c) => {
   const id = c.req.param('rid')
   if (!/^[a-f0-9]+$/i.test(id)) {
     return c.text('Not Found', 404)
@@ -678,7 +688,7 @@ p.get('/meeting-record/:rid', (c) => {
   return c.html(
     layout(
       '회의 기록 — MS12',
-      'meeting_record',
+      'record',
       `data-ms12-record-id="${escapeHtml(id)}"`,
       guestNoJs('회의 기록'),
       `<a href="/app/archive" class="ms12-p" style="display:inline-block;margin-bottom:0.5rem">← 보관함</a>
@@ -723,9 +733,9 @@ p.get('/meeting-record/:rid', (c) => {
            <span class="ms12-muted" id="ms12-mr-msg" style="margin-left:0.5rem;font-size:0.88rem"></span>
          </p>
        </form>
-       ${loginAside('/app/meeting-record/' + id, kakao, google)}`,
+       ${loginAside('/app/record/' + id, kakao, google)}`,
       getAuthMode(c),
-      `/app/meeting-record/${id}`,
+      `/app/record/${id}`,
     ),
   )
 })
@@ -793,7 +803,7 @@ p.get('/meeting', (c) =>
   c.html(
     layout(
       '회의 — MS12',
-      'meeting',
+      'meeting_hub',
       '',
       guestNoJs('회의'),
       `<div class="ms12-mh">
@@ -806,46 +816,22 @@ p.get('/meeting', (c) =>
        <section class="ms12-mh-hero" aria-labelledby="ms12-mh-title">
          <h1 id="ms12-mh-title" class="ms12-mh-title">오늘 회의를 시작하세요</h1>
          <p class="ms12-mh-sub">기록하면 실행·문서로 이어집니다.</p>
-         <button type="button" class="ms12-mh-cta" data-ms12-action="meeting-start">회의 시작</button>
+         <button type="button" class="ms12-mh-cta" data-ms12-action="hub-start">회의 시작</button>
          <p class="ms12-mh-policy js-ms12-policy" style="margin:0.4rem auto 0;max-width:22rem;font-size:0.78rem;line-height:1.45;color:rgb(100 116 139);text-align:center" aria-label="플랜 안내"></p>
          <p id="ms12-mh-status" class="ms12-mh-status" role="status" aria-live="polite"></p>
-         <div class="ms12-mh-quick" aria-label="빠른 시작">
-           <p class="ms12-mh-quick-label">빠른 시작</p>
-           <div class="ms12-mh-chips">
-             <button type="button" class="ms12-mh-chip" data-ms12-action="meeting-start-quick" data-ms12-type="team" data-ms12-title="팀 회의">팀</button>
-             <button type="button" class="ms12-mh-chip" data-ms12-action="meeting-start-quick" data-ms12-type="class" data-ms12-title="수업 회의">수업</button>
-             <button type="button" class="ms12-mh-chip" data-ms12-action="meeting-start-quick" data-ms12-type="counseling" data-ms12-title="상담 기록">상담</button>
-             <button type="button" class="ms12-mh-chip" data-ms12-action="meeting-start-quick" data-ms12-type="planning" data-ms12-title="기획 회의">기획</button>
-           </div>
-         </div>
        </section>
-       <nav class="ms12-mh-secondary" aria-label="보조 메뉴">
-         <button type="button" class="ms12-mh-sec" data-ms12-action="meeting-join">회의 참여</button>
-         <button type="button" class="ms12-mh-sec" data-ms12-action="records-open">기록 보기</button>
-         <button type="button" class="ms12-mh-sec" data-ms12-action="app-archive">회의 보관함</button>
-         <button type="button" class="ms12-mh-sec" data-ms12-action="app-library">문서 보관함</button>
+       <nav class="ms12-mh-secondary" aria-label="보조 메뉴" style="max-width:24rem;grid-template-columns:1fr 1fr">
+         <button type="button" class="ms12-mh-sec" data-ms12-action="hub-open-join">회의 참여</button>
+         <button type="button" class="ms12-mh-sec" data-ms12-action="hub-open-archive">보관함</button>
        </nav>
-       <div class="ms12-mh-card" role="status" aria-live="polite">
-         <p style="margin:0;font-size:0.95rem">아직 진행 중인 회의가 없습니다.</p>
-         <p>새 회의를 시작하거나, 코드로 회의에 참여하세요.</p>
-         <button type="button" class="ms12-mh-card-btn" data-ms12-action="meeting-start">새 회의 시작</button>
-       </div>
-       <section class="ms12-mh-recent-grid" aria-label="최근 항목">
-         <div class="ms12-mh-panel">
+       <section class="ms12-mh-recent-grid" aria-label="최근 회의" style="margin-top:1.25rem">
+         <div class="ms12-mh-panel" style="max-width:28rem;margin-left:auto;margin-right:auto">
            <h3>최근 회의</h3>
            <div id="ms12-home-recent" class="ms12-muted" style="font-size:0.88rem;min-height:2.5rem">불러오는 중…</div>
          </div>
-         <div class="ms12-mh-panel">
-           <h3>최근 문서</h3>
-           <div id="ms12-dash-docs" class="ms12-muted" style="font-size:0.88rem;min-height:2.5rem">불러오는 중…</div>
-         </div>
-         <div class="ms12-mh-panel">
-           <h3>미완료 실행 항목</h3>
-           <div id="ms12-dash-actions" class="ms12-muted" style="font-size:0.88rem;min-height:2.5rem">불러오는 중…</div>
-         </div>
        </section>
        <div class="ms12-mh-foot">
-         <p class="ms12-muted" style="font-size:0.86rem;margin:0">MS12 회의 플랫폼 — 계정 없이 바로 이용합니다.</p>
+         <p class="ms12-muted" style="font-size:0.86rem;margin:0">MS12 회의록 플랫폼</p>
        </div>
        ${loginAside('/app/meeting', kakao, google)}
        </div>`,
@@ -856,6 +842,12 @@ p.get('/meeting', (c) =>
 )
 
 p.get('/meeting/:id', (c) => {
+  const rid = c.req.param('id')
+  if (rid === 'new' || !/^[a-f0-9]+$/i.test(rid || '')) return c.text('Not Found', 404)
+  return c.redirect(`/app/room/${rid}`, 302)
+})
+
+p.get('/room/:id', (c) => {
   const id = c.req.param('id')
   if (id === 'new' || !/^[a-f0-9]+$/i.test(id)) {
     return c.text('Not Found', 404)
@@ -863,7 +855,7 @@ p.get('/meeting/:id', (c) => {
   return c.html(
     layout(
       '회의 — MS12',
-      'meeting_room',
+      'room',
       `data-ms12-meeting-id="${escapeHtml(id)}"`,
       guestNoJs('회의'),
       `${MS12_HOME_LINK}
@@ -884,47 +876,6 @@ p.get('/meeting/:id', (c) => {
          </div>
        </div>
        <div id="ms12-room-free-notice" class="ms12-panel" style="display:none;margin:0.5rem 0;max-width:40rem;padding:0.5rem 0.75rem;border:1px solid rgb(251 191 36);background:rgb(255 251 235);font-size:0.86rem;line-height:1.45" role="status"></div>
-       <div id="ms12-live-caption-wrap" class="ms12-live-caption-wrap" role="region" aria-label="실시간 음성 자막">
-         <div class="ms12-live-caption-inner">
-           <p class="ms12-live-caption-label">실시간 자막</p>
-           <p id="ms12-live-caption-text" class="ms12-live-caption-text ms12-live-caption-text--idle" aria-live="polite">음성 인식을 켜면 말하는 내용이 여기(화면 하단)와 「메모·전사」탭의 전사 칸에 함께 표시됩니다.</p>
-         </div>
-       </div>
-       <div id="ms12-linked-ann" class="ms12-panel" style="display:none;margin:0.75rem 0;max-width:40rem;padding:0.75rem 1rem;border:1px solid rgb(199 210 254);background:rgb(238 242 255)">
-         <p class="ms12-p" style="font-weight:600;margin:0 0 0.25rem 0">연결된 공모·지원 공고</p>
-         <p class="ms12-p" id="ms12-linked-ann-line" style="font-size:0.9rem;margin:0"></p>
-         <a id="ms12-linked-ann-link" class="text-indigo-600" style="font-size:0.88rem;text-decoration:underline;display:none" href="#">공고 상세</a>
-       </div>
-       <div class="ms12-panel" style="margin:0.75rem 0 0.75rem 0;max-width:32rem">
-         <p class="ms12-p" style="font-weight:600;margin:0 0 0.35rem 0">서버 보관함에 저장</p>
-         <p class="ms12-muted" style="font-size:0.8rem;margin:0 0 0.4rem 0">필수 항목을 채운 뒤 저장하면 <a href="/app/archive" class="text-indigo-600" style="text-decoration:underline">회의 보관함</a>에 쌓입니다. 목록에서 열어 덮어쓰기·참고할 수 있습니다.</p>
-         <input class="ms12-input" id="ms12-save-title" type="text" placeholder="예: 260428 회의" maxlength="200" style="max-width:100%"/>
-         <div style="display:grid;gap:0.35rem;margin-top:0.4rem;max-width:22rem">
-           <label class="ms12-muted" style="font-size:0.8rem">회의 날짜</label>
-           <input class="ms12-input" id="ms12-save-meeting-date" type="date" />
-           <label class="ms12-muted" style="font-size:0.8rem">회의 분류</label>
-           <input class="ms12-input" id="ms12-save-category" type="text" value="일반" maxlength="80" autocomplete="off" style="max-width:100%"/>
-           <details class="ms12-cat-picker" style="margin:0;border:1px solid rgb(226 232 240);border-radius:0.5rem;padding:0.45rem 0.55rem;background:rgb(248 250 252)">
-             <summary style="cursor:pointer;font-size:0.82rem;font-weight:600;color:rgb(71 85 105);user-select:none">미리 정해 둔 분류에서 고르기 · 직접 추가</summary>
-             <div id="ms12-cat-chip-wrap" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.5rem"></div>
-             <div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.45rem;align-items:center">
-               <input class="ms12-input" id="ms12-save-category-add-input" type="text" placeholder="새 분류(추가 후 계속 사용)" maxlength="40" style="flex:1;min-width:8rem;margin:0;font-size:0.88rem"/>
-               <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-save-category-add-btn" style="font-size:0.82rem;padding:0.35rem 0.55rem;min-height:auto">추가</button>
-             </div>
-           </details>
-           <datalist id="ms12-cat-dl"></datalist>
-           <label class="ms12-muted" style="font-size:0.8rem">태그 <span style="font-weight:400;color:rgb(148 163 184)">(보관함 검색·주제별 묶기, 쉼표로 구분)</span></label>
-           <input class="ms12-input" id="ms12-save-tags" type="text" placeholder="예: 부모교육, 공모, 점검" />
-           <label class="ms12-muted" style="font-size:0.8rem">공개 수준</label>
-           <select class="ms12-input" id="ms12-save-vis" style="max-width:16rem">
-             <option value="public_internal">내부 전체(기본)</option>
-             <option value="restricted">제한</option>
-             <option value="private_admin">관리자만</option>
-           </select>
-         </div>
-         <button type="button" class="ms12-btn ms12-btn--teal" id="ms12-meeting-save-server" style="margin-top:0.5rem">서버에 회의 저장</button>
-         <p class="ms12-muted" id="ms12-save-server-msg" style="font-size:0.8rem;margin:0.35rem 0 0 0"></p>
-       </div>
        <div class="ms12-room-wrap" style="margin-top:0.75rem">
          <div>
            <div class="ms12-panel" style="padding:0.55rem 0.7rem 0.35rem 0.7rem">
@@ -956,7 +907,7 @@ p.get('/meeting/:id', (c) => {
                <button type="button" class="ms12-btn" id="ms12-room-export">JSON 내보내기</button>
              </div>
              <p class="ms12-muted" id="ms12-room-flush-msg" style="font-size:0.78rem;min-height:1rem;margin:0.35rem 0 0 0"></p>
-             <p class="ms12-muted" style="font-size:0.77rem;margin:0.55rem 0 0 0;line-height:1.45;color:rgb(100 116 139)">내용 맨 아래에 키워드·태그를 적어 두면 나중에 찾기 좋습니다. 서버에 저장할 때는 위쪽 「태그」칸에도 같은 단어를 넣으면 보관함에서 검색하기 쉽습니다.</p>
+             <p class="ms12-muted" style="font-size:0.77rem;margin:0.55rem 0 0 0;line-height:1.45;color:rgb(100 116 139)">내용 맨 아래에 키워드·태그를 적어 두면 나중에 찾기 좋습니다. 서버에 저장할 때는 아래 「서버 보관함에 저장」의 태그 칸에도 같은 단어를 넣으면 보관함에서 검색하기 쉽습니다.</p>
              </div>
            </div>
            <div id="ms12-rpanel-summary" class="ms12-rpanel" data-panel="summary" style="display:none">
@@ -1087,10 +1038,53 @@ p.get('/meeting/:id', (c) => {
            </div>
          </aside>
        </div>
-       ${loginAside('/app/meeting/' + id, kakao, google)}
+       <div id="ms12-live-caption-wrap" class="ms12-live-caption-wrap" role="region" aria-label="실시간 음성 자막">
+         <div class="ms12-live-caption-inner">
+           <p class="ms12-live-caption-label">실시간 자막</p>
+           <p id="ms12-live-caption-text" class="ms12-live-caption-text ms12-live-caption-text--idle" aria-live="polite">음성 인식을 켜면 말하는 내용이 여기(화면 하단)와 「메모·전사」탭의 전사 칸에 함께 표시됩니다.</p>
+         </div>
+       </div>
+       <div id="ms12-linked-ann" class="ms12-panel" style="display:none;margin:0.75rem 0;max-width:40rem;padding:0.75rem 1rem;border:1px solid rgb(199 210 254);background:rgb(238 242 255)">
+         <p class="ms12-p" style="font-weight:600;margin:0 0 0.25rem 0">연결된 공모·지원 공고</p>
+         <p class="ms12-p" id="ms12-linked-ann-line" style="font-size:0.9rem;margin:0"></p>
+         <a id="ms12-linked-ann-link" class="text-indigo-600" style="font-size:0.88rem;text-decoration:underline;display:none" href="#">공고 상세</a>
+       </div>
+       <details class="ms12-panel" style="margin:0.75rem 0 0.75rem 0;max-width:32rem">
+         <summary style="cursor:pointer;font-weight:600;padding:0.35rem 0;list-style:none">서버 보관함에 저장 (제목·날짜·분류)</summary>
+         <div style="margin-top:0.45rem">
+         <p class="ms12-muted" style="font-size:0.8rem;margin:0 0 0.4rem 0">필수 항목을 채운 뒤 저장하면 <a href="/app/archive" class="text-indigo-600" style="text-decoration:underline">회의 보관함</a>에 쌓입니다. 목록에서 열어 덮어쓰기·참고할 수 있습니다.</p>
+         <input class="ms12-input" id="ms12-save-title" type="text" placeholder="예: 260428 회의" maxlength="200" style="max-width:100%"/>
+         <div style="display:grid;gap:0.35rem;margin-top:0.4rem;max-width:22rem">
+           <label class="ms12-muted" style="font-size:0.8rem">회의 날짜</label>
+           <input class="ms12-input" id="ms12-save-meeting-date" type="date" />
+           <label class="ms12-muted" style="font-size:0.8rem">회의 분류</label>
+           <input class="ms12-input" id="ms12-save-category" type="text" value="일반" maxlength="80" autocomplete="off" style="max-width:100%"/>
+           <details class="ms12-cat-picker" style="margin:0;border:1px solid rgb(226 232 240);border-radius:0.5rem;padding:0.45rem 0.55rem;background:rgb(248 250 252)">
+             <summary style="cursor:pointer;font-size:0.82rem;font-weight:600;color:rgb(71 85 105);user-select:none">미리 정해 둔 분류에서 고르기 · 직접 추가</summary>
+             <div id="ms12-cat-chip-wrap" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.5rem"></div>
+             <div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.45rem;align-items:center">
+               <input class="ms12-input" id="ms12-save-category-add-input" type="text" placeholder="새 분류(추가 후 계속 사용)" maxlength="40" style="flex:1;min-width:8rem;margin:0;font-size:0.88rem"/>
+               <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-save-category-add-btn" style="font-size:0.82rem;padding:0.35rem 0.55rem;min-height:auto">추가</button>
+             </div>
+           </details>
+           <datalist id="ms12-cat-dl"></datalist>
+           <label class="ms12-muted" style="font-size:0.8rem">태그 <span style="font-weight:400;color:rgb(148 163 184)">(보관함 검색·주제별 묶기, 쉼표로 구분)</span></label>
+           <input class="ms12-input" id="ms12-save-tags" type="text" placeholder="예: 부모교육, 공모, 점검" />
+           <label class="ms12-muted" style="font-size:0.8rem">공개 수준</label>
+           <select class="ms12-input" id="ms12-save-vis" style="max-width:16rem">
+             <option value="public_internal">내부 전체(기본)</option>
+             <option value="restricted">제한</option>
+             <option value="private_admin">관리자만</option>
+           </select>
+         </div>
+         <button type="button" class="ms12-btn ms12-btn--teal" id="ms12-meeting-save-server" style="margin-top:0.5rem">서버에 회의 저장</button>
+         <p class="ms12-muted" id="ms12-save-server-msg" style="font-size:0.8rem;margin:0.35rem 0 0 0"></p>
+         </div>
+       </details>
+       ${loginAside('/app/room/' + id, kakao, google)}
        <p id="ms12-room-err" class="ms12-p" style="color:rgb(185 28 28);display:none"></p>`,
       getAuthMode(c),
-      `/app/meeting/${id}`,
+      `/app/room/${id}`,
     ),
   )
 })
@@ -1183,7 +1177,7 @@ function escapeHtml(s: string): string {
 /** 레거시 `/app/login` → 회의 허브 */
 p.get('/login', (c) => {
   const q = new URL(c.req.url).search || ''
-  return c.redirect('/app/meeting' + q, 302)
+  return c.redirect('/app' + q, 302)
 })
 
 export { renderEntryPage }

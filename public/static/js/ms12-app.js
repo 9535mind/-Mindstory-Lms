@@ -279,7 +279,7 @@
     try {
       sessionStorage.setItem('ms12_local_only', '1')
     } catch (e) {}
-    window.location.href = '/app/meeting/' + encodeURIComponent(id)
+    window.location.href = '/app/room/' + encodeURIComponent(id)
   }
 
   function recordMeetingLocal(d) {
@@ -475,9 +475,11 @@
     if (p === '/app/archive') return 'archive'
     if (p === '/app/announcements') return 'announcements'
     if (p.indexOf('/app/announcements/') === 0) return 'announcement_detail'
-    if (p.indexOf('/app/meeting-record/') === 0) return 'meeting_record'
-    if (p === '/app/meeting') return 'meeting'
-    if (p.indexOf('/app/meeting/') === 0) return 'meeting_room'
+    if (p.indexOf('/app/record/') === 0) return 'record'
+    if (p.indexOf('/app/meeting-record/') === 0) return 'record'
+    if (p === '/app/meeting') return 'meeting_hub'
+    if (p.indexOf('/app/room/') === 0) return 'room'
+    if (p.indexOf('/app/meeting/') === 0) return 'room'
     return 'hub'
   }
 
@@ -691,21 +693,21 @@
                 if (typeof location !== 'undefined' && location.reload) {
                   location.reload()
                 } else {
-                  window.location.href = '/app/meeting'
+                  window.location.href = '/app'
                 }
                 return
               }
               if (typeof location !== 'undefined' && location.reload) {
                 location.reload()
               } else {
-                window.location.href = '/app/meeting'
+                window.location.href = '/app'
               }
             })
             .catch(function () {
               if (typeof location !== 'undefined' && location.reload) {
                 location.reload()
               } else {
-                window.location.href = '/app/meeting'
+                window.location.href = '/app'
               }
             })
         })
@@ -718,7 +720,7 @@
       .map(function (row) {
         var t = (row.title || '제목 없음') + ' · ' + (row.meetingCode || '') + ' · ' + (row.myRole || '')
         return (
-          '<div style="padding:0.35rem 0;border-bottom:1px solid rgb(241 245 249)"><a href="/app/meeting/' +
+          '<div style="padding:0.35rem 0;border-bottom:1px solid rgb(241 245 249)"><a href="/app/room/' +
           encodeURIComponent(row.id) +
           '" class="text-indigo-600" style="text-decoration:underline">' +
           t +
@@ -744,7 +746,7 @@
       (row.title || '회의') +
       '</strong> · 코드 ' +
       (row.meetingCode || '—') +
-      ' · <a class="text-indigo-600 underline font-medium" href="/app/meeting/' +
+      ' · <a class="text-indigo-600 underline font-medium" href="/app/room/' +
       encodeURIComponent(row.id) +
       '">이어서 열기</a>'
   }
@@ -849,7 +851,7 @@
             try {
               recordMeetingLocal(j.data)
             } catch (e) {}
-            window.location.href = '/app/meeting/' + encodeURIComponent(j.data.id)
+            window.location.href = '/app/room/' + encodeURIComponent(j.data.id)
             return
           }
           authLog('create meeting: server did not return id, open local only', (j && j.error) || '')
@@ -892,7 +894,7 @@
             try {
               recordMeetingLocal(j.data)
             } catch (e) {}
-            window.location.href = '/app/meeting/' + encodeURIComponent(j.data.id)
+            window.location.href = '/app/room/' + encodeURIComponent(j.data.id)
             return
           }
           var msg = (j && (j.error || j.message)) || '입장할 수 없습니다.'
@@ -951,7 +953,7 @@
               (row.meetingCode || '—') +
               ' · 내 역할: ' +
               (row.myRole || '—') +
-              '</span><br/><a class="ms12-btn" style="margin-top:0.4rem" href="/app/meeting/' +
+              '</span><br/><a class="ms12-btn" style="margin-top:0.4rem" href="/app/room/' +
               encodeURIComponent(row.id) +
               '">회의실 열기</a></div>'
             )
@@ -968,7 +970,7 @@
                 (row.title || '제목 없음') +
                 '</strong> <span class="ms12-muted" style="font-size:0.8rem">(이 브라우저)</span><br/><span class="ms12-p" style="font-size:0.85rem">코드: ' +
                 (row.meetingCode || '—') +
-                '</span><br/><a class="ms12-btn" style="margin-top:0.4rem" href="/app/meeting/' +
+                '</span><br/><a class="ms12-btn" style="margin-top:0.4rem" href="/app/room/' +
                 encodeURIComponent(row.id) +
                 '">회의실 열기</a></div>'
               )
@@ -1211,7 +1213,7 @@
           if (items && items.length) {
             acts.innerHTML = items
               .map(function (it) {
-                var href = '/app/meeting/' + encodeURIComponent(it.meetingId)
+                var href = '/app/room/' + encodeURIComponent(it.meetingId)
                 var room = escapeForHtml((it.roomTitle || '회의') + '')
                 var title = escapeForHtml((it.title || '—') + '')
                 var due = it.dueAt ? ' · ' + escapeForHtml(formatDue(String(it.dueAt))) : ''
@@ -1343,7 +1345,7 @@
 
   function initMeetingRoom() {
     var b = document.body
-    if (!b || b.getAttribute('data-ms12-route') !== 'meeting_room') return
+    if (!b || b.getAttribute('data-ms12-route') !== 'room') return
     var id = b.getAttribute('data-ms12-meeting-id') || ''
     if (!id) return
     roomServerOk = false
@@ -2983,7 +2985,7 @@
 
   function initLoginPage() {
     try {
-      window.location.replace('/app/meeting')
+      window.location.replace('/app')
     } catch (e) {}
   }
 
@@ -3189,7 +3191,7 @@
             try {
               sessionStorage.setItem('ms12_proposal_room_for_ann_' + id, o.j.data.id)
             } catch (e) {}
-            window.location.href = '/app/meeting/' + encodeURIComponent(o.j.data.id)
+            window.location.href = '/app/room/' + encodeURIComponent(o.j.data.id)
           })
           .catch(function () {
             alert('요청이 실패했습니다.')
@@ -3282,51 +3284,7 @@
     })
   }
 
-  function initEntryPage() {
-    var card = document.getElementById('ms12-entry-login')
-    var statusEl = document.getElementById('ms12-entry-status')
-    if (!card) return
-    function setSt(t) {
-      if (statusEl) statusEl.textContent = t || ''
-    }
-    function doCreate(title, type) {
-      var A = typeof globalThis !== 'undefined' && globalThis.Ms12Actions
-      if (!A || typeof A.createMeeting !== 'function') {
-        setSt('잠시 후 다시 시도해 주세요.')
-        return
-      }
-      setSt('회의를 준비하는 중…')
-      var payload = { title: title || ms12NextMeetingTitleForToday() }
-      if (type) payload.type = type
-      A.createMeeting(payload)
-        .then(function (res) {
-          if (res && res.kind === 'error') setSt((res && res.error) || '회의를 시작할 수 없습니다.')
-          else setSt('')
-        })
-        .catch(function () {
-          setSt('요청에 실패했습니다.')
-        })
-    }
-    card.addEventListener('click', function (ev) {
-      var base = clickTargetElement(ev)
-      if (!base || !base.closest) return
-      var trig = base.closest('[data-ms12-entry-qs]')
-      if (!trig) return
-      var qs = trig.getAttribute('data-ms12-entry-qs')
-      if (!qs) return
-      ev.preventDefault()
-      if (qs === 'start') {
-        doCreate(ms12NextMeetingTitleForToday(), '')
-        return
-      }
-      if (qs === 'quick') {
-        doCreate(
-          trig.getAttribute('data-ms12-title') || ms12NextMeetingTitleForToday(),
-          trig.getAttribute('data-ms12-type') || ''
-        )
-      }
-    })
-  }
+  function initEntryPage() {}
 
   function initMeetingHub() {
     var hubStatus = document.getElementById('ms12-mh-status')
@@ -3336,7 +3294,7 @@
     document.body.addEventListener('click', function (ev) {
       var base = clickTargetElement(ev)
       if (!base || !base.closest) return
-      if (getRoute() !== 'meeting') return
+      if (getRoute() !== 'meeting_hub') return
       var el = base.closest('[data-ms12-action]')
       if (!el) return
       var A = typeof globalThis !== 'undefined' && globalThis.Ms12Actions
@@ -3359,28 +3317,22 @@
             setHubStatus('요청에 실패했습니다.')
           })
       }
-      if (act === 'meeting-start') {
+      if (act === 'hub-start') {
         runCreate({ title: ms12NextMeetingTitleForToday() })
         return
       }
-      if (act === 'meeting-start-quick') {
-        runCreate({
-          title: el.getAttribute('data-ms12-title') || ms12NextMeetingTitleForToday(),
-          type: el.getAttribute('data-ms12-type') || undefined,
-        })
-        return
-      }
-      if (act === 'meeting-join' && A.openAppPath) A.openAppPath('/app/join')
-      else if (act === 'records-open' && A.openAppPath) A.openAppPath('/app/records')
-      else if (act === 'app-archive' && A.openAppPath) A.openAppPath('/app/archive')
-      else if (act === 'app-library' && A.openAppPath) A.openAppPath('/app/library')
+      if (act === 'hub-open-join' && A.openAppPath) A.openAppPath('/app/join')
+      else if (act === 'hub-open-archive' && A.openAppPath) A.openAppPath('/app/archive')
     })
   }
 
   function initAuthedPage() {
     var route = getRoute()
     if (route === 'entry') initEntryPage()
-    if (route === 'meeting') initMeetingHub()
+    if (route === 'meeting_hub') {
+      initMeetingHub()
+      initHomeRecent()
+    }
     if (route === 'desk') {
       initDeskHome()
     }
@@ -3391,10 +3343,10 @@
     if (route === 'meeting_new') initFormNew()
     if (route === 'join') initFormJoin()
     if (route === 'records') initRecordsList()
-    if (route === 'meeting_room') initMeetingRoom()
+    if (route === 'room') initMeetingRoom()
     if (route === 'library') initLibrary()
     if (route === 'archive') initArchive()
-    if (route === 'meeting_record') initMeetingRecord()
+    if (route === 'record') initMeetingRecord()
     if (route === 'login') initLoginPage()
     if (route === 'announcements') initAnnouncementsList()
     if (route === 'announcement_detail') initAnnouncementDetail()
@@ -3407,7 +3359,7 @@
     return items
       .map(function (it) {
         return (
-          '<div class="ms12-p" style="padding:0.4rem 0;border-bottom:1px solid rgb(241 245 249)"><a href="/app/meeting-record/' +
+          '<div class="ms12-p" style="padding:0.4rem 0;border-bottom:1px solid rgb(241 245 249)"><a href="/app/record/' +
           encodeURIComponent(it.id) +
           '" class="text-indigo-600" style="text-decoration:underline;font-weight:600">' +
           escapeForHtml((it.title || '—') + '') +
