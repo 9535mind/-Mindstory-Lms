@@ -558,6 +558,24 @@ api.post('/meetings/join', ms12Access, async (c) => {
   )
 })
 
+/** 회의 종료 — 클라에서 회의록 저장 후 호출(ms12_meeting_records는 별도 API). status만 ended 로 전환 */
+api.post('/meetings/:id/end', ms12Access, async (c) => {
+  const actor = c.get('actor')
+  const meetingId = c.req.param('id')
+  if (!/^[a-f0-9]+$/i.test(meetingId || '')) {
+    return c.json(errorResponse('id가 올바르지 않습니다.'), 400)
+  }
+  await requireRoomParticipant(c, meetingId, actor)
+  const roomBlock = await assertRoomOpenForMutations(c, meetingId)
+  if (roomBlock) return roomBlock
+  const t = nowIso()
+  await c.env.DB
+    .prepare(`UPDATE ms12_rooms SET status = 'ended', updated_at = ? WHERE id = ? AND status = 'open'`)
+    .bind(t, meetingId)
+    .run()
+  return c.json(successResponse({ ended: true, meetingId }))
+})
+
 /** 호스트가 참가자에게 공동 호스트 부여·해제 (participant ↔ cohost 만) */
 api.patch('/meetings/:id/participants/role', ms12Access, async (c) => {
   const actor = c.get('actor')

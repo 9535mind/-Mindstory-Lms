@@ -8,7 +8,7 @@ import { SITE_PUBLIC_ORIGIN } from '../utils/oauth-public'
 const p = new Hono<{ Bindings: Bindings }>({ strict: false })
 
 /** Pages 배포·소스 ?v= 일치(배포 후 페이지 소스에 이 주석이 보이면 새 Worker) */
-const MS12_BUILD = '20260429routesV2b'
+const MS12_BUILD = '20260422ms12entryFix'
 const MS12_ACTIONS_SCRIPT = `/static/js/ms12-actions.js?v=${MS12_BUILD}`
 const MS12_APP_SCRIPT = `/static/js/ms12-app.js?v=${MS12_BUILD}`
 const waitBlock = '<p class="ms12-p" id="ms12-wait" style="color:rgb(100 116 139)">불러오는 중…</p>'
@@ -428,69 +428,14 @@ function layoutEntry(authMode: string): string {
 
 type Ms12Context = Context<{ Bindings: Bindings }>
 
-/** 첫 화면 HTML — `app.route('/app', ms12Pages)` 시 하위 `''` 가 `/app` 과 일치 */
+/** MS12 시작 화면 HTML — `src/index.tsx`에서만 `app.get('/app', renderEntryPage)`로 응답. 이 서브앱에 `p.get('/')`를 두면 `app.route('/app', …)`와 중복되어 엔트리 대신 옛 허브 HTML이 나올 수 있음. */
 function renderEntryPage(c: Ms12Context) {
   return c.html(layoutEntry(getAuthMode(c)))
 }
 
-/** `/app`·`/app/` — 시작 화면 (상위 `index` 에서 `/app` 리다이렉트 제거 시 필수) */
-p.get('/', renderEntryPage)
-
-const HUB_INNER = `<div class="ms12-header-row">
-         <h1 class="ms12-h1" style="margin:0">MS12</h1>
-         <div><span class="ms12-badge js-ms12-badge" style="background:rgb(220 252 231);color:rgb(22 101 52)">준비됨</span></div>
-       </div>
-       <p class="ms12-p" style="margin-top:0.5rem">안녕하세요, <span class="js-ms12-user-name" style="font-weight:600">—</span> <span class="js-ms12-user-suffix" style="font-weight:400">님</span></p>
-       <p class="ms12-p ms12-muted" style="margin-top:0.25rem">회의·기록·문서·보관함까지 한 흐름으로 이용할 수 있습니다.</p>
-       <p class="ms12-subtitle" style="margin-top:1.25rem">빠른 작업</p>
-       <div class="ms12-card-grid" style="margin-top:0.5rem;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
-         <a class="ms12-big-btn" href="/app/meeting/new" style="text-decoration:none">
-           <strong>회의 시작</strong><span>새 모임·회의(코드 자동 발급)</span>
-         </a>
-         <a class="ms12-big-btn" href="/app/join" style="text-decoration:none">
-           <strong>회의 참여</strong><span>초대 코드로 입장</span>
-         </a>
-         <a class="ms12-big-btn" href="/app/records" style="text-decoration:none">
-           <strong>기록 보기</strong><span>참여·저장·요약(기록·목록)</span>
-         </a>
-         <a class="ms12-big-btn" href="/app/library" style="text-decoration:none">
-           <strong>문서 보관함</strong><span>기관 문서·검색·AI·결합</span>
-         </a>
-         <a class="ms12-big-btn" href="/app/archive" style="text-decoration:none">
-           <strong>회의 보관함</strong><span>서버에 저장한 회의 스냅샷</span>
-         </a>
-         <a class="ms12-big-btn" href="/app/announcements" style="text-decoration:none">
-           <strong>공모사업 찾기</strong><span>구조화 공고·검색·회의·제안서 연결</span>
-         </a>
-       </div>
-       <p class="ms12-p" style="margin-top:0.75rem"><a href="/app/archive" class="text-indigo-600" style="text-decoration:underline">보관함</a></p>
-       <p class="ms12-subtitle" style="margin-top:1.5rem">대시보드</p>
-       <div class="ms12-card-grid ms12-card-grid--2x2" style="margin-top:0.5rem">
-         <div class="ms12-panel" style="margin:0;padding:0.85rem 1rem">
-           <p class="ms12-p" style="font-weight:600;margin:0 0 0.35rem 0">최근 문서</p>
-           <div id="ms12-dash-docs" class="ms12-muted" style="font-size:0.88rem;min-height:2.5rem">불러오는 중…</div>
-           <p style="margin-top:0.5rem"><a class="text-indigo-600" style="font-size:0.88rem;text-decoration:underline" href="/app/library">문서 보관함 열기</a></p>
-         </div>
-         <div class="ms12-panel" style="margin:0;padding:0.85rem 1rem">
-           <p class="ms12-p" style="font-weight:600;margin:0 0 0.35rem 0">미완료 실행 항목</p>
-           <div id="ms12-dash-actions" class="ms12-muted" style="font-size:0.88rem;min-height:2.5rem">불러오는 중…</div>
-           <p style="margin-top:0.5rem"><a class="text-indigo-600" style="font-size:0.88rem;text-decoration:underline" href="/app/records">기록·회의 목록</a></p>
-         </div>
-       </div>
-       <div class="ms12-panel" style="margin-top:0.75rem;padding:0.85rem 1rem">
-         <p class="ms12-p" style="font-weight:600;margin:0 0 0.35rem 0">빠른 검색 (문서 창고)</p>
-         <form id="ms12-home-quick-search" class="ms12-toolbar" style="margin:0;flex-wrap:wrap;align-items:center;gap:0.5rem">
-           <input class="ms12-input" name="q" type="search" placeholder="키워드·제목" style="max-width:14rem" />
-           <button type="submit" class="ms12-btn" style="margin:0">이동</button>
-         </form>
-         <p class="ms12-muted" style="font-size:0.8rem;margin:0.35rem 0 0 0">제출 시 문서 보관함으로 이동합니다(자동 리다이렉트 아님).</p>
-       </div>
-       <div id="ms12-resume" class="ms12-muted" style="display:none;margin-top:0.5rem;margin-bottom:0.75rem;padding:0.5rem 0.75rem;border-radius:0.5rem;border:1px solid rgb(226 232 240);background:rgb(248 250 252)"></div>
-       <div class="ms12-footer-cards">
-         <p class="ms12-subtitle">최근 회의</p>
-         <div id="ms12-home-recent" class="ms12-muted" style="min-height:2.5rem">세션을 확인하는 중…</div>
-       </div>
-       ${loginAside('/app/hub', kakao, google)}`
+/** 레거시 대시보드 URL → 시작 화면(세 가지 동작 중심)으로 통합 */
+p.get('/hub', (c) => c.redirect('/app', 302))
+p.get('/home', (c) => c.redirect('/app', 302))
 
 const DESK_INNER = `<div class="ms12-desk">
   <div class="ms12-dsk-grid">
@@ -500,7 +445,7 @@ const DESK_INNER = `<div class="ms12-desk">
       <a href="/app/library">문서</a>
       <a href="/app/records">기록</a>
       <a href="/app/announcements">공고</a>
-      <a href="/app/hub">더보기</a>
+      <a href="/app">더보기</a>
     </nav>
     <main class="ms12-dsk-main">
       <header class="ms12-dsk-hero">
@@ -540,23 +485,6 @@ const DESK_INNER = `<div class="ms12-desk">
   </div>
   ${loginAside('/app/desk', kakao, google)}
 </div>`
-
-/** 예전 대시보드(카드·요약) — /app /app/hub */
-p.get('/hub', (c) =>
-  c.html(
-    layout(
-      'MS12 — 대시보드',
-      'hub',
-      '',
-      guestNoJs('MS12'),
-      HUB_INNER,
-      getAuthMode(c),
-      '/app/hub',
-    ),
-  ),
-)
-
-p.get('/home', (c) => c.redirect('/app/hub', 302))
 
 /** 로그인 직후 첫 화면 — 사이드 내비·시계·빠른 작업(오피스 홈 유형, MS12 전용) */
 p.get('/desk', (c) =>
@@ -876,22 +804,17 @@ p.get('/room/:id', (c) => {
          </div>
        </div>
        <div id="ms12-room-free-notice" class="ms12-panel" style="display:none;margin:0.5rem 0;max-width:40rem;padding:0.5rem 0.75rem;border:1px solid rgb(251 191 36);background:rgb(255 251 235);font-size:0.86rem;line-height:1.45" role="status"></div>
+       <div class="ms12-toolbar" style="margin:0.35rem 0 0.5rem 0;flex-wrap:wrap;gap:0.5rem;align-items:center">
+         <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-room-end-meeting">회의 종료</button>
+         <span class="ms12-muted" id="ms12-room-end-msg" style="font-size:0.82rem;min-height:1.2rem" role="status" aria-live="polite"></span>
+       </div>
        <div class="ms12-room-wrap" style="margin-top:0.75rem">
          <div>
-           <div class="ms12-panel" style="padding:0.55rem 0.7rem 0.35rem 0.7rem">
-             <div class="ms12-tab-bar" role="tablist" aria-label="회의 섹션">
-               <button type="button" class="ms12-tab ms12-tab--active" data-ms12-room-tab="memo" id="ms12-tab-memo" aria-selected="true">메모·전사</button>
-               <button type="button" class="ms12-tab" data-ms12-room-tab="summary" id="ms12-tab-summary" aria-selected="false">요약</button>
-               <button type="button" class="ms12-tab" data-ms12-room-tab="actions" id="ms12-tab-actions" aria-selected="false">실행 항목</button>
-               <button type="button" class="ms12-tab" data-ms12-room-tab="drafts" id="ms12-tab-drafts" aria-selected="false">문서 초안</button>
-             </div>
-           </div>
-           <div id="ms12-rpanel-memo" class="ms12-rpanel" data-panel="memo">
-             <div class="ms12-panel" style="margin-top:0.35rem">
+           <div class="ms12-panel">
              <p class="ms12-p" style="font-weight:600;margin:0 0 0.5rem 0">회의 메모</p>
              <textarea class="ms12-notes" id="ms12-room-notes" placeholder="핵심 메모 (자동 저장)"></textarea>
              <p class="ms12-p" style="font-weight:600;margin:0.75rem 0 0.4rem 0">전사</p>
-             <p class="ms12-p" style="font-size:0.82rem;margin:0 0 0.35rem 0" id="ms12-stt-hint">회의실에서는 마이크·음성 전사가 기본으로 켜집니다. 말하는 내용은 화면 하단 실시간 자막과 아래 전사 칸에 같이 쌓입니다. 필요 시 «음성 끄기»로 끌 수 있습니다.</p>
+             <p class="ms12-p" style="font-size:0.82rem;margin:0 0 0.35rem 0" id="ms12-stt-hint">«음성 켜기»를 누르면 브라우저에서 마이크 권한을 요청합니다. 허용 후 말한 내용은 화면 하단 실시간 자막과 아래 전사 칸에 쌓입니다.</p>
              <div class="ms12-toolbar" style="margin:0 0 0.4rem 0">
                <button type="button" class="ms12-btn ms12-btn--teal" id="ms12-stt-toggle">음성 켜기</button>
                <span class="ms12-muted ms12-mono" id="ms12-stt-status" style="font-size:0.8rem">준비 중…</span>
@@ -903,145 +826,36 @@ p.get('/room/:id', (c) => {
              </div>
              <textarea class="ms12-notes" id="ms12-room-transcript" placeholder="전사문 (입력·붙여넣기·음성, 자동 저장)" style="min-height:6rem"></textarea>
              <div class="ms12-toolbar" style="margin-top:0.6rem">
-               <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-room-flush">지금 이 브라우저에 저장</button>
+               <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-room-flush">이 브라우저에 임시 저장</button>
                <button type="button" class="ms12-btn" id="ms12-room-export">JSON 내보내기</button>
              </div>
              <p class="ms12-muted" id="ms12-room-flush-msg" style="font-size:0.78rem;min-height:1rem;margin:0.35rem 0 0 0"></p>
-             <p class="ms12-muted" style="font-size:0.77rem;margin:0.55rem 0 0 0;line-height:1.45;color:rgb(100 116 139)">내용 맨 아래에 키워드·태그를 적어 두면 나중에 찾기 좋습니다. 서버에 저장할 때는 아래 「서버 보관함에 저장」의 태그 칸에도 같은 단어를 넣으면 보관함에서 검색하기 쉽습니다.</p>
-             </div>
+             <p class="ms12-muted" style="font-size:0.77rem;margin:0.55rem 0 0 0;line-height:1.45;color:rgb(100 116 139)">내용 맨 아래에 키워드·태그를 적어 두면 나중에 찾기 좋습니다. 서버에 반영할 때는 아래 「서버에 회의 저장」 블록의 태그 칸에 같은 단어를 넣으면 보관함 검색에 도움이 됩니다.</p>
            </div>
-           <div id="ms12-rpanel-summary" class="ms12-rpanel" data-panel="summary" style="display:none">
-             <div class="ms12-panel" style="margin-top:0.35rem">
-               <p class="ms12-p" style="font-weight:600;margin:0 0 0.35rem 0">AI 제안 (메모·전사 기반, 자동·수동)</p>
-               <p class="ms12-muted" id="ms12-ai-auto-status" style="font-size:0.8rem;margin:0 0 0.4rem 0">입력이 멈춘 뒤 약 90초마다(참가자·API 키 있을 때) 갱신을 시도합니다. 또는 아래를 누르세요.</p>
-               <div class="ms12-toolbar" style="margin:0 0 0.5rem 0">
-                 <button type="button" class="ms12-btn ms12-btn--teal" id="ms12-ai-summary-now" style="margin:0">지금 AI 요약 받기</button>
-                 <button type="button" class="ms12-btn" id="ms12-ai-summary-apply" style="margin:0">AI 제안 → 아래 요약에 반영</button>
-               </div>
-               <div class="ms12-panel" style="margin:0.35rem 0 0.75rem 0;padding:0.6rem 0.75rem;background:rgb(248 250 252)">
-                 <p class="ms12-muted" style="font-size:0.75rem;margin:0 0 0.3rem 0">AI·기본 (직접 수정 가능)</p>
-                 <textarea id="ms12-ai-sug-basic" class="ms12-input" rows="2" style="width:100%;min-height:2.4rem;max-width:100%;font-size:0.86rem;white-space:pre-wrap;resize:vertical" placeholder="AI 기본 제안(직접 수정)"></textarea>
-                 <p class="ms12-muted" style="font-size:0.75rem;margin:0.5rem 0 0.3rem 0">AI·실행 (직접 수정 가능)</p>
-                 <textarea id="ms12-ai-sug-action" class="ms12-input" rows="2" style="width:100%;min-height:2.4rem;max-width:100%;font-size:0.86rem;white-space:pre-wrap;resize:vertical" placeholder="AI 실행 제안(직접 수정)"></textarea>
-                 <p class="ms12-muted" style="font-size:0.75rem;margin:0.5rem 0 0.3rem 0">AI·보고 (직접 수정 가능)</p>
-                 <textarea id="ms12-ai-sug-report" class="ms12-input" rows="2" style="width:100%;min-height:2.4rem;max-width:100%;font-size:0.86rem;white-space:pre-wrap;resize:vertical" placeholder="AI 보고 제안(직접 수정)"></textarea>
-               </div>
-               <p class="ms12-p" style="font-weight:600;margin:0.5rem 0 0.35rem 0">수정·저장용 요약 (3단)</p>
-             <p class="ms12-muted" style="font-size:0.8rem;margin:0 0 0.4rem 0">탭을 누르면 해당 유형만 AI로 정리·아래에 반영됩니다. (자동 저장) 전체 3단은 위「지금 AI 요약 받기」에서 한꺼번에 갱신됩니다.</p>
-             <div class="ms12-subtab-bar" role="tablist" aria-label="요약 유형" style="margin:0.35rem 0 0.5rem 0;flex-wrap:wrap">
-               <button type="button" class="ms12-subtab ms12-subtab--active" data-ms12-summary-tab="basic" id="ms12-sum-tab-basic" role="tab" aria-selected="true">기본요약</button>
-               <button type="button" class="ms12-subtab" data-ms12-summary-tab="action" id="ms12-sum-tab-action" role="tab" aria-selected="false">실행요약</button>
-               <button type="button" class="ms12-subtab" data-ms12-summary-tab="report" id="ms12-sum-tab-report" role="tab" aria-selected="false">보고요약</button>
+           <details class="ms12-panel" style="margin-top:0.75rem">
+             <summary style="cursor:pointer;font-weight:600;padding:0.35rem 0;list-style:none">수동 요약 (기본 · 실행 · 보고)</summary>
+             <div style="margin-top:0.5rem">
+               <p class="ms12-muted" style="font-size:0.82rem;margin:0 0 0.65rem 0">직접 입력합니다. 이 브라우저에 자동 저장됩니다.</p>
+               <label class="ms12-muted" style="font-size:0.78rem;display:block;margin:0 0 0.15rem 0" for="ms12-room-summary-basic">기본 요약</label>
+               <textarea class="ms12-notes" id="ms12-room-summary-basic" placeholder="기본 요약 (자동 저장)" style="min-height:4rem;margin-bottom:0.65rem" aria-label="기본 요약"></textarea>
+               <label class="ms12-muted" style="font-size:0.78rem;display:block;margin:0 0 0.15rem 0" for="ms12-room-summary-action">실행 요약</label>
+               <textarea class="ms12-notes" id="ms12-room-summary-action" placeholder="실행 요약" style="min-height:4rem;margin-bottom:0.65rem" aria-label="실행 요약"></textarea>
+               <label class="ms12-muted" style="font-size:0.78rem;display:block;margin:0 0 0.15rem 0" for="ms12-room-summary-report">보고 요약</label>
+               <textarea class="ms12-notes" id="ms12-room-summary-report" placeholder="보고 요약" style="min-height:4rem" aria-label="보고 요약"></textarea>
              </div>
-             <div data-ms12-summary-wrap="basic" class="ms12-summary-wrap" style="display:block">
-             <label class="ms12-muted" style="font-size:0.78rem;display:block;margin:0 0 0.15rem 0" for="ms12-room-summary-basic">기본 요약</label>
-             <textarea class="ms12-notes" id="ms12-room-summary-basic" placeholder="기본 요약 (자동 저장)" style="min-height:5rem" aria-label="기본 요약"></textarea>
-             </div>
-             <div data-ms12-summary-wrap="action" class="ms12-summary-wrap" style="display:none">
-             <label class="ms12-muted" style="font-size:0.78rem;display:block;margin:0 0 0.15rem 0" for="ms12-room-summary-action">실행 요약</label>
-             <textarea class="ms12-notes" id="ms12-room-summary-action" placeholder="실행 요약" style="min-height:5rem" aria-label="실행 요약"></textarea>
-             </div>
-             <div data-ms12-summary-wrap="report" class="ms12-summary-wrap" style="display:none">
-             <label class="ms12-muted" style="font-size:0.78rem;display:block;margin:0 0 0.15rem 0" for="ms12-room-summary-report">보고 요약</label>
-             <textarea class="ms12-notes" id="ms12-room-summary-report" placeholder="보고 요약" style="min-height:5rem" aria-label="보고 요약"></textarea>
-             </div>
-             <p class="ms12-p" style="font-weight:600;margin:0.75rem 0 0.35rem 0">실행 항목 (AI 초안)</p>
-             <p class="ms12-muted" style="font-size:0.8rem;margin:0 0 0.4rem 0">메모·전사·3단 요약을 바탕으로 AI가 후보를 만듭니다. 아래 JSON을 고친 뒤 «서버에 반영»하세요. <strong>실행 항목</strong> 탭 목록에서도 제목·상세·담당·기한을 바로 고칠 수 있습니다.</p>
-             <label class="ms12-muted" style="font-size:0.78rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin:0 0 0.4rem 0">
-               <input type="checkbox" id="ms12-ai-action-sync" checked style="width:auto" /> 전체 AI 요약(90초·또는「지금 받기」)과 함께 실행 항목 초안도 채움
-             </label>
-             <div class="ms12-toolbar" style="margin:0 0 0.5rem 0;flex-wrap:wrap;gap:0.4rem;align-items:center">
-               <button type="button" class="ms12-btn" id="ms12-ai-action-gen" style="margin:0">실행 항목 AI 제안</button>
-               <button type="button" class="ms12-btn ms12-btn--teal" id="ms12-ai-action-apply" style="margin:0">초안 → 서버 실행 항목에 추가</button>
-             </div>
-             <textarea class="ms12-notes" id="ms12-ai-action-draft" style="min-height:6.5rem;font-size:0.85rem" placeholder='[ { "title": "…", "taskDetail": "", "assignee": "", "dueAt": "" } ] JSON 배열, 수정 후 반영' aria-label="실행 항목 AI 초안"></textarea>
-             </div>
-           </div>
-           <div id="ms12-rpanel-actions" class="ms12-rpanel" data-panel="actions" style="display:none">
-             <div class="ms12-panel" style="margin-top:0.35rem">
-               <p class="ms12-p" style="font-weight:600;margin:0 0 0.5rem 0">실행 항목 (정리·추가)</p>
-               <p class="ms12-muted" style="font-size:0.8rem;margin:0 0 0.5rem 0">할 일·담당·기한·완료를 한곳에서 봅니다. 서버 동기화는 참가자일 때만 됩니다.</p>
-               <div id="ms12-actions-list" class="ms12-muted" style="font-size:0.88rem;min-height:1.5rem">불러오는 중…</div>
-               <form id="ms12-action-form" style="margin-top:0.6rem;display:grid;gap:0.4rem" autocomplete="off">
-                 <input class="ms12-input" name="title" type="text" placeholder="할 일" maxlength="500" required style="max-width:100%"/>
-                 <input class="ms12-input" name="taskDetail" type="text" placeholder="세부 설명(선택)" style="max-width:100%"/>
-                 <div style="display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center">
-                   <input class="ms12-input" name="assignee" type="text" placeholder="담당(선택)" maxlength="120" style="max-width:12rem"/>
-                   <input class="ms12-input" name="dueAt" type="date" style="max-width:11rem"/>
-                   <select class="ms12-input" name="priority" style="max-width:7rem" title="우선순위">
-                     <option value="low">낮음</option>
-                     <option value="normal" selected>보통</option>
-                     <option value="high">높음</option>
-                   </select>
-                   <select class="ms12-input" name="itemCategory" style="max-width:8rem" title="구분">
-                     <option value="required" selected>필수</option>
-                     <option value="assist">협조</option>
-                     <option value="optional">선택</option>
-                   </select>
-                 </div>
-                 <button type="submit" class="ms12-btn" style="margin-top:0.25rem">추가</button>
-               </form>
-             </div>
-           </div>
-           <div id="ms12-rpanel-drafts" class="ms12-rpanel" data-panel="drafts" style="display:none">
-             <div class="ms12-panel" style="margin-top:0.35rem">
-               <p class="ms12-p" style="font-weight:600;margin:0 0 0.4rem 0">문서 초안 (AI)</p>
-               <p class="ms12-muted" style="font-size:0.8rem;margin:0 0 0.5rem 0">유형을 탭으로 고른 뒤, 버튼으로 생성합니다. 전환 시 해당 유형에 저장한 초안이 표시됩니다(브라우저에 유지).</p>
-               <p class="ms12-muted" style="font-size:0.75rem;margin:0 0 0.25rem 0">보고·계획·제안</p>
-               <div class="ms12-subtab-bar" data-ms12-draft-group="a">
-                 <button type="button" class="ms12-subtab ms12-subtab--active" data-ms12-draft-kind="report_int" title="내부 보고">내부 보고</button>
-                 <button type="button" class="ms12-subtab" data-ms12-draft-kind="report_ext" title="대외 보고">대외</button>
-                 <button type="button" class="ms12-subtab" data-ms12-draft-kind="action_plan" title="실행계획">실행계획</button>
-                 <button type="button" class="ms12-subtab" data-ms12-draft-kind="result_report" title="결과">결과</button>
-                 <button type="button" class="ms12-subtab" data-ms12-draft-kind="proposal" title="제안">제안</button>
-               </div>
-               <p class="ms12-muted" style="font-size:0.75rem;margin:0.4rem 0 0.25rem 0">홍보·콘텐츠</p>
-               <div class="ms12-subtab-bar" data-ms12-draft-group="b">
-                 <button type="button" class="ms12-subtab" data-ms12-draft-kind="press" title="보도">보도</button>
-                 <button type="button" class="ms12-subtab" data-ms12-draft-kind="blog" title="블로그">블로그</button>
-                 <button type="button" class="ms12-subtab" data-ms12-draft-kind="social" title="SNS">SNS</button>
-               </div>
-               <div class="ms12-toolbar" style="margin:0.5rem 0;flex-wrap:wrap;gap:0.4rem;align-items:center">
-                 <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-draft-gen-current" style="margin:0">선택 유형으로 생성</button>
-                 <span class="ms12-muted" id="ms12-draft-cur-label" style="font-size:0.78rem">· 내부 보고</span>
-               </div>
-               <p class="ms12-toolbar" style="margin:0;flex-wrap:wrap;gap:0.3rem;align-items:center">
-                 <span class="ms12-muted" style="font-size:0.78rem">또는 직접:</span>
-                 <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-draft-report-int" style="margin:0">내부</button>
-                 <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-draft-report-ext" style="margin:0">대외</button>
-                 <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-draft-action-plan" style="margin:0">계획</button>
-                 <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-draft-result" style="margin:0">결과</button>
-                 <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-draft-proposal" style="margin:0">제안</button>
-                 <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-draft-press" style="margin:0">보도</button>
-                 <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-draft-blog" style="margin:0">블로그</button>
-                 <button type="button" class="ms12-btn ms12-btn--muted" id="ms12-draft-social" style="margin:0">SNS</button>
-               </div>
-             <textarea class="ms12-notes" id="ms12-room-draft-out" readonly placeholder="초안이 여기에 표시됩니다. 전환·저장·재생성 시 유지됩니다." style="min-height:9rem;margin-top:0.35rem;font-size:0.88rem"></textarea>
-             </div>
-           </div>
+           </details>
          </div>
          <aside>
            <div class="ms12-panel" id="ms12-part-wrap">
              <p class="ms12-p" style="font-weight:600;margin:0 0 0.25rem 0">참석자 <span class="js-ms12-part-count">0</span>명</p>
              <ul class="ms12-part-list js-ms12-part-list"><li>불러오는 중…</li></ul>
            </div>
-           <div class="ms12-panel" style="margin-top:0.75rem" id="ms12-ai-wrap">
-             <p class="ms12-p" style="font-weight:600;margin:0 0 0.35rem 0">회의 AI 질의</p>
-             <p class="ms12-muted" style="font-size:0.8rem;margin:0 0 0.4rem 0">왼쪽 메모·전사·요약을 바탕으로 답합니다. 키가 없으면 서버가 503을 반환할 수 있습니다.</p>
-             <textarea class="ms12-input" id="ms12-ai-q" placeholder="이 회의에서 결정한 점은?" rows="3" style="min-height:4rem;max-width:100%;resize:vertical"></textarea>
-             <div class="ms12-toolbar" style="margin-top:0.5rem">
-               <button type="button" class="ms12-btn" id="ms12-ai-send">질문 보내기</button>
-             </div>
-             <p class="ms12-p" style="font-weight:600;margin:0.6rem 0 0.25rem 0;font-size:0.9rem">답변</p>
-             <div class="ms12-ai-out" id="ms12-ai-answer">—</div>
-             <p class="ms12-p ms12-muted" id="ms12-ai-err" style="color:rgb(185 28 28);display:none;font-size:0.85rem"></p>
-           </div>
          </aside>
        </div>
        <div id="ms12-live-caption-wrap" class="ms12-live-caption-wrap" role="region" aria-label="실시간 음성 자막">
          <div class="ms12-live-caption-inner">
            <p class="ms12-live-caption-label">실시간 자막</p>
-           <p id="ms12-live-caption-text" class="ms12-live-caption-text ms12-live-caption-text--idle" aria-live="polite">음성 인식을 켜면 말하는 내용이 여기(화면 하단)와 「메모·전사」탭의 전사 칸에 함께 표시됩니다.</p>
+           <p id="ms12-live-caption-text" class="ms12-live-caption-text ms12-live-caption-text--idle" aria-live="polite">«음성 켜기» 후 말하는 내용이 여기(화면 하단)와 위 전사 칸에 함께 표시됩니다.</p>
          </div>
        </div>
        <div id="ms12-linked-ann" class="ms12-panel" style="display:none;margin:0.75rem 0;max-width:40rem;padding:0.75rem 1rem;border:1px solid rgb(199 210 254);background:rgb(238 242 255)">
@@ -1050,7 +864,7 @@ p.get('/room/:id', (c) => {
          <a id="ms12-linked-ann-link" class="text-indigo-600" style="font-size:0.88rem;text-decoration:underline;display:none" href="#">공고 상세</a>
        </div>
        <details class="ms12-panel" style="margin:0.75rem 0 0.75rem 0;max-width:32rem">
-         <summary style="cursor:pointer;font-weight:600;padding:0.35rem 0;list-style:none">서버 보관함에 저장 (제목·날짜·분류)</summary>
+         <summary style="cursor:pointer;font-weight:600;padding:0.35rem 0;list-style:none">서버에 회의 저장 (보관함·제목·날짜)</summary>
          <div style="margin-top:0.45rem">
          <p class="ms12-muted" style="font-size:0.8rem;margin:0 0 0.4rem 0">필수 항목을 채운 뒤 저장하면 <a href="/app/archive" class="text-indigo-600" style="text-decoration:underline">회의 보관함</a>에 쌓입니다. 목록에서 열어 덮어쓰기·참고할 수 있습니다.</p>
          <input class="ms12-input" id="ms12-save-title" type="text" placeholder="예: 260428 회의" maxlength="200" style="max-width:100%"/>

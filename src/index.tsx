@@ -23,7 +23,7 @@ import forestGasReport from './routes/forest-gas-report'
 import forestGasReportPublic from './routes/forest-gas-report-public'
 import forestResults from './routes/forest-results'
 import landing from './routes/landing'
-import ms12Pages from './routes/ms12-pages'
+import ms12Pages, { renderEntryPage } from './routes/ms12-pages'
 import { FOOTER_HTML_REVISION } from './utils/site-footer-legal'
 import {
   isForestProductHost,
@@ -188,6 +188,10 @@ app.get('/', (c) => {
 })
 /** mindstory-lms(평생교육원) — /legacy/mindstory-landing (GET / 는 Host 로 위에서 분기) */
 app.route('/', landing)
+
+/** MS12 시작 화면 — 하위 앱 mount 전에 고정하여 `/app` 이 항상 엔트리(허브 HTML 혼선 방지) */
+app.get('/app', renderEntryPage)
+app.get('/app/', renderEntryPage)
 
 app.route('/app', ms12Pages)
 

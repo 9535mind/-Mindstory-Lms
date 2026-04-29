@@ -1043,7 +1043,8 @@
     var roomId = options && options.roomId ? String(options.roomId) : ''
     var rows = (items || []).filter(Boolean)
     if (!rows.length) {
-      el.innerHTML = '<span class="ms12-muted" style="font-size:0.88rem">아직 없습니다. 아래에 추가하거나 AI 초안을 반영하세요.</span>'
+      el.innerHTML =
+        '<span class="ms12-muted" style="font-size:0.88rem">아직 없습니다. 실행 항목 화면이 열려 있을 때 여기서 추가할 수 있습니다.</span>'
       return
     }
     el.innerHTML = rows
@@ -1505,7 +1506,7 @@
           saveRoomDraft(id)
         } catch (e) {}
         if (flushMsg) {
-          flushMsg.textContent = '이 브라우저에 저장했습니다. (' + new Date().toLocaleTimeString() + ')'
+          flushMsg.textContent = '이 브라우저에 임시 저장되었습니다. (' + new Date().toLocaleTimeString() + ')'
         }
       })
     }
@@ -1606,6 +1607,8 @@
       })
     }
 
+    var ms12RoomAiMvp = true
+
     var autoSumTimer = null
     var lastAutoHash = ''
     var sugB = document.getElementById('ms12-ai-sug-basic')
@@ -1613,6 +1616,7 @@
     var sugR = document.getElementById('ms12-ai-sug-report')
     var statEl = document.getElementById('ms12-ai-auto-status')
     function runAutoSummaryNow() {
+      if (ms12RoomAiMvp) return
       if (!roomServerOk) {
         if (statEl) {
           statEl.textContent =
@@ -1756,6 +1760,7 @@
       }
     }
     function runAutoSummaryForFocus(focus) {
+      if (ms12RoomAiMvp) return
       if (summaryTabBusy) return
       if (!roomServerOk) {
         if (statEl) {
@@ -1840,12 +1845,13 @@
           var k = btn.getAttribute('data-ms12-summary-tab')
           if (k === 'basic' || k === 'action' || k === 'report') {
             showSummaryTabUI(k)
-            runAutoSummaryForFocus(k)
+            if (!ms12RoomAiMvp) runAutoSummaryForFocus(k)
           }
         })
       })(sumTabBtns[sti])
     }
     function scheduleAutoSummary() {
+      if (ms12RoomAiMvp) return
       var n = document.getElementById('ms12-room-notes')
       var tr = document.getElementById('ms12-room-transcript')
       var h = String((n && n.value) || '') + '|' + String((tr && tr.value) || '')
@@ -1859,8 +1865,10 @@
     }
     var nAuto = document.getElementById('ms12-room-notes')
     var trAuto = document.getElementById('ms12-room-transcript')
-    if (nAuto) nAuto.addEventListener('input', scheduleAutoSummary)
-    if (trAuto) trAuto.addEventListener('input', scheduleAutoSummary)
+    if (!ms12RoomAiMvp) {
+      if (nAuto) nAuto.addEventListener('input', scheduleAutoSummary)
+      if (trAuto) trAuto.addEventListener('input', scheduleAutoSummary)
+    }
     var btnAiNow = document.getElementById('ms12-ai-summary-now')
     if (btnAiNow) btnAiNow.addEventListener('click', function () { runAutoSummaryNow() })
     var btnApply = document.getElementById('ms12-ai-summary-apply')
@@ -2101,6 +2109,7 @@
     }
 
     function loadActionItems() {
+      if (!document.getElementById('ms12-actions-list')) return
       ms12Fetch('/api/ms12/meetings/' + encodeURIComponent(id) + '/action-items', { credentials: 'include' })
         .then(function (r) {
           return jsonFromResponse(r)
@@ -2626,19 +2635,8 @@
       })
       if (sttHint && Rec) {
         sttHint.textContent =
-          '회의실에서는 마이크·음성 전사가 기본으로 켜집니다. 더 빠른 글자 표시는 «클라우드 실시간 STT»를 선택하세요. HTTPS · Chrome·Edge 권장.'
+          '«음성 켜기»를 누르면 마이크 권한을 요청합니다. 더 빠른 글자 표시가 필요하면 «클라우드 실시간 STT»를 선택하세요. HTTPS · Chrome·Edge 권장.'
       }
-      setTimeout(function () {
-        try {
-          requestMicThenStart()
-        } catch (e) {
-          if (sttSt) sttSt.textContent = '대기'
-          if (sttHint) {
-            sttHint.textContent =
-              '자동으로 마이크를 켤 수 없습니다. «음성 켜기»를 눌러 주세요.'
-          }
-        }
-      }, 450)
 
       trEl.addEventListener('paste', function (e) {
         if (!sttOn) return
@@ -2707,83 +2705,126 @@
       }
     }
     initMeetingCategoryPickers()
+
+    function persistMeetingRecordSnapshot(roomId) {
+      var saveTitleEl = document.getElementById('ms12-save-title')
+      var saveDateEl = document.getElementById('ms12-save-meeting-date')
+      var titleS = saveTitleEl && saveTitleEl.value ? String(saveTitleEl.value).trim() : ''
+      var n = document.getElementById('ms12-room-notes')
+      var trs = document.getElementById('ms12-room-transcript')
+      var sba = document.getElementById('ms12-room-summary-basic')
+      var sac = document.getElementById('ms12-room-summary-action')
+      var srp = document.getElementById('ms12-room-summary-report')
+      var raw = n ? n.value : ''
+      if (!titleS) {
+        return Promise.resolve({ ok: false, reason: '회의 제목을 입력하세요.' })
+      }
+      if (!String(raw).trim()) {
+        return Promise.resolve({ ok: false, reason: '회의 메모(원문)을 입력하세요.' })
+      }
+      if (!saveDateEl || !String(saveDateEl.value).trim()) {
+        return Promise.resolve({ ok: false, reason: '회의 날짜를 선택하세요.' })
+      }
+      var catEl = document.getElementById('ms12-save-category')
+      var tagEl = document.getElementById('ms12-save-tags')
+      var visEl = document.getElementById('ms12-save-vis')
+      var cat = catEl && catEl.value ? String(catEl.value).trim() : '일반'
+      var tag = tagEl && tagEl.value ? String(tagEl.value).trim() : ''
+      var vis = visEl && visEl.value ? String(visEl.value) : 'public_internal'
+      var recKey = 'ms12_record_for_room_' + roomId
+      var existing = null
+      try {
+        existing = sessionStorage.getItem(recKey)
+      } catch (e) {}
+      var method = existing ? 'PATCH' : 'POST'
+      var url = existing
+        ? '/api/ms12/meeting-records/' + encodeURIComponent(existing)
+        : '/api/ms12/meeting-records'
+      var body = {
+        title: titleS,
+        meetingDate: saveDateEl.value,
+        category: cat,
+        rawNotes: String(raw).trim(),
+        transcript: trs && trs.value ? String(trs.value) : null,
+        tags: tag || null,
+        visibility: vis,
+        summaryBasic: sba && sba.value ? String(sba.value) : null,
+        summaryAction: sac && sac.value ? String(sac.value) : null,
+        summaryReport: srp && srp.value ? String(srp.value) : null,
+      }
+      if (method === 'POST') {
+        body.roomId = roomId
+      }
+      return ms12Fetch(url, {
+        method: method,
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+        .then(function (r) {
+          return jsonFromResponse(r)
+        })
+        .then(function (j) {
+          if (j && j.success && j.data && j.data.id) {
+            try {
+              sessionStorage.setItem(recKey, j.data.id)
+            } catch (e) {}
+            return { ok: true, recordId: String(j.data.id) }
+          }
+          return {
+            ok: false,
+            reason: (j && (j.error || j.message)) || '저장 실패',
+          }
+        })
+        .catch(function () {
+          return { ok: false, reason: '오프라인이거나 요청이 실패했습니다.' }
+        })
+    }
+
     if (saveBtn) {
       saveBtn.addEventListener('click', function () {
-        var titleS = saveTitleEl && saveTitleEl.value ? String(saveTitleEl.value).trim() : ''
-        var n = document.getElementById('ms12-room-notes')
-        var trs = document.getElementById('ms12-room-transcript')
-        var sba = document.getElementById('ms12-room-summary-basic')
-        var sac = document.getElementById('ms12-room-summary-action')
-        var srp = document.getElementById('ms12-room-summary-report')
-        var raw = n ? n.value : ''
-        if (!titleS) {
-          if (saveServerMsg) saveServerMsg.textContent = '회의 제목을 입력하세요.'
-          return
-        }
-        if (!String(raw).trim()) {
-          if (saveServerMsg) saveServerMsg.textContent = '회의 메모(원문)을 입력하세요.'
-          return
-        }
-        if (!saveDateEl || !String(saveDateEl.value).trim()) {
-          if (saveServerMsg) saveServerMsg.textContent = '회의 날짜를 선택하세요.'
-          return
-        }
-        var catEl = document.getElementById('ms12-save-category')
-        var tagEl = document.getElementById('ms12-save-tags')
-        var visEl = document.getElementById('ms12-save-vis')
-        var cat = (catEl && catEl.value) ? String(catEl.value).trim() : '일반'
-        var tag = tagEl && tagEl.value ? String(tagEl.value).trim() : ''
-        var vis = visEl && visEl.value ? String(visEl.value) : 'public_internal'
-        var recKey = 'ms12_record_for_room_' + id
-        var existing = null
-        try {
-          existing = sessionStorage.getItem(recKey)
-        } catch (e) {}
-        var method = existing ? 'PATCH' : 'POST'
-        var url = existing
-          ? '/api/ms12/meeting-records/' + encodeURIComponent(existing)
-          : '/api/ms12/meeting-records'
-        var body = {
-          title: titleS,
-          meetingDate: saveDateEl.value,
-          category: cat,
-          rawNotes: String(raw).trim(),
-          transcript: trs && trs.value ? String(trs.value) : null,
-          tags: tag || null,
-          visibility: vis,
-          summaryBasic: sba && sba.value ? String(sba.value) : null,
-          summaryAction: sac && sac.value ? String(sac.value) : null,
-          summaryReport: srp && srp.value ? String(srp.value) : null,
-        }
-        if (method === 'POST') {
-          body.roomId = id
-        }
         if (saveServerMsg) saveServerMsg.textContent = '저장 중…'
-        ms12Fetch(url, {
-          method: method,
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+        persistMeetingRecordSnapshot(id).then(function (res) {
+          if (!res.ok) {
+            if (saveServerMsg) saveServerMsg.textContent = res.reason || '저장 실패'
+            return
+          }
+          if (saveServerMsg) {
+            saveServerMsg.textContent =
+              '서버에 회의 저장됨 — 보관함에서 다시 열 수 있습니다.'
+          }
         })
-          .then(function (r) {
-            return jsonFromResponse(r)
+      })
+    }
+
+    var endBtn = document.getElementById('ms12-room-end-meeting')
+    var endMsg = document.getElementById('ms12-room-end-msg')
+    if (endBtn) {
+      endBtn.addEventListener('click', function () {
+        if (endMsg) endMsg.textContent = '저장 후 종료 처리 중…'
+        persistMeetingRecordSnapshot(id).then(function (res) {
+          if (!res.ok) {
+            if (endMsg) endMsg.textContent = res.reason || '저장 실패'
+            return
+          }
+          var rid = res.recordId
+          return ms12Fetch('/api/ms12/meetings/' + encodeURIComponent(id) + '/end', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}',
           })
-          .then(function (j) {
-            if (j && j.success && j.data && j.data.id) {
-              try {
-                sessionStorage.setItem(recKey, j.data.id)
-              } catch (e) {}
-              if (saveServerMsg) {
-                saveServerMsg.textContent =
-                  '보관함에 저장했습니다. «회의 보관함»에서 다시 열 수 있습니다.'
+            .then(function (r) {
+              return jsonFromResponse(r)
+            })
+            .then(function (ej) {
+              if (ej && ej.success) {
+                window.location.href = '/app/record/' + encodeURIComponent(rid)
+              } else if (endMsg) {
+                endMsg.textContent = (ej && (ej.error || ej.message)) || '종료 처리 실패'
               }
-            } else {
-              if (saveServerMsg) saveServerMsg.textContent = (j && (j.error || j.message)) || '저장 실패'
-            }
-          })
-          .catch(function () {
-            if (saveServerMsg) saveServerMsg.textContent = '오프라인이거나 요청이 실패했습니다.'
-          })
+            })
+        })
       })
     }
 
