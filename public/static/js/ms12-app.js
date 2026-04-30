@@ -977,6 +977,9 @@
     }
   }
 
+  /** /api/auth/me 가 지연·멈춤이어도 이 시간 안에 #ms12-authed 를 연다 */
+  var MS12_BOOT_UI_MS = 1100
+
   function sleep(ms) {
     return new Promise(function (resolve) {
       setTimeout(resolve, ms)
@@ -1102,6 +1105,9 @@
     } catch (e) {}
     var elg = document.getElementById('ms12-logout')
     if (elg) elg.style.display = 'none'
+    try {
+      if (phase === 'app' && typeof window !== 'undefined') window.ms12ShellReady = true
+    } catch (eShell) {}
   }
 
   function ensureMs12LogoutButton() {
@@ -1275,15 +1281,73 @@
       })
   }
 
+  /** 회의 생성 POST — 무응답 시 같은 화면에 붙잡히지 않도록 상한 */
+  var MS12_CREATE_MEETING_MS = 12000
+
+  function ms12FetchCreateMeeting(payload, timeoutMs) {
+    timeoutMs = timeoutMs || MS12_CREATE_MEETING_MS
+    var body = JSON.stringify(payload)
+    if (typeof AbortController === 'undefined') {
+      return Promise.race([
+        ms12Fetch('/api/ms12/meetings', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: body,
+        }),
+        sleep(timeoutMs).then(function () {
+          throw Object.assign(new Error('create meeting timeout'), { name: 'AbortError' })
+        }),
+      ])
+    }
+    var ctrl = new AbortController()
+    var postTimer = setTimeout(function () {
+      try {
+        ctrl.abort()
+      } catch (e) {}
+    }, timeoutMs)
+    return ms12Fetch('/api/ms12/meetings', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: body,
+      signal: ctrl.signal,
+    })
+      .then(function (r) {
+        try {
+          clearTimeout(postTimer)
+        } catch (e2) {}
+        return r
+      })
+      .catch(function (err) {
+        try {
+          clearTimeout(postTimer)
+        } catch (e3) {}
+        throw err
+      })
+  }
+
   function initFormNew() {
     var f = document.getElementById('ms12-form-new')
     if (!f) return
     var titleIn = document.getElementById('ms12-input-new-title') || f.querySelector('input[name="title"]')
     var dnIn = document.getElementById('ms12-input-new-displayname')
+    try {
+      var sp = new URLSearchParams(typeof location !== 'undefined' && location.search ? location.search : '')
+      var tQ = (sp.get('title') || '').trim()
+      var dQ = (sp.get('displayName') || '').trim()
+      if (titleIn && tQ) titleIn.value = tQ
+      if (dnIn && dQ) dnIn.value = dQ
+    } catch (eq) {}
     if (titleIn && !(titleIn.value && String(titleIn.value).trim())) {
       titleIn.value = ms12PeekNextMeetingTitleYyMmDdNn()
     }
-    fetchMeOnce()
+    Promise.race([
+      fetchMeOnce(),
+      sleep(MS12_BOOT_UI_MS).then(function () {
+        return { status: 0, json: null }
+      }),
+    ])
       .then(function (o) {
         var j = o && o.json
         var dn = defaultDisplayNameForNewMeeting(j)
@@ -1291,7 +1355,10 @@
           dnIn.value = dn
         }
         var hl = document.getElementById('ms12-new-meeting-host-label')
-        if (hl) hl.textContent = dn + '님이 호스트로 입장합니다.'
+        if (hl) {
+          var shown = (dnIn && String(dnIn.value || '').trim()) || dn
+          hl.textContent = shown + '님이 호스트로 입장합니다.'
+        }
       })
       .catch(function () {
         var dn = defaultDisplayNameForNewMeeting(null)
@@ -1299,7 +1366,10 @@
           dnIn.value = dn
         }
         var hl = document.getElementById('ms12-new-meeting-host-label')
-        if (hl) hl.textContent = dn + '님이 호스트로 입장합니다.'
+        if (hl) {
+          var shown2 = (dnIn && String(dnIn.value || '').trim()) || dn
+          hl.textContent = shown2 + '님이 호스트로 입장합니다.'
+        }
       })
     f.addEventListener('submit', function (e) {
       e.preventDefault()
@@ -1309,12 +1379,7 @@
       var dn = (fd.get('displayName') || '').toString().trim()
       var payload = { title: title }
       if (dn) payload.displayName = dn
-      ms12Fetch('/api/ms12/meetings', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+      ms12FetchCreateMeeting(payload)
         .then(function (r) {
           return jsonFromResponse(r).then(function (j) {
             return { ok: r.ok, j: j }
@@ -5448,26 +5513,72 @@
   async function run() {
     var hadOauth = new URLSearchParams(window.location.search || '').get('oauth_sync') === '1'
 
-    applyShell('loading', {})
-    var o = await fetchMeOnce()
+    var pmEarly = getPageAuthMode()
+    var pubQuick =
+      !hadOauth &&
+      (pmEarly === 'public' ||
+        pmEarly === 'demo' ||
+        pmEarly === 'optional' ||
+        pmEarly === 'disabled')
+    var didEarlyInit = false
+    if (pubQuick) {
+      applyShell('app', {
+        user: null,
+        isGuest: true,
+        guestIdentified: false,
+        sessionAuthed: false,
+        demoMode: pmEarly === 'demo' || pmEarly === 'public' ? true : pmEarly !== 'required',
+      })
+      wireLogout()
+      initAuthedPage()
+      didEarlyInit = true
+    } else {
+      applyShell('loading', {})
+    }
+    var o = await Promise.race([
+      fetchMeOnce(),
+      sleep(MS12_BOOT_UI_MS).then(function () {
+        return { status: 0, json: null, _bootUiCutoff: true }
+      }),
+    ])
     var j = o && o.json
     pageMode = (j && j.authMode) || getPageAuthMode()
 
     var authed = isAuthedFromMe(j)
     if (hadOauth && !authed) {
-      authLog('oauth_sync retry /api/auth/me')
-      var delays = [40, 100, 200, 400, 700]
-      for (var ri = 0; ri < delays.length; ri++) {
-        await sleep(delays[ri])
-        o = await fetchMeOnce()
-        j = o && o.json
-        authed = isAuthedFromMe(j)
-        if (authed) break
-        pageMode = (j && j.authMode) || pageMode
-      }
+      void (async function oauthSyncRetries() {
+        authLog('oauth_sync retry /api/auth/me')
+        var delays = [40, 100, 200, 400, 700]
+        for (var ri = 0; ri < delays.length; ri++) {
+          await sleep(delays[ri])
+          var ox = await fetchMeOnce()
+          var jx = ox && ox.json
+          if (isAuthedFromMe(jx)) {
+            try {
+              stripOauthParam()
+            } catch (e0) {}
+            try {
+              localStorage.setItem('user', JSON.stringify(jx.data))
+            } catch (e1) {}
+            try {
+              consumePendingCreateMeeting()
+            } catch (e2) {}
+            return
+          }
+        }
+        try {
+          stripOauthParam()
+        } catch (e3) {}
+      })()
+    } else if (hadOauth) {
+      stripOauthParam()
     }
     var openMode = isOpenAuthMode(pageMode)
-    if (openMode && !authed && (o.status === 0 || (o.status >= 500 && o.status < 600))) {
+    if (
+      openMode &&
+      !authed &&
+      (o.status === 0 || (o.status >= 500 && o.status < 600) || o._bootUiCutoff)
+    ) {
       var lid = ensureLocalOnlyActorId()
       j = {
         success: true,
@@ -5505,10 +5616,6 @@
       } catch (e) {}
     }
 
-    if (hadOauth) {
-      stripOauthParam()
-    }
-
     var showApp = openMode || authed || guestIdentified
     if (showApp) {
       applyNextToOAuthLinks()
@@ -5520,7 +5627,7 @@
         demoMode: demoMode,
       })
       wireLogout()
-      initAuthedPage()
+      if (!didEarlyInit) initAuthedPage()
       if (authed) {
         try {
           consumePendingCreateMeeting()
@@ -5530,7 +5637,7 @@
       applyNextToOAuthLinks()
       applyShell('app', { user: null, isGuest: true, demoMode: true })
       wireLogout()
-      initAuthedPage()
+      if (!didEarlyInit) initAuthedPage()
     }
   }
 

@@ -8,13 +8,33 @@ import { SITE_PUBLIC_ORIGIN } from '../utils/oauth-public'
 const p = new Hono<{ Bindings: Bindings }>({ strict: false })
 
 /** Pages 배포·소스 ?v= 일치(배포 후 페이지 소스에 이 주석이 보이면 새 Worker) */
-const MS12_BUILD = '20260422meetingShellPaintV1'
+const MS12_BUILD = '20260422pubQuickCreateV1'
 const MS12_ACTIONS_SCRIPT = `/static/js/ms12-actions.js?v=${MS12_BUILD}`
 const MS12_APP_SCRIPT = `/static/js/ms12-app.js?v=${MS12_BUILD}`
 const waitBlock = '<p class="ms12-p" id="ms12-wait" style="color:rgb(100 116 139)">불러오는 중…</p>'
 /** /app(엔트리)로 가는 뒤로가기: 텍스트 «시작화면» 대신 홈 아이콘 */
 const MS12_HOME_LINK =
   '<a href="/app" class="ms12-home-link" title="시작 화면" aria-label="시작 화면(홈)"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a>'
+
+/** defer 번들 첫 스크립트 오류 시 두 번째가 실행되지 않는 브라우저 동작 대비 — ms12-app 을 항상 먼저 두고, 부트 실패 시 본문 표시 */
+const MS12_SHELL_FALLBACK_SCRIPT = `<script>
+(function(){
+  var ms=4500;
+  function un(){
+    try{if(typeof window!=='undefined'&&window.ms12ShellReady)return}catch(e){}
+    var w=document.getElementById('ms12-wait'),a=document.getElementById('ms12-authed');
+    if(w)w.style.display='none';
+    if(a)a.style.display='block';
+    var hl=document.getElementById('ms12-new-meeting-host-label');
+    if(hl){var t=hl.textContent||'';if(t.indexOf('불러오는')>=0||t.indexOf('표시 이름')>=0)hl.textContent='페이지 로드가 지연되었습니다. 표시 이름은 직접 입력할 수 있습니다.'}
+    var ti=document.getElementById('ms12-input-new-title');
+    if(ti&&!String(ti.value||'').trim()){var d=new Date(),y=String(d.getFullYear()).slice(-2),m=('0'+(d.getMonth()+1)).slice(-2),da=('0'+d.getDate()).slice(-2);ti.value=y+m+da+'-01'}
+    var dn=document.getElementById('ms12-input-new-displayname');
+    if(dn&&!String(dn.value||'').trim()){try{dn.value='참가자 '+Math.floor(10000+Math.random()*89999)}catch(e2){}}
+  }
+  setTimeout(un,ms);
+})();
+</script>`
 
 const commonStyles = `
   .ms12-wrap{max-width:48rem;margin:0 auto;padding:2rem max(1.25rem, env(safe-area-inset-left)) 2rem max(1.25rem, env(safe-area-inset-right));padding-bottom:max(2rem, calc(0.75rem + env(safe-area-inset-bottom)))}
@@ -265,8 +285,8 @@ function layout(
   <title>${title}</title>
 ${canTag}  <link rel="stylesheet" href="/static/css/app.css" />
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
-  <script src="${MS12_ACTIONS_SCRIPT}" defer></script>
   <script src="${MS12_APP_SCRIPT}" defer></script>
+  <script src="${MS12_ACTIONS_SCRIPT}" defer></script>
   <style>
     ${commonStyles}
   </style>
@@ -281,6 +301,7 @@ ${canTag}  <link rel="stylesheet" href="/static/css/app.css" />
     <div id="ms12-guest" style="display:none">${guest}</div>
     <div id="ms12-authed">${authed}</div>
   </div>
+  ${MS12_SHELL_FALLBACK_SCRIPT}
 </body>
 </html>`
 }
@@ -427,8 +448,8 @@ function layoutEntry(authMode: string): string {
   <link rel="canonical" href="${SITE_PUBLIC_ORIGIN}/app"/>
   <link rel="stylesheet" href="/static/css/app.css" />
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
-  <script src="${MS12_ACTIONS_SCRIPT}" defer></script>
   <script src="${MS12_APP_SCRIPT}" defer></script>
+  <script src="${MS12_ACTIONS_SCRIPT}" defer></script>
   <style>
     ${entryStyles}
   </style>
