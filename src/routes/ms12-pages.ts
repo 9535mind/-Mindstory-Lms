@@ -8,7 +8,7 @@ import { SITE_PUBLIC_ORIGIN } from '../utils/oauth-public'
 const p = new Hono<{ Bindings: Bindings }>({ strict: false })
 
 /** Pages 배포·소스 ?v= 일치(배포 후 페이지 소스에 이 주석이 보이면 새 Worker) */
-const MS12_BUILD = '20260422pubQuickCreateV1'
+const MS12_BUILD = '20260422fastPaintV1'
 const MS12_ACTIONS_SCRIPT = `/static/js/ms12-actions.js?v=${MS12_BUILD}`
 const MS12_APP_SCRIPT = `/static/js/ms12-app.js?v=${MS12_BUILD}`
 const waitBlock = '<p class="ms12-p" id="ms12-wait" style="color:rgb(100 116 139)">불러오는 중…</p>'
@@ -19,7 +19,7 @@ const MS12_HOME_LINK =
 /** defer 번들 첫 스크립트 오류 시 두 번째가 실행되지 않는 브라우저 동작 대비 — ms12-app 을 항상 먼저 두고, 부트 실패 시 본문 표시 */
 const MS12_SHELL_FALLBACK_SCRIPT = `<script>
 (function(){
-  var ms=4500;
+  var ms=2200;
   function un(){
     try{if(typeof window!=='undefined'&&window.ms12ShellReady)return}catch(e){}
     var w=document.getElementById('ms12-wait'),a=document.getElementById('ms12-authed');
@@ -218,9 +218,9 @@ const commonStyles = `
   .ms12-dsk-ticker__in{display:inline-block;white-space:nowrap;animation:ms12DskT 95s linear infinite}
   @keyframes ms12DskT{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
   @media (prefers-reduced-motion:reduce){.ms12-dsk-ticker__in{animation:none}}
-  /* 첫 페인트: 로딩 표시·본문 숨김(noscript에서는 본문만 표시). JS 실행 후 applyShell이 인라인으로 덮습니다. */
-  #ms12-wait{display:block}
-  #ms12-authed{display:none}
+  /* 첫 페인트: 본문 우선(JS·/auth/me 지연 시에도 «불러오는 중»만 오래 보이지 않음). oauth_sync는 applyShell(loading) 인라인으로 덮음 */
+  #ms12-wait{display:none}
+  #ms12-authed{display:block}
 `
 
 function guestNoJs(heading: string): string {

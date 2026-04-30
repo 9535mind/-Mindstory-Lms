@@ -977,8 +977,10 @@
     }
   }
 
-  /** /api/auth/me 가 지연·멈춤이어도 이 시간 안에 #ms12-authed 를 연다 */
-  var MS12_BOOT_UI_MS = 1100
+  /** 부트 레이스: /auth/me 보다 먼저 끝나면 이 시간 후 오프라인 합성으로 진행 */
+  var MS12_BOOT_UI_MS = 400
+  /** /api/auth/me 단일 요청 상한(Abort·레거시 레이스 공통) */
+  var MS12_AUTH_ME_MS = 2200
 
   function sleep(ms) {
     return new Promise(function (resolve) {
@@ -988,7 +990,7 @@
 
   async function fetchMeOnce() {
     var fetchOpts = { credentials: 'include', cache: 'no-store' }
-    var meTimeoutMs = 10000
+    var meTimeoutMs = MS12_AUTH_ME_MS
     var r
     if (typeof AbortController === 'undefined') {
       try {
@@ -1282,7 +1284,7 @@
   }
 
   /** 회의 생성 POST — 무응답 시 같은 화면에 붙잡히지 않도록 상한 */
-  var MS12_CREATE_MEETING_MS = 12000
+  var MS12_CREATE_MEETING_MS = 8000
 
   function ms12FetchCreateMeeting(payload, timeoutMs) {
     timeoutMs = timeoutMs || MS12_CREATE_MEETING_MS
@@ -5514,12 +5516,8 @@
     var hadOauth = new URLSearchParams(window.location.search || '').get('oauth_sync') === '1'
 
     var pmEarly = getPageAuthMode()
-    var pubQuick =
-      !hadOauth &&
-      (pmEarly === 'public' ||
-        pmEarly === 'demo' ||
-        pmEarly === 'optional' ||
-        pmEarly === 'disabled')
+    /* oauth_sync 제외 전 경로 — 첫 페인트가 이미 본문(ms12-pages CSS)이라 여기서 즉시 이벤트만 연결 */
+    var pubQuick = !hadOauth
     var didEarlyInit = false
     if (pubQuick) {
       applyShell('app', {
@@ -5551,7 +5549,12 @@
         var delays = [40, 100, 200, 400, 700]
         for (var ri = 0; ri < delays.length; ri++) {
           await sleep(delays[ri])
-          var ox = await fetchMeOnce()
+          var ox = await Promise.race([
+            fetchMeOnce(),
+            sleep(MS12_AUTH_ME_MS).then(function () {
+              return { status: 0, json: null }
+            }),
+          ])
           var jx = ox && ox.json
           if (isAuthedFromMe(jx)) {
             try {
