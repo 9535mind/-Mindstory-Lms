@@ -66,6 +66,14 @@ function clipContextMs12(s: string): string {
   return t.slice(0, CONTEXT_MAX) + '\n…(이하 잘림)'
 }
 
+/** 요청 본문에 키가 있으면 그 값을 쓰고, 없으면 DB 저장값 사용(저장 전 화면 초안 반영). */
+function pickBodyStr(body: Record<string, unknown>, key: string, rowFallback: unknown): string {
+  if (Object.prototype.hasOwnProperty.call(body, key)) {
+    return String(body[key] ?? '')
+  }
+  return String(rowFallback ?? '')
+}
+
 function aiAvailable(env: Bindings): boolean {
   return !!(env.GEMINI_API_KEY?.trim() || env.OPENAI_API_KEY?.trim())
 }
@@ -497,11 +505,17 @@ r.post('/meeting-records/:rid/ai-report-sections', ms12Access, async (c) => {
   if (String(row.created_by_key) !== by) {
     return c.json(errorResponse('생성 권한이 없습니다.'), 403)
   }
-  const notes = clipContextMs12(String(row.raw_notes || ''))
-  const transcript = clipContextMs12(String(row.transcript || ''))
-  const sb = clipContextMs12(String(row.summary_basic || ''))
-  const sa = clipContextMs12(String(row.summary_action || ''))
-  const sr = clipContextMs12(String(row.summary_report || ''))
+  let body: Record<string, unknown> = {}
+  try {
+    body = (await c.req.json()) as Record<string, unknown>
+  } catch {
+    body = {}
+  }
+  const notes = clipContextMs12(pickBodyStr(body, 'rawNotes', row.raw_notes))
+  const transcript = clipContextMs12(pickBodyStr(body, 'transcript', row.transcript))
+  const sb = clipContextMs12(pickBodyStr(body, 'summaryBasic', row.summary_basic))
+  const sa = clipContextMs12(pickBodyStr(body, 'summaryAction', row.summary_action))
+  const sr = clipContextMs12(pickBodyStr(body, 'summaryReport', row.summary_report))
   if (![notes, transcript, sb, sa, sr].some((x) => x.trim().length > 0)) {
     return c.json(errorResponse('메모·회의록 내용·요약 중 최소 하나를 채운 뒤 생성해 주세요.'), 400)
   }

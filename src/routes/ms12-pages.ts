@@ -8,7 +8,7 @@ import { SITE_PUBLIC_ORIGIN } from '../utils/oauth-public'
 const p = new Hono<{ Bindings: Bindings }>({ strict: false })
 
 /** Pages 배포·소스 ?v= 일치(배포 후 페이지 소스에 이 주석이 보이면 새 Worker) */
-const MS12_BUILD = '20260429meetingTranscriptV1'
+const MS12_BUILD = '20260430recordReportDraftV1'
 const MS12_ACTIONS_SCRIPT = `/static/js/ms12-actions.js?v=${MS12_BUILD}`
 const MS12_APP_SCRIPT = `/static/js/ms12-app.js?v=${MS12_BUILD}`
 const waitBlock = '<p class="ms12-p" id="ms12-wait" style="color:rgb(100 116 139)">불러오는 중…</p>'
@@ -723,6 +723,7 @@ p.get('/record/:rid', (c) => {
          <section class="ms12-panel ms12-rec-span2">
            <p class="ms12-rec-panel-title">보고서 초안</p>
            <p class="ms12-rec-lead">기관 제출이나 내부 공유에 사용할 수 있는 보고서 초안입니다.</p>
+           <p id="ms12-rec-ai-report-hint" class="ms12-muted" style="font-size:0.78rem;line-height:1.45;margin:0 0 0.55rem;display:none"></p>
            <div class="ms12-rec-rblk"><label for="ms12-rec-r-overview">① 회의 개요</label>
              <textarea id="ms12-rec-r-overview" class="ms12-notes" style="min-height:3.5rem"></textarea></div>
            <div class="ms12-rec-rblk"><label for="ms12-rec-r-purpose">② 회의 목적</label>

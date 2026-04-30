@@ -4707,6 +4707,16 @@
       return extras
     }
 
+    function collectDraftForAiReport() {
+      return {
+        rawNotes: el('ms12-rec-raw') ? String(el('ms12-rec-raw').value || '') : '',
+        transcript: el('ms12-rec-tr') ? String(el('ms12-rec-tr').value || '') : '',
+        summaryBasic: el('ms12-rec-s-basic') ? String(el('ms12-rec-s-basic').value || '') : '',
+        summaryAction: el('ms12-rec-s-action') ? String(el('ms12-rec-s-action').value || '') : '',
+        summaryReport: el('ms12-rec-s-report') ? String(el('ms12-rec-s-report').value || '') : '',
+      }
+    }
+
     function buildPayload() {
       collectExtrasFromDom()
       return {
@@ -4993,16 +5003,26 @@
         var wrap = el('ms12-rec-ai-sum-wrap')
         var btnAiSum = el('ms12-rec-ai-sum')
         var btnAiRep = el('ms12-rec-ai-report')
+        var hintRep = el('ms12-rec-ai-report-hint')
         if (!aiAvailGlobal) {
           if (wrap)
             wrap.innerHTML =
               '<p class="ms12-rec-ai-hint">AI 요약은 추후 제공됩니다. 현재는 직접 요약을 입력할 수 있습니다.</p>'
           if (btnAiSum) btnAiSum.style.display = 'none'
           if (btnAiRep) btnAiRep.style.display = 'none'
+          if (hintRep) {
+            hintRep.style.display = 'none'
+            hintRep.textContent = ''
+          }
         } else {
           if (wrap) wrap.innerHTML = ''
           if (btnAiSum) btnAiSum.style.display = ''
           if (btnAiRep) btnAiRep.style.display = ''
+          if (hintRep) {
+            hintRep.style.display = 'block'
+            hintRep.textContent =
+              '「보고서 초안 생성」은 회의 메모·회의록 내용·요약 칸에 현재 보이는 글을 근거로 합니다. 저장하지 않은 수정도 생성 요청에 포함됩니다.'
+          }
         }
 
         setSummaryTab('basic')
@@ -5068,12 +5088,23 @@
       btnAiRep.addEventListener('click', function () {
         var msg = el('ms12-rec-msg-report')
         if (!aiAvailGlobal) return
+        var draftPick = collectDraftForAiReport()
+        var hasSrc = ['rawNotes', 'transcript', 'summaryBasic', 'summaryAction', 'summaryReport'].some(function (
+          k,
+        ) {
+          return String(draftPick[k] || '').trim().length > 0
+        })
+        if (!hasSrc) {
+          if (msg) msg.textContent = '회의 메모·회의록 내용·요약 중 하나 이상을 채운 뒤 생성해 주세요.'
+          return
+        }
+        btnAiRep.disabled = true
         if (msg) msg.textContent = '보고서 초안 생성 중…'
         ms12Fetch('/api/ms12/meeting-records/' + encodeURIComponent(rid) + '/ai-report-sections', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
+          body: JSON.stringify(draftPick),
         })
           .then(function (r) {
             return jsonFromResponse(r)
@@ -5081,6 +5112,7 @@
           .then(function (j) {
             if (j && j.success && j.data && j.data.sections) {
               var sec = j.data.sections
+              var srcKind = j.data.source === 'json' ? 'json' : 'fallback'
               if (el('ms12-rec-r-overview')) el('ms12-rec-r-overview').value = sec.overview || ''
               if (el('ms12-rec-r-purpose')) el('ms12-rec-r-purpose').value = sec.purpose || ''
               if (el('ms12-rec-r-discussion')) el('ms12-rec-r-discussion').value = sec.discussion || ''
@@ -5088,13 +5120,26 @@
               if (el('ms12-rec-r-execution')) el('ms12-rec-r-execution').value = sec.execution || ''
               if (el('ms12-rec-r-schedule')) el('ms12-rec-r-schedule').value = sec.schedule || ''
               if (el('ms12-rec-r-conclusion')) el('ms12-rec-r-conclusion').value = sec.conclusion || ''
-              patchRecord(msg, true)
-            } else {
-              if (msg) msg.textContent = (j && j.error) || '실패'
+              return patchRecord(null, true).then(function (row) {
+                if (!msg) return
+                if (row) {
+                  msg.textContent =
+                    srcKind === 'json'
+                      ? '보고서 초안을 채워 서버에 저장했습니다. 검토 후 수정할 수 있습니다.'
+                      : '보고서 칸을 채워 저장했습니다. AI 응답 형식이 불완전할 수 있어 각 항목을 확인하세요.'
+                } else {
+                  msg.textContent =
+                    '보고서 칸은 채워졌지만 저장에 실패했습니다. 「보고서 저장」으로 다시 시도하세요.'
+                }
+              })
             }
+            if (msg) msg.textContent = (j && j.error) || '실패'
           })
           .catch(function () {
             if (msg) msg.textContent = '요청 실패'
+          })
+          .finally(function () {
+            btnAiRep.disabled = false
           })
       })
     }
@@ -5102,6 +5147,18 @@
     var btnBlank = el('ms12-rec-blank-report')
     if (btnBlank) {
       btnBlank.addEventListener('click', function () {
+        var blankTpl = {
+          overview:
+            '- 회의 명칭·일시:\n- 참석(범위):\n- 배경 요약:',
+          purpose: '- 회의 목적:\n- 기대 성과:',
+          discussion:
+            '- 논의 주제별 요지:\n  · \n  · ',
+          decisions: '- 확정된 결정 사항:\n  · ',
+          execution:
+            '- 실행 과제:\n  · 내용:\n  · 담당:\n  · 기한:',
+          schedule: '- 향후 일정·마일스톤:',
+          conclusion: '- 종합 의견·향후 과제:',
+        }
         ;[
           'overview',
           'purpose',
@@ -5112,10 +5169,12 @@
           'conclusion',
         ].forEach(function (key) {
           var node = el('ms12-rec-r-' + key)
-          if (node && !node.value.trim()) node.value = ''
+          if (node && !String(node.value || '').trim()) {
+            node.value = blankTpl[key] || ''
+          }
         })
         var msg = el('ms12-rec-msg-report')
-        if (msg) msg.textContent = '빈 양식을 채워 저장할 수 있습니다.'
+        if (msg) msg.textContent = '비어 있는 항목에 작성 가이드를 넣었습니다. 채운 뒤 「보고서 저장」을 누르세요.'
       })
     }
 
@@ -5488,4 +5547,5 @@
   } else {
     safeRun()
   }
+}
 })()
