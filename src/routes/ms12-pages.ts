@@ -8,7 +8,7 @@ import { SITE_PUBLIC_ORIGIN } from '../utils/oauth-public'
 const p = new Hono<{ Bindings: Bindings }>({ strict: false })
 
 /** Pages 배포·소스 ?v= 일치(배포 후 페이지 소스에 이 주석이 보이면 새 Worker) */
-const MS12_BUILD = '20260430recordReportDraftV1'
+const MS12_BUILD = '20260422meetingShellPaintV1'
 const MS12_ACTIONS_SCRIPT = `/static/js/ms12-actions.js?v=${MS12_BUILD}`
 const MS12_APP_SCRIPT = `/static/js/ms12-app.js?v=${MS12_BUILD}`
 const waitBlock = '<p class="ms12-p" id="ms12-wait" style="color:rgb(100 116 139)">불러오는 중…</p>'
@@ -198,6 +198,9 @@ const commonStyles = `
   .ms12-dsk-ticker__in{display:inline-block;white-space:nowrap;animation:ms12DskT 95s linear infinite}
   @keyframes ms12DskT{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
   @media (prefers-reduced-motion:reduce){.ms12-dsk-ticker__in{animation:none}}
+  /* 첫 페인트: 로딩 표시·본문 숨김(noscript에서는 본문만 표시). JS 실행 후 applyShell이 인라인으로 덮습니다. */
+  #ms12-wait{display:block}
+  #ms12-authed{display:none}
 `
 
 function guestNoJs(heading: string): string {
@@ -271,11 +274,12 @@ ${canTag}  <link rel="stylesheet" href="/static/css/app.css" />
 <body class="bg-slate-50 min-h-screen" data-ms12-route="${route}" data-ms12-auth="${authMode}" ${extraBody}>
   <div class="ms12-wrap">
     <noscript>
+      <style>#ms12-authed{display:block!important}#ms12-wait{display:none!important}</style>
       <p class="ms12-p">JavaScript 를 켜 주세요. <a href="/app">MS12</a></p>
     </noscript>
     ${waitBlock}
     <div id="ms12-guest" style="display:none">${guest}</div>
-    <div id="ms12-authed" style="display:none">${authed}</div>
+    <div id="ms12-authed">${authed}</div>
   </div>
 </body>
 </html>`

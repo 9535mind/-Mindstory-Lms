@@ -985,10 +985,16 @@
 
   async function fetchMeOnce() {
     var fetchOpts = { credentials: 'include', cache: 'no-store' }
+    var meTimeoutMs = 10000
     var r
     if (typeof AbortController === 'undefined') {
       try {
-        r = await ms12Fetch('/api/auth/me', fetchOpts)
+        r = await Promise.race([
+          ms12Fetch('/api/auth/me', fetchOpts),
+          sleep(meTimeoutMs).then(function () {
+            throw Object.assign(new Error('auth/me timeout'), { name: 'AbortError' })
+          }),
+        ])
       } catch (e) {
         return { status: 0, json: null, _err: e }
       }
@@ -998,7 +1004,7 @@
         try {
           ctrl.abort()
         } catch (e) {}
-      }, 10000)
+      }, meTimeoutMs)
       try {
         r = await ms12Fetch('/api/auth/me', Object.assign({}, fetchOpts, { signal: ctrl.signal }))
       } catch (e) {
