@@ -542,7 +542,7 @@
     if (s.length <= max) return s
     return '… ' + s.slice(-max)
   }
-  /** 화면 하단 실시간 자막 — 전사 칸과 동일 문자열 반영 */
+  /** 화면 하단 실시간 자막 — 최신 발언 한 줄만 (전체 회의록은 목록·textarea) */
   function ms12SyncLiveCaptionFromTranscript(fullText, opts) {
     var cap = document.getElementById('ms12-live-caption-text')
     if (!cap) return
@@ -1904,7 +1904,7 @@
     ms12RoomTranscriptSegs = null
     ms12RoomTranscriptLive = null
     g_ms12RoomIsHost = false
-    /** GET /meetings/:id — roomIsModerator: 호스트·공동 호스트(녹음 중 전사 붙여넣기 등) */
+    /** GET /meetings/:id — roomIsModerator: 호스트·공동 호스트(녹음 중 회의록 붙여넣기 등) */
     var roomIsHost = false
     var roomIsModerator = false
     var roomAiAvail = false
@@ -2564,7 +2564,7 @@
       var notes = n ? n.value : ''
       var trans = tr ? tr.value : ''
       if (!String(notes + trans).trim() || String(notes + trans).trim().length < 30) {
-        if (statEl) statEl.textContent = '메모·전사를 조금 더 입력하세요. (최소 약 30자)'
+        if (statEl) statEl.textContent = '메모·회의록을 조금 더 입력하세요. (최소 약 30자)'
         return
       }
       if (statEl) statEl.textContent = 'AI 요약 요청 중…'
@@ -2625,7 +2625,7 @@
       var notes = n ? n.value : ''
       var trans = tr ? tr.value : ''
       if (String(notes + trans + sb0 + sa0 + sr0).trim().length < 15) {
-        if (isManual && statEl) statEl.textContent = '메모·전사·요약을 조금 더 입력하세요.'
+        if (isManual && statEl) statEl.textContent = '메모·회의록·요약을 조금 더 입력하세요.'
         return
       }
       ms12Fetch('/api/ms12/meetings/' + encodeURIComponent(id) + '/action-items/ai-suggest', {
@@ -2709,7 +2709,7 @@
       var notes = n ? n.value : ''
       var trans = tr ? tr.value : ''
       if (!String(notes + trans).trim() || String(notes + trans).trim().length < 30) {
-        if (statEl) statEl.textContent = '메모·전사를 조금 더 입력하세요. (최소 약 30자)'
+        if (statEl) statEl.textContent = '메모·회의록을 조금 더 입력하세요. (최소 약 30자)'
         return
       }
       var label =
@@ -3147,7 +3147,7 @@
         var summary = combinedSummaryFromDom()
         if (!notes.trim() && !transcript.trim() && !summary.trim()) {
           if (aiErr) {
-            aiErr.textContent = '메모·전사·요약 중 하나는 채운 뒤 질의해 주세요.'
+            aiErr.textContent = '메모·회의록·요약 중 하나는 채운 뒤 질의해 주세요.'
             aiErr.style.display = 'block'
           }
           return
@@ -3409,7 +3409,7 @@
             if (sttSt) sttSt.textContent = '클라우드 STT 듣는 중'
             if (sttHint && sttOn) {
               sttHint.textContent =
-                '클라우드 실시간 전사 중입니다. 필요 시 «음성 끄기»를 누르세요.'
+                '클라우드 실시간 회의록 수신 중입니다. 필요 시 «음성 끄기»를 누르세요.'
             }
           }).catch(function () {
             if (sttHint) sttHint.textContent = '마이크를 허용해야 클라우드 STT가 동작합니다.'
@@ -3527,7 +3527,7 @@
           startWebSpeechListening()
           if (sttHint && sttOn) {
             sttHint.textContent =
-              '마이크·음성 전사가 켜졌습니다. 필요할 때만 «음성 끄기»를 누르세요.'
+              '마이크·회의록 음성 입력이 켜졌습니다. 필요할 때만 «음성 끄기»를 누르세요.'
           }
           return
         }
@@ -3632,7 +3632,7 @@
           startWebSpeechListening()
           if (sttHint && sttOn) {
             sttHint.textContent =
-              '마이크·음성 전사가 켜졌습니다. 필요할 때만 «음성 끄기»를 누르세요.'
+              '마이크·회의록 음성 입력이 켜졌습니다. 필요할 때만 «음성 끄기»를 누르세요.'
           }
         }
         if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
@@ -3650,7 +3650,7 @@
               if (sttSt) sttSt.textContent = '대기'
               if (sttHint) {
                 sttHint.textContent =
-                  '마이크를 허용해야 전사가 켜집니다. 주소창 자물쇠에서 허용한 뒤 «음성 켜기»를 눌러 주세요.'
+                  '마이크를 허용해야 회의록 음성 입력이 켜집니다. 주소창 자물쇠에서 허용한 뒤 «음성 켜기»를 눌러 주세요.'
               }
             })
         } else {
@@ -3661,7 +3661,7 @@
         if (sttOn) {
           stopListeningChosen()
           if (sttHint) {
-            sttHint.textContent = '음성 전사를 껐습니다. 다시 켜려면 «음성 켜기»를 누르세요.'
+            sttHint.textContent = '회의록 음성 입력을 껐습니다. 다시 켜려면 «음성 켜기»를 누르세요.'
           }
         } else {
           requestMicThenStart()
@@ -3916,7 +3916,7 @@
       if (!draftOut) return
       var b = roomDraftBody()
       if (!b.notes.trim() && !b.transcript.trim() && !b.summary.trim()) {
-        draftOut.value = '메모·전사·요약 중 하나에 내용이 있어야 합니다.'
+        draftOut.value = '메모·회의록·요약 중 하나에 내용이 있어야 합니다.'
         return
       }
       draftOut.value = '초안을 생성하는 중…'
@@ -4007,7 +4007,7 @@
         if (o.status === 403) {
           if (localRow) {
             showRoomErr(
-              '이 방에 서버 기준으로는 아직 입장 기록이 없을 수 있습니다. 이 브라우저에 저장해 둔 메모·전사·요약은 그대로 표시했습니다. 코드로「회의 입장」하면 동기화됩니다.'
+              '이 방에 서버 기준으로는 아직 입장 기록이 없을 수 있습니다. 이 브라우저에 저장해 둔 메모·회의록·요약은 그대로 표시했습니다. 코드로「회의 입장」하면 동기화됩니다.'
             )
           } else {
             showRoomErr('이 방의 참석자만 내용을 볼 수 있습니다. 먼저「회의 입장」에서 코드로 입장하세요.')
@@ -5164,7 +5164,7 @@
         ms12CopyToClipboard(
           composeMinutesText({}),
           el('ms12-rec-msg-copy'),
-          '회의록(전사·메모)을 복사했습니다.',
+          '회의록과 메모를 복사했습니다.',
         )
       })
     }
