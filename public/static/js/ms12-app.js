@@ -1333,7 +1333,6 @@
     var f = document.getElementById('ms12-form-new')
     if (!f) return
     if (f.getAttribute('data-ms12-new-meeting-wired') === '1') return
-    f.setAttribute('data-ms12-new-meeting-wired', '1')
     var titleIn = document.getElementById('ms12-input-new-title') || f.querySelector('input[name="title"]')
     var dnIn = document.getElementById('ms12-input-new-displayname')
     try {
@@ -1378,10 +1377,23 @@
     var creatingMeeting = false
     f.addEventListener('submit', function (e) {
       e.preventDefault()
-      if (creatingMeeting) return
+      if (creatingMeeting) {
+        try {
+          console.warn('[ms12] 회의 생성 요청이 이미 진행 중입니다.')
+        } catch (eLog) {}
+        return
+      }
       var fd = new FormData(f)
       var title = (fd.get('title') || '').toString().trim()
-      if (!title) return
+      if (!title) {
+        try {
+          console.warn('[ms12] 회의 제목이 비어 있어 POST를 보내지 않았습니다.')
+        } catch (eLog2) {}
+        try {
+          if (titleIn) titleIn.focus()
+        } catch (eF) {}
+        return
+      }
       var dn = (fd.get('displayName') || '').toString().trim()
       var payload = { title: title }
       if (dn) payload.displayName = dn
@@ -1409,10 +1421,16 @@
             return
           }
           authLog('create meeting: server did not return id, open local only', (j && j.error) || '')
+          try {
+            console.warn('[ms12] POST /api/ms12/meetings 응답에 meeting id 없음 → 로컬 방만 엽니다.', j || {})
+          } catch (eW) {}
           openMeetingLocalOnly(title, dn)
         })
         .catch(function (err) {
           authLog('create meeting: fetch error, open local only', err)
+          try {
+            console.warn('[ms12] POST /api/ms12/meetings 실패 → 로컬 방만 엽니다.', err)
+          } catch (eW2) {}
           openMeetingLocalOnly(title, dn)
         })
         .finally(function () {
